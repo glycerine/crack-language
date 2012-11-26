@@ -103,78 +103,81 @@ void Construct::runRepl(Context* prevContext) {
         exit(1);
     }
 
-    Context* prior = prevContext ? prevContext : rootContext.get();
+    // XXX TODO: what should these context parameters actually be???`
 
-    ContextPtr context =
-        new Context(*builder, Context::local, prior,
-                    new GlobalNamespace(rootContext->ns.get(), canName)
-                    );
-    context->toplevel = true;
+     Context* prior = prevContext ? prevContext : rootContext.get();
 
-    string name = "wisecrack_input_";
-    ModuleDefPtr modDef = context->createModule(canName, name);
+     ContextPtr context =
+         new Context(*builder, Context::module, prior,
+                     new GlobalNamespace(rootContext->ns.get(), canName)
+                     );
+     context->toplevel = true;
 
-    // setup to optimize the code at -O2 
-    init_llvm_target();
+     string name = "wisecrack_lineno_";
+     ModuleDefPtr modDef = context->createModule(canName, name);
 
-    llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
-    // This is the default optimization used by the JIT.
-    llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
+     // setup to optimize the code at -O2 
+     init_llvm_target();
 
-    FPM->add(new llvm::TargetData(*jitExecEngine->getTargetData()));
-    FPM->add(llvm::createCFGSimplificationPass());
-    
-    FPM->add(llvm::createJumpThreadingPass());
-    FPM->add(llvm::createPromoteMemoryToRegisterPass());
-    FPM->add(llvm::createInstructionCombiningPass());
-    FPM->add(llvm::createCFGSimplificationPass());
-    FPM->add(llvm::createScalarReplAggregatesPass());
-    
-    FPM->add(llvm::createLICMPass());
-    FPM->add(llvm::createJumpThreadingPass());
-    
-    FPM->add(llvm::createGVNPass());
-    FPM->add(llvm::createSCCPPass());
-    
-    FPM->add(llvm::createAggressiveDCEPass());
-    FPM->add(llvm::createCFGSimplificationPass());
-    FPM->add(llvm::createVerifierPass());
-            
-    FPM->doInitialization();
+     llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
+     // This is the default optimization used by the JIT.
+     llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
 
-    // from pure-lang:
-    // Install a fallback mechanism to resolve references to the runtime, on
-    // systems which do not allow the program to dlopen itself.
-    jitExecEngine->InstallLazyFunctionCreator(resolve_external);
-    
-    bool eager_jit = true;
-    jitExecEngine->DisableLazyCompilation(eager_jit);
+     FPM->add(new llvm::TargetData(*jitExecEngine->getTargetData()));
+     FPM->add(llvm::createCFGSimplificationPass());
+
+     FPM->add(llvm::createJumpThreadingPass());
+     FPM->add(llvm::createPromoteMemoryToRegisterPass());
+     FPM->add(llvm::createInstructionCombiningPass());
+     FPM->add(llvm::createCFGSimplificationPass());
+     FPM->add(llvm::createScalarReplAggregatesPass());
+
+     FPM->add(llvm::createLICMPass());
+     FPM->add(llvm::createJumpThreadingPass());
+
+     FPM->add(llvm::createGVNPass());
+     FPM->add(llvm::createSCCPPass());
+
+     FPM->add(llvm::createAggressiveDCEPass());
+     FPM->add(llvm::createCFGSimplificationPass());
+     FPM->add(llvm::createVerifierPass());
+
+     FPM->doInitialization();
+
+     // from pure-lang:
+     // Install a fallback mechanism to resolve references to the runtime, on
+     // systems which do not allow the program to dlopen itself.
+     jitExecEngine->InstallLazyFunctionCreator(resolve_external);
+
+     bool eager_jit = true;
+     jitExecEngine->DisableLazyCompilation(eager_jit);
 
 
-    
-    printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
-    //
-    // main Read-Eval-Print loop
-    //
-    while(!r.done()) {
-        r.nextlineno();
-        r.prompt(stdout);
-        r.read(stdin);
-        if (r.getLastReadLineLen()==0) continue;
+     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
-        std::stringstream src;
-        src << r.getLastReadLine();
+     //
+     // main Read-Eval-Print loop
+     //
+     while(!r.done()) {
+         r.nextlineno();
+         r.prompt(stdout);
+         r.read(stdin);
+         if (r.getLastReadLineLen()==0) continue;
 
-        std::stringstream anonFuncName;
-        anonFuncName << name << r.lineno();
+         std::stringstream src;
+         src << r.getLastReadLine();
 
-        std::string path = r.getPrompt();
+         std::stringstream anonFuncName;
+         anonFuncName << name << r.lineno() << "_";
 
-        try {
+         std::string path = r.getPrompt();
 
-            // example from kaleidoscope: evaluate into an anonymous function.
+         try {
 
+             // example from kaleidoscope: evaluate into an anonymous function.
+
+#if 0
             llvm::Function *TheFunction = AnonFunctionPrototype_Codegen(anonFuncName.str(), 
                                                                         bldr->module); 
             assert(TheFunction);
@@ -182,11 +185,13 @@ void Construct::runRepl(Context* prevContext) {
             // Create a new basic block to start insertion into.
             BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
             bldr->builder.SetInsertPoint(BB);
-
+#endif
 
             Toker toker(src, path.c_str());
             Parser parser(toker, context.get());
             parser.parse();
+
+            
 
             //bldr->innerCloseModule(*context, modDef.get());
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
