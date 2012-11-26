@@ -39,17 +39,28 @@ namespace wisecrack {
 
 
         void prompt(FILE* fout);
+        char* getPrompt();
+
         void read(FILE* fin);
         void eval();
         void print(FILE* fout);
         void run(FILE* fin, FILE* fout);
 
+        long lineno();
+        long nextlineno();
+
+        char* getLastReadLine();
+        long  getLastReadLineLen();
+
     private:
         bool _alldone;
+        long _lineno;
 
         const static int _readsz = 4096;
         char       _readbuf[_readsz];
         int        _readlen;
+
+        void trimr();
 
     };
 

@@ -394,8 +394,16 @@ class Construct : public spug::RCBase, public Options {
          * no definition with the name was ever registered.
          */
         VarDefPtr getRegisteredDef(const std::string &canonicalName);
+
+        /**
+         * run the interpreter 
+         */
+        void runRepl(Context* prevContext);
+
 };
 
+ std::string modNameFromFile(const std::string &filename);
+ 
 } // namespace model
 
 #endif

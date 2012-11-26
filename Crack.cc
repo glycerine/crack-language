@@ -103,20 +103,6 @@ int Crack::runScript(std::istream &src, const std::string &name) {
             options->optionMap["out"] = name + ".bin";
     }
     construct->runScript(src, name);
-
-    if (options->runRepl) {
-        return runRepl();
-    }
-}
-
-
-int Crack::runRepl() {
-
-    wisecrack::Repl r;
-    printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
-    r.run(stdin,stdout);
-
-    return 0;
 }
 
 void Crack::callModuleDestructors() {
@@ -134,4 +120,10 @@ void Crack::printStats(std::ostream &out) {
     construct->stats->write(out);
     if (construct->compileTimeConstruct)
         construct->compileTimeConstruct->stats->write(out);
+}
+
+void Crack::runRepl() {
+    if (!init())
+        return;
+    construct->runRepl(0);
 }
