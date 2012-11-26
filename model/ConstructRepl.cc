@@ -39,7 +39,6 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/PassManager.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Assembly/PrintModulePass.h>
@@ -56,6 +55,33 @@ using namespace parser;
 using namespace builder;
 using namespace crack::ext;
 using namespace llvm;
+
+//global:
+llvm::FunctionPassManager *FPM =0;
+llvm::Module *module = 0;
+std::string modname;
+llvm::ExecutionEngine *JIT = 0;
+
+void jit_init();
+void jit_shutdown();
+void init_llvm_target(); // must be at bottom of file.
+static void* resolve_external(const std::string& name);
+
+
+// from kaleidoscope, codegen for a double F(); anonymous function declaration.
+llvm::Function *AnonFunctionPrototype_Codegen(std::string Name, llvm::Module* TheModule) {
+
+  // Make the function type:  double(double,double) etc.
+    std::vector<llvm::Type*> Doubles(0,
+                                     llvm::Type::getDoubleTy(llvm::getGlobalContext()));
+    llvm::FunctionType *FT = FunctionType::get(llvm::Type::getDoubleTy(getGlobalContext()),
+                                       Doubles, false);
+  
+    llvm::Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
+      
+  return F;
+}
+
 
 
 void Construct::runRepl(Context* prevContext) {
@@ -85,40 +111,52 @@ void Construct::runRepl(Context* prevContext) {
                     );
     context->toplevel = true;
 
-    string name = "wisecrack-input";
+    string name = "wisecrack_input_";
     ModuleDefPtr modDef = context->createModule(canName, name);
 
     // setup to optimize the code at -O2 
-    llvm::InitializeNativeTarget();
-    llvm::ExecutionEngine* execEngine = bldr->getExecEng();
-    // This is the default optimization used by the JIT.
-    llvm::FunctionPassManager *O2 = new llvm::FunctionPassManager(bldr->module);
+    init_llvm_target();
 
-    O2->add(new llvm::TargetData(*execEngine->getTargetData()));
-    O2->add(llvm::createCFGSimplificationPass());
+    llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
+    // This is the default optimization used by the JIT.
+    llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
+
+    FPM->add(new llvm::TargetData(*jitExecEngine->getTargetData()));
+    FPM->add(llvm::createCFGSimplificationPass());
     
-    O2->add(llvm::createJumpThreadingPass());
-    O2->add(llvm::createPromoteMemoryToRegisterPass());
-    O2->add(llvm::createInstructionCombiningPass());
-    O2->add(llvm::createCFGSimplificationPass());
-    O2->add(llvm::createScalarReplAggregatesPass());
+    FPM->add(llvm::createJumpThreadingPass());
+    FPM->add(llvm::createPromoteMemoryToRegisterPass());
+    FPM->add(llvm::createInstructionCombiningPass());
+    FPM->add(llvm::createCFGSimplificationPass());
+    FPM->add(llvm::createScalarReplAggregatesPass());
     
-    O2->add(llvm::createLICMPass());
-    O2->add(llvm::createJumpThreadingPass());
+    FPM->add(llvm::createLICMPass());
+    FPM->add(llvm::createJumpThreadingPass());
     
-    O2->add(llvm::createGVNPass());
-    O2->add(llvm::createSCCPPass());
+    FPM->add(llvm::createGVNPass());
+    FPM->add(llvm::createSCCPPass());
     
-    O2->add(llvm::createAggressiveDCEPass());
-    O2->add(llvm::createCFGSimplificationPass());
-    O2->add(llvm::createVerifierPass());
+    FPM->add(llvm::createAggressiveDCEPass());
+    FPM->add(llvm::createCFGSimplificationPass());
+    FPM->add(llvm::createVerifierPass());
             
-    O2->doInitialization();
+    FPM->doInitialization();
+
+    // from pure-lang:
+    // Install a fallback mechanism to resolve references to the runtime, on
+    // systems which do not allow the program to dlopen itself.
+    jitExecEngine->InstallLazyFunctionCreator(resolve_external);
+    
+    bool eager_jit = true;
+    jitExecEngine->DisableLazyCompilation(eager_jit);
 
 
     
     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
+    //
+    // main Read-Eval-Print loop
+    //
     while(!r.done()) {
         r.nextlineno();
         r.prompt(stdout);
@@ -128,31 +166,48 @@ void Construct::runRepl(Context* prevContext) {
         std::stringstream src;
         src << r.getLastReadLine();
 
+        std::stringstream anonFuncName;
+        anonFuncName << name << r.lineno();
+
         std::string path = r.getPrompt();
 
         try {
 
+            // example from kaleidoscope: evaluate into an anonymous function.
+
+            llvm::Function *TheFunction = AnonFunctionPrototype_Codegen(anonFuncName.str(), 
+                                                                        bldr->module); 
+            assert(TheFunction);
+  
+            // Create a new basic block to start insertion into.
+            BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+            bldr->builder.SetInsertPoint(BB);
+
+
             Toker toker(src, path.c_str());
             Parser parser(toker, context.get());
-
             parser.parse();
 
-            bldr->innerCloseModule(*context, modDef.get());
-            //            if (!bldr->builder.GetInsertBlock()->getTerminator())
-            //                bldr->builder.CreateRetVoid();
+            //bldr->innerCloseModule(*context, modDef.get());
+            //verifyModule(*bldr->module, llvm::PrintMessageAction);
+            if (!bldr->builder.GetInsertBlock()->getTerminator())
+                bldr->builder.CreateRetVoid();
 
-            verifyModule(*bldr->module, llvm::PrintMessageAction);
 
             // do I need to add an implicit 'using' of this new module?
 
             // optimize
 
             llvm::Function* f = bldr->func;
-            //llvm::verifyFunction(*f);
-            O2->run(*f);
+
+            // Validate the generated code, checking for consistency.
+            llvm::verifyFunction(*f);
+
+            // optimize the function
+            FPM->run(*f);
 
             // JIT the function, returning a function pointer.
-            int (*fptr)() = (int (*)())execEngine->getPointerToFunction(f);
+            int (*fptr)() = (int (*)())jitExecEngine->getPointerToFunction(f);
             SPUG_CHECK(fptr, "repl-jit error: no address for function " << string(f->getName()));
 
             // execute the jit-ed code.
@@ -172,4 +227,125 @@ void Construct::runRepl(Context* prevContext) {
 
     } // end while
 
+    // XXX TODO: put FPM in an RAII resource so it gets cleaned up automatically.
+    if (FPM) {
+        // It seems that this is needed for LLVM 3.1 and later.
+        FPM->doFinalization();
+        delete FPM;
+        FPM = 0;
+    }
+
 }
+
+
+
+
+extern "C"
+void crack_function_unresolved()
+{
+    // how to do this in crack?
+    //pure_throw(unresolved_exception());
+}
+
+// XXX TODO: port this from Pure -> Crack
+static void* resolve_external(const std::string& name)
+{
+  /* If we come here, the dynamic loader has already tried everything to
+     resolve the function, so instead we just print an error message and
+     return a dummy function which raises a Pure exception when called. In any
+     case that's better than aborting the program (which is what the JIT will
+     do when we return NULL here). */
+    std::cout.flush();
+  cerr << "error trying to resolve external: "
+       << (name.compare(0, 2, "$$") == 0?"<<anonymous>>":name) << '\n';
+  return (void*)crack_function_unresolved;
+}
+
+void   init_llvm_target();
+
+void jit_init() {
+
+    // fragments to model from pure-lang code by A. Graef.
+  // Initialize the JIT.
+
+  using namespace llvm;
+
+  init_llvm_target();
+  module = new llvm::Module(modname, llvm::getGlobalContext());
+
+  llvm::EngineBuilder factory(module);
+  factory.setEngineKind(llvm::EngineKind::JIT);
+  factory.setAllocateGVsWithCode(false);
+
+  llvm::TargetOptions Opts;
+
+  Opts.GuaranteedTailCallOpt = true;
+
+  factory.setTargetOptions(Opts);
+
+  JIT = factory.create();
+  assert(JIT);
+
+  FPM = new FunctionPassManager(module);
+
+
+  // Set up the optimizer pipeline. Start with registering info about how the
+  // target lays out data structures.
+  FPM->add(new TargetData(*JIT->getTargetData()));
+  // Promote allocas to registers.
+  FPM->add(createPromoteMemoryToRegisterPass());
+  // Do simple "peephole" optimizations and bit-twiddling optimizations.
+  FPM->add(createInstructionCombiningPass());
+  // Reassociate expressions.
+  FPM->add(createReassociatePass());
+  // Eliminate common subexpressions.
+  FPM->add(createGVNPass());
+  // Simplify the control flow graph (deleting unreachable blocks, etc).
+  FPM->add(createCFGSimplificationPass());
+
+  // It seems that this is needed for LLVM 3.1 and later.
+  FPM->doInitialization();
+
+
+  // Install a fallback mechanism to resolve references to the runtime, on
+  // systems which do not allow the program to dlopen itself.
+  JIT->InstallLazyFunctionCreator(resolve_external);
+
+  bool eager_jit = true;
+  JIT->DisableLazyCompilation(eager_jit);
+
+
+
+}
+
+void jit_shutdown() {
+
+    if (JIT) {
+        delete JIT;
+        JIT = 0;
+    }
+
+  if (FPM) {
+    // It seems that this is needed for LLVM 3.1 and later.
+    FPM->doFinalization();
+    delete FPM;
+    FPM = 0;
+  }
+
+}
+
+
+/* advice from pure-lang code by A. Graef:
+   Make sure to make this import of TargetSelect the very last thing,
+   since TargetSelect.h pulls in LLVM's config.h file which may stomp on our own config
+   settings! */
+
+// LLVM 3.0 or later
+#include <llvm/Support/TargetSelect.h>
+//include <llvm/Target/TargetSelect.h>
+
+void init_llvm_target()
+{
+  llvm::InitializeNativeTarget();
+}
+
