@@ -45,6 +45,7 @@ struct option longopts[] = {
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
     {"lib", true, 0, 'l'},
+    {"repl", false, 0, 'r'},
     {"version", false, 0, 0},
     {"stats", false, 0, 0},
     {"dump-func-table", false, 0, dumpFuncTable},
@@ -88,6 +89,8 @@ void usage(int retval) {
         << endl;
     cout << " -n         --no-bootstrap       Do not load bootstrapping modules"
             << endl;
+    cout << " -r         --repl               After executing script, start interpreter"
+            << endl;
     cout << " -v         --verbose            Verbose output, use more than once"
             " for greater effect" << endl;
     cout << " -q         --quiet              No extra output, implies"
@@ -128,7 +131,8 @@ int main(int argc, char **argv) {
     bool optionsError = false;
     bool useDoubleBuilder = false;    
     bool doDumpFuncTable = false;
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vq", longopts, &idx)) !=
+    bool startRepl = false;
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vqr", longopts, &idx)) !=
            -1) {
         switch (opt) {
             case 0:
@@ -224,6 +228,9 @@ int main(int argc, char **argv) {
                     libPath.append(optarg);
                 }
                 break;
+            case 'r':
+                crack.options->runRepl = true;
+                break;
             case doubleBuilder:
                 useDoubleBuilder = true;
                 break;
@@ -253,9 +260,13 @@ int main(int argc, char **argv) {
 
     // are there any more arguments?
     if (optind == argc) {
-        cerr << "You need to define a script or the '-' option to read "
+        if (crack.options->runRepl) {
+            rc = crack.runRepl();
+        } else {
+            cerr << "You need to define a script or the '-' option to read "
                 "from standard input." << endl;
-        rc = -1;
+            rc = -1;
+        }
     } else if (!strcmp(argv[optind], "-")) {
         crack.setArgv(argc - optind, &argv[optind]);
         // ensure a reasonable output file name in native mode
@@ -277,7 +288,7 @@ int main(int argc, char **argv) {
             rc = crack.runScript(src, argv[optind]);
         }
     }
-    
+
     if (bType == jitBuilder && !crack.options->dumpMode)
         crack.callModuleDestructors();
 
