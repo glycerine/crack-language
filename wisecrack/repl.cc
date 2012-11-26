@@ -25,17 +25,27 @@
 namespace wisecrack {
 
 
+
     //ctor
     Repl::Repl()
-        : _alldone(false)
-    {}
+        : _alldone(false),
+          _lineno(0)
+    {
+        bzero(_readbuf, _readsz);
+    }
 
     bool Repl::done() { return _alldone; }
     void Repl::setDone() { _alldone = true; }
 
 
+    char* Repl::getPrompt() {
+        static char _promptbuf[256];
+        sprintf(_promptbuf,"(crack:%ld)",_lineno);
+        return _promptbuf;
+    }
+
     void Repl::prompt(FILE* fout) {
-        fprintf(fout,"(crack) ");
+        fprintf(fout,"%s ",getPrompt());
         fflush(fout);
     }
 
@@ -55,13 +65,9 @@ namespace wisecrack {
                 return;
             }
         }
-
-
+        
         _readlen = strlen(_readbuf);
-        if (_readbuf[_readlen-1] == '\n') {
-            _readbuf[_readlen-1] = '\0';
-            --_readlen;
-        }
+        trimr();
     }
 
 
@@ -81,6 +87,7 @@ namespace wisecrack {
     void Repl::run(FILE* fin, FILE* fout) {
 
         while(!done()) {
+            nextlineno();
             prompt(fout);
             read(fin);
             eval();
@@ -89,6 +96,36 @@ namespace wisecrack {
 
         fprintf(fout,"\n");
     }
+
+    long Repl::lineno() {
+        return _lineno;
+    }
+
+    long Repl::nextlineno() {
+        return ++_lineno;
+    }
+
+    char* Repl::getLastReadLine() {
+        return _readbuf;
+    }
+
+    long Repl::getLastReadLineLen() {
+        return _readlen;
+    }
+
+
+    // remove right side whitespace
+    void Repl::trimr() {
+        if (_readlen <=0) return;
+
+        char* newp = &_readbuf[_readlen-1];
+        while(newp > &_readbuf[0] && ( (*newp) =='\n' || (*newp) =='\t' || (*newp) ==' ')) {
+            (*newp) ='\0';
+            --newp;
+            --_readlen;
+        }
+    }
+
 
 
 } // end namespace wisecrack
