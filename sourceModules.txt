@@ -4,6 +4,7 @@ ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
 model/Construct.cc
+model/ConstructRepl.cc
 model/ConstSequenceExpr.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
@@ -72,5 +73,6 @@ compiler/Annotation2.cc
 compiler/CrackContext.cc
 compiler/Token2.cc
 compiler/Location2.cc
+wisecrack/repl.cc
 Crack.cc
 
