@@ -14,6 +14,7 @@
 #include "model/Construct.h"
 #include "model/Context.h"
 #include "model/OverloadDef.h"
+#include "wisecrack/repl.h"
 
 using namespace std;
 using namespace model;
@@ -102,6 +103,19 @@ int Crack::runScript(std::istream &src, const std::string &name) {
             options->optionMap["out"] = name + ".bin";
     }
     construct->runScript(src, name);
+
+    if (options->runRepl) {
+        return runRepl();
+    }
+}
+
+
+int Crack::runRepl() {
+
+    wisecrack::Repl r;
+    r.run(stdin,stdout);
+
+    return 0;
 }
 
 void Crack::callModuleDestructors() {

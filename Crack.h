@@ -112,6 +112,11 @@ class Crack : public model::Options {
          */
         void printStats(std::ostream &out);
 
+        /**
+         * run the interpreter 
+         */
+        int runRepl();
+
 
 };
 

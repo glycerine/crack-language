@@ -5,9 +5,7 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
-#include <stdio.h>
-#include <strings.h> // bzero
-#include <string.h>  // strlen
+#include "repl.h"
 
 //
 // wisecrack: an interpreter for crack
@@ -26,86 +24,71 @@
 
 namespace wisecrack {
 
-    class Repl {
 
-    public:
+    //ctor
+    Repl::Repl()
+        : _alldone(false)
+    {}
 
-        //ctor
-        Repl()
-            : _alldone(false)
-        {}
-
-        bool done() { return _alldone; }
-        void setDone() { _alldone = true; }
+    bool Repl::done() { return _alldone; }
+    void Repl::setDone() { _alldone = true; }
 
 
-        void prompt(FILE* fout) {
-            fprintf(fout,"(crack) ");
-            fflush(fout);
-        }
+    void Repl::prompt(FILE* fout) {
+        fprintf(fout,"(crack) ");
+        fflush(fout);
+    }
 
 
-        void read(FILE* fin) {
+    void Repl::read(FILE* fin) {
         
-            _readlen = 0;
-            bzero(_readbuf, _readsz);
-            char* r = fgets(_readbuf, _readsz, fin);
+        _readlen = 0;
+        bzero(_readbuf, _readsz);
+        char* r = fgets(_readbuf, _readsz, fin);
 
-            if (NULL == r) {
-                // eof or error
-                if (feof(fin)) {
+        if (NULL == r) {
+            // eof or error
+            if (feof(fin)) {
                 
-                    // stub
-                    setDone();
-                    return;
-                }
-            }
-
-
-            _readlen = strlen(_readbuf);
-            if (_readbuf[_readlen-1] == '\n') {
-                _readbuf[_readlen-1] = '\0';
-                --_readlen;
+                // stub
+                setDone();
+                return;
             }
         }
 
 
-        void eval() {
+        _readlen = strlen(_readbuf);
+        if (_readbuf[_readlen-1] == '\n') {
+            _readbuf[_readlen-1] = '\0';
+            --_readlen;
+        }
+    }
 
+
+    void Repl::eval() {
+
+    }
+
+    void Repl::print(FILE* fout) {
+        if (done()) return;
+        fprintf(fout,
+                "*print* called, _readlen(%d), _readbuf: '%s'\n",
+                _readlen,
+                _readbuf);
+    }
+
+
+    void Repl::run(FILE* fin, FILE* fout) {
+
+        while(!done()) {
+            prompt(fout);
+            read(fin);
+            eval();
+            print(fout);
         }
 
-        void print(FILE* fout) {
-            if (done()) return;
-            fprintf(fout,
-                    "*print* called, _readlen(%d), _readbuf: '%s'\n",
-                    _readlen,
-                    _readbuf);
-        }
-
-
-        void run(FILE* fin, FILE* fout) {
-
-            while(!done()) {
-                prompt(fout);
-                read(fin);
-                eval();
-                print(fout);
-            }
-
-            fprintf(fout,"\n");
-        }
-
-
-
-
-    private:
-        bool _alldone;
-
-        const static int _readsz = 4096;
-        char       _readbuf[_readsz];
-        int        _readlen;
-
-    };
+        fprintf(fout,"\n");
+    }
 
 
 } // end namespace wisecrack
