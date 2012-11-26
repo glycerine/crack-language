@@ -64,7 +64,7 @@ void Construct::runRepl(Context* prevContext) {
 
     std::stringstream cn;
     cn << "wisecrack:" << &r;
-    string canName = modNameFromFile(cn.str());
+    string canName = model::modNameFromFile(cn.str());
     
     // create the builder and context for the repl.
     BuilderPtr builder = rootBuilder->createChildBuilder();
@@ -141,13 +141,13 @@ void Construct::runRepl(Context* prevContext) {
 
             // optimize
 
-            llvm::Function* f = modDef->func;
+            llvm::Function* f = bldr->func;
             //llvm::verifyFunction(*f);
             O2->run(*f);
 
             // JIT the function, returning a function pointer.
             int (*fptr)() = (int (*)())execEngine->getPointerToFunction(f);
-            SPUG_CHECK(fptr, "no address for function " << string(f->getName()));
+            SPUG_CHECK(fptr, "repl-jit error: no address for function " << string(f->getName()));
 
             // execute the jit-ed code.
             fptr();

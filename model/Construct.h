@@ -398,7 +398,7 @@ class Construct : public spug::RCBase {
 
 };
 
- std::string modNameFromFile(const std::string &filename);
+   std::string modNameFromFile(const std::string &filename);
  
 } // namespace model
 
