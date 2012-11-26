@@ -117,6 +117,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
 int Crack::runRepl() {
 
     wisecrack::Repl r;
+    printf("*** starting wisecrack repl, press ctrl-d to exit. ***\n");
     r.run(stdin,stdout);
 
     return 0;
