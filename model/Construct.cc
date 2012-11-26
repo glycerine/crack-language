@@ -731,7 +731,7 @@ bool Construct::loadBootstrapModules() {
     return true;
 }
 
-namespace {
+namespace model {
     
     // Returns a "brief path" for the filename.  A brief path consists of an 
     // md5 hash of the absolute path of the directory of the file, followed by 
@@ -778,7 +778,7 @@ namespace {
 int Construct::runScript(istream &src, const string &name) {
     
     // get the canonical name for the script
-    string canName = modNameFromFile(name);
+    string canName = model::modNameFromFile(name);
     
     // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
