@@ -137,7 +137,13 @@ void Construct::runRepl(Context* prevContext) {
 
             parser.parse();
 
+            bldr->innerCloseModule(*context, modDef.get());
+            //            if (!bldr->builder.GetInsertBlock()->getTerminator())
+            //                bldr->builder.CreateRetVoid();
+
             verifyModule(*bldr->module, llvm::PrintMessageAction);
+
+            // do I need to add an implicit 'using' of this new module?
 
             // optimize
 
