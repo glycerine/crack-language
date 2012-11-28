@@ -393,6 +393,14 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 }
 
+void LLVMJitBuilder::closeSection(Context &context, ModuleDef *moduleDef) {
+
+    assert(module);
+    StatState sStats(&context, ConstructStats::builder, moduleDef);
+    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
+
+}
+
 void LLVMJitBuilder::dump() {
     PassManager passMan;
     passMan.add(llvm::createPrintModulePass(&llvm::outs()));
