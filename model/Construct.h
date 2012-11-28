@@ -394,7 +394,7 @@ class Construct : public spug::RCBase {
         /**
          * run the interpreter 
          */
-        void runRepl(Context* prevContext);
+        void runRepl();
 
 };
 
