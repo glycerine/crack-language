@@ -68,6 +68,40 @@ void init_llvm_target(); // must be at bottom of file.
 static void* resolve_external(const std::string& name);
 
 
+// XXX test / experimental 88888888
+#if 0
+void construct_jit_and_callfunction1(builder::mvll::LLVMJitBuilder* bldr) {
+
+
+    LLVMAppendBasicBlockInContext
+
+    LLVMPositionBuilderAtEnd(labelBlock)
+
+    // create blocks for the true and false conditions
+    LLVMContext &lctx = getGlobalContext();
+    BasicBlock *trueBlock = BasicBlock::Create(lctx, tLabel, func);
+
+    BBranchpointPtr result = new BBranchpoint(
+        BasicBlock::Create(lctx, fLabel, func)
+    );
+
+    if (condInCleanupFrame) context.createCleanupFrame();
+    cond->emitCond(context);
+    Value *condVal = lastValue; // condition value
+    if (condInCleanupFrame) context.closeCleanupFrame();
+    result->block2 = builder.GetInsertBlock(); // condition block
+    lastValue = condVal;
+    builder.CreateCondBr(lastValue, trueBlock, result->block);
+
+    // repoint to the new ("if true") block
+    builder.SetInsertPoint(trueBlock);
+
+    
+
+}
+#endif 
+
+
 // from kaleidoscope, codegen for a double F(); anonymous function declaration.
 llvm::Function *AnonFunctionPrototype_Codegen(std::string Name, llvm::Module* TheModule) {
 
@@ -152,6 +186,8 @@ void Construct::runRepl(Context* prevContext) {
      bool eager_jit = true;
      jitExecEngine->DisableLazyCompilation(eager_jit);
 
+     // XXX test / experimental
+     //construct_jit_and_callfunction1(bldr);
 
 
      printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
@@ -164,6 +200,12 @@ void Construct::runRepl(Context* prevContext) {
          r.prompt(stdout);
          r.read(stdin);
          if (r.getLastReadLineLen()==0) continue;
+
+         // special commands
+         if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
+             context->dump();
+             continue;
+         }
 
          std::stringstream src;
          src << r.getLastReadLine();
@@ -187,16 +229,18 @@ void Construct::runRepl(Context* prevContext) {
             bldr->builder.SetInsertPoint(BB);
 #endif
 
+
+
             Toker toker(src, path.c_str());
             Parser parser(toker, context.get());
             parser.parse();
 
             
 
-            //bldr->innerCloseModule(*context, modDef.get());
+            bldr->innerCloseModule(*context, modDef.get());
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
-            if (!bldr->builder.GetInsertBlock()->getTerminator())
-                bldr->builder.CreateRetVoid();
+            //if (!bldr->builder.GetInsertBlock()->getTerminator())
+            //    bldr->builder.CreateRetVoid();
 
 
             // do I need to add an implicit 'using' of this new module?
@@ -353,4 +397,5 @@ void init_llvm_target()
 {
   llvm::InitializeNativeTarget();
 }
+
 

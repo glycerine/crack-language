@@ -21,6 +21,7 @@
 //    so we can focus on the read-eval interaction, which
 //    is the tricky part.
 
+#include <ctype.h> // isspace
 
 namespace wisecrack {
 
@@ -109,6 +110,14 @@ namespace wisecrack {
         return _readbuf;
     }
 
+    char* Repl::getTrimmedLastReadLine() {
+        char *p = &_readbuf[0];
+        while (p < &_readbuf[_readlen-1] && isspace(*p)) {
+            ++p;
+        }
+        return p;
+    }
+
     long Repl::getLastReadLineLen() {
         return _readlen;
     }
@@ -119,7 +128,7 @@ namespace wisecrack {
         if (_readlen <=0) return;
 
         char* newp = &_readbuf[_readlen-1];
-        while(newp > &_readbuf[0] && ( (*newp) =='\n' || (*newp) =='\t' || (*newp) ==' ')) {
+        while(newp > &_readbuf[0] && isspace(*newp)) {
             (*newp) ='\0';
             --newp;
             --_readlen;
