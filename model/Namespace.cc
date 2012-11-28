@@ -77,8 +77,10 @@ void Namespace::removeDef(VarDef *def) {
          iter != ordered.end();
          ++iter
          ) {
-        ordered.erase(iter);
-        break;
+        if (def->name == (*iter->get()).name) {
+            ordered.erase(iter);
+            break;
+        }
     }
     
     // remove it from the ordered for cache defs
@@ -86,8 +88,10 @@ void Namespace::removeDef(VarDef *def) {
          iter != orderedForCache.end();
          ++iter
          ) {
-        orderedForCache.erase(iter);
-        break;
+        if (def->name == (*iter->get()).name) {
+            orderedForCache.erase(iter);
+            break;
+        }
     }
 }
 
