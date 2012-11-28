@@ -48,9 +48,17 @@ namespace wisecrack {
 
         long lineno();
         long nextlineno();
-
-        char* getLastReadLine();
         long  getLastReadLineLen();
+
+        /**
+         * always right trimmed of whitespace
+         */
+        char* getLastReadLine();
+
+        /**
+         * any left whitespace trimmed too.
+         */
+        char* getTrimmedLastReadLine();
 
     private:
         bool _alldone;
