@@ -117,15 +117,129 @@ llvm::Function *AnonFunctionPrototype_Codegen(std::string Name, llvm::Module* Th
 }
 
 
+void init_fpm(llvm::FunctionPassManager* FPM, llvm::ExecutionEngine* jitExecEngine, bool eager_jit) {
 
-void Construct::runRepl(Context* prevContext) {
+    FPM->add(new llvm::TargetData(*jitExecEngine->getTargetData()));
+    FPM->add(llvm::createCFGSimplificationPass());
+
+    FPM->add(llvm::createJumpThreadingPass());
+    FPM->add(llvm::createPromoteMemoryToRegisterPass());
+    FPM->add(llvm::createInstructionCombiningPass());
+    FPM->add(llvm::createCFGSimplificationPass());
+    FPM->add(llvm::createScalarReplAggregatesPass());
+
+    FPM->add(llvm::createLICMPass());
+    FPM->add(llvm::createJumpThreadingPass());
+
+    FPM->add(llvm::createGVNPass());
+    FPM->add(llvm::createSCCPPass());
+
+    FPM->add(llvm::createAggressiveDCEPass());
+    FPM->add(llvm::createCFGSimplificationPass());
+    FPM->add(llvm::createVerifierPass());
+
+    FPM->doInitialization();
+
+    // from pure-lang:
+    // Install a fallback mechanism to resolve references to the runtime, on
+    // systems which do not allow the program to dlopen itself.
+    jitExecEngine->InstallLazyFunctionCreator(resolve_external);
+
+    //bool eager_jit = true;
+    jitExecEngine->DisableLazyCompilation(eager_jit);
+
+}
+
+
+
+//
+// from ~/pkg/crack/github/crack-language/builder/llvm/LLVMBuilder.cc
+//   derived from   void finishClassType(Context &context, BTypeDef *classType) {
+#if 0
+void generate(Context &context, BTypeDef *classType) {
+
+        // for the kinds of things we're about to do, we need a global block
+        // for functions to restore to, and for that we need a function and
+        // module.
+        LLVMContext &lctx = getGlobalContext();
+        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+        // builder.module should already exist from .builtin module
+        assert(builder.module);
+        vector<Type *> argTypes;
+        FunctionType *voidFuncNoArgs =
+            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
+        Function *func = Function::Create(voidFuncNoArgs,
+                                          Function::ExternalLinkage,
+                                          "__builtin_init__",
+                                          builder.module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        builder.builder.SetInsertPoint(BasicBlock::Create(lctx,
+                                                          "__builtin_init__",
+                                                          builder.func
+                                                          )
+                                       );
+
+        // add "Class"
+        int lineNum = __LINE__ + 1;
+        string temp("    byteptr name;\n"
+                    "    uint numBases;\n"
+                    "    array[Class] bases;\n"
+                    "    bool isSubclass(Class other) {\n"
+                    "        if (this is other)\n"
+                    "            return (1==1);\n"
+                    "        uint i;\n"
+                    "        while (i < numBases) {\n"
+                    "            if (bases[i].isSubclass(other))\n"
+                    "                return (1==1);\n"
+                    "            i = i + uint(1);\n"
+                    "        }\n"
+                    "        return (1==0);\n"
+                    "    }\n"
+                    "}\n"
+                    );
+
+        // create the class context - different scope from parent context.
+        ContextPtr classCtx =
+            context.createSubContext(Context::instance, classType);
+
+        CompositeNamespacePtr ns = new CompositeNamespace(classType,
+                                                          context.ns.get()
+                                                          );
+        ContextPtr lexicalContext =
+            classCtx->createSubContext(Context::composite, ns.get());
+        BBuilderContextData *bdata =
+            BBuilderContextData::get(lexicalContext.get());
+
+        istringstream src(temp);
+        try {
+            parser::Toker toker(src, "<builtin>", lineNum);
+            parser::Parser p(toker, lexicalContext.get());
+            p.parseClassBody();
+        } catch (parser::ParseError &ex) {
+            std::cerr << ex << endl;
+            assert(false);
+        }
+
+        // let the "end class" emitter handle the rest of this.
+        context.builder.emitEndClass(*classCtx);
+
+        // close off the block.
+        builder.builder.CreateRetVoid();
+    }
+
+#endif
+
+
+void Construct::runRepl() {
 
     wisecrack::Repl r;
 
     std::stringstream cn;
     cn << "wisecrack:" << &r;
-    string canName = model::modNameFromFile(cn.str());
-    
+    //    string canName = model::modNameFromFile(cn.str());
+    string canName = "wisecrack_";
+
     // create the builder and context for the repl.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     builderStack.push(builder);
@@ -139,10 +253,11 @@ void Construct::runRepl(Context* prevContext) {
 
     // XXX TODO: what should these context parameters actually be???`
 
-     Context* prior = prevContext ? prevContext : rootContext.get();
+     Context* prior = rootContext.get();
 
      ContextPtr context =
-         new Context(*builder, Context::module, prior,
+         //new Context(*builder, Context::module, prior,
+         new Context(*builder, Context::composite, prior,
                      new GlobalNamespace(rootContext->ns.get(), canName)
                      );
      context->toplevel = true;
@@ -150,41 +265,17 @@ void Construct::runRepl(Context* prevContext) {
      string name = "wisecrack_lineno_";
      ModuleDefPtr modDef = context->createModule(canName, name);
 
+     bldr->closeSection(*context, modDef.get());
+     verifyModule(*bldr->module, llvm::PrintMessageAction);
+
      // setup to optimize the code at -O2 
      init_llvm_target();
 
      llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
      // This is the default optimization used by the JIT.
      llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
-
-     FPM->add(new llvm::TargetData(*jitExecEngine->getTargetData()));
-     FPM->add(llvm::createCFGSimplificationPass());
-
-     FPM->add(llvm::createJumpThreadingPass());
-     FPM->add(llvm::createPromoteMemoryToRegisterPass());
-     FPM->add(llvm::createInstructionCombiningPass());
-     FPM->add(llvm::createCFGSimplificationPass());
-     FPM->add(llvm::createScalarReplAggregatesPass());
-
-     FPM->add(llvm::createLICMPass());
-     FPM->add(llvm::createJumpThreadingPass());
-
-     FPM->add(llvm::createGVNPass());
-     FPM->add(llvm::createSCCPPass());
-
-     FPM->add(llvm::createAggressiveDCEPass());
-     FPM->add(llvm::createCFGSimplificationPass());
-     FPM->add(llvm::createVerifierPass());
-
-     FPM->doInitialization();
-
-     // from pure-lang:
-     // Install a fallback mechanism to resolve references to the runtime, on
-     // systems which do not allow the program to dlopen itself.
-     jitExecEngine->InstallLazyFunctionCreator(resolve_external);
-
      bool eager_jit = true;
-     jitExecEngine->DisableLazyCompilation(eager_jit);
+     init_fpm(FPM, jitExecEngine, eager_jit);
 
      // XXX test / experimental
      //construct_jit_and_callfunction1(bldr);
@@ -208,14 +299,26 @@ void Construct::runRepl(Context* prevContext) {
          }
 
          std::stringstream src;
+         src << "void repl_" << r.lineno() << "() { ";
          src << r.getLastReadLine();
-
+         src << "}";
+         
          std::stringstream anonFuncName;
          anonFuncName << name << r.lineno() << "_";
 
          std::string path = r.getPrompt();
 
          try {
+
+             // create a new context in the same scope, and true => use the 
+             //  compile namespace of the existing context.
+             ContextPtr myCtx =
+                 context->createSubContext(true);
+
+
+
+             LLVMContext &lctx = getGlobalContext();
+
 
              // example from kaleidoscope: evaluate into an anonymous function.
 
@@ -225,7 +328,7 @@ void Construct::runRepl(Context* prevContext) {
             assert(TheFunction);
   
             // Create a new basic block to start insertion into.
-            BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+            BasicBlock *BB = BasicBlock::Create(lctx, "entry", TheFunction);
             bldr->builder.SetInsertPoint(BB);
 #endif
 
@@ -236,18 +339,30 @@ void Construct::runRepl(Context* prevContext) {
             parser.parse();
 
             
-
-            bldr->innerCloseModule(*context, modDef.get());
+#if 1
+            assert(bldr->builder.GetInsertBlock()->getTerminator());
+            // bldr->closeSection(*context, modDef.get());
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
-            //if (!bldr->builder.GetInsertBlock()->getTerminator())
-            //    bldr->builder.CreateRetVoid();
+            llvm::Function* f = bldr->func;
 
+#else
+            if (!bldr->builder.GetInsertBlock()->getTerminator()) {
+                bldr->builder.CreateRetVoid();
+
+                //llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
+                //bldr->builder.CreateRet(RetVal);
+            }
+            llvm::Function* f = TheFunction;
+
+#endif
+
+
+    // Finish off the function.
 
             // do I need to add an implicit 'using' of this new module?
 
             // optimize
 
-            llvm::Function* f = bldr->func;
 
             // Validate the generated code, checking for consistency.
             llvm::verifyFunction(*f);
@@ -257,7 +372,7 @@ void Construct::runRepl(Context* prevContext) {
 
             // JIT the function, returning a function pointer.
             int (*fptr)() = (int (*)())jitExecEngine->getPointerToFunction(f);
-            SPUG_CHECK(fptr, "repl-jit error: no address for function " << string(f->getName()));
+            SPUG_CHECK(fptr, "wisecrack repl-jit error: no address for function " << string(f->getName()));
 
             // execute the jit-ed code.
             fptr();
@@ -273,6 +388,11 @@ void Construct::runRepl(Context* prevContext) {
             else if (!uncaughtExceptionFunc())
                 cerr << "Unknown exception caught." << endl;
         }
+
+         // if we threw we might be in a bad place, without a terminator...try to remedy that.
+         if (!bldr->builder.GetInsertBlock()->getTerminator()) {
+             bldr->builder.CreateRetVoid();
+         }
 
     } // end while
 

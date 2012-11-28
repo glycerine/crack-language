@@ -125,5 +125,6 @@ void Crack::printStats(std::ostream &out) {
 void Crack::runRepl() {
     if (!init())
         return;
-    construct->runRepl(0);
+    construct->runRepl();
+    //? callModuleDestructors();
 }
