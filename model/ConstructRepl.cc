@@ -276,7 +276,8 @@ void Construct::runRepl() {
 
     // with Context::composite, we could see our own function definitions. and we can see cout;
     //    ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
-    // comparison: we could call functions with Context::local
+    // comparison: we could call functions with Context::local ; this is how script compilation works, but then
+    //  each line doesn't know about the declarations of the previous line. So we use a Context::composite.
 #define ENCLOSE_IN_ANON_FUNCTION
 #ifdef ENCLOSE_IN_ANON_FUNCTION
     ContextPtr context = new Context(*builder, Context::composite, prior, local_compile_ns.get(), local_compile_ns.get());  
@@ -299,7 +300,8 @@ void Construct::runRepl() {
 
 
 #ifdef ENCLOSE_IN_ANON_FUNCTION
-    // we want wisecrack_:main function to be closed.
+    // I think we want wisecrack_:main function to be closed (i.e. empty), so the module as a whole verifies.
+    //  We'll run our anonymous functions containing each repl input line in turn below.
     bldr->closeModule(*context, modDef.get());
     verifyModule(*bldr->module, llvm::PrintMessageAction);
 #endif
@@ -321,9 +323,6 @@ void Construct::runRepl() {
     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
     LLVMContext &lctx = getGlobalContext();
-
-    // try just innerClose-ing once
-    bool modClosed = false;
 
 
     //
