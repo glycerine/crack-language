@@ -267,20 +267,25 @@ void Construct::runRepl() {
 
     std::string local_ns_cname = "wisec_local_ns";
     std::string local_cns_cname = "wisec_local_compile_ns";
-    LocalNamespacePtr local_ns = new LocalNamespace(prior->ns.get(),local_ns_cname);
-    LocalNamespacePtr local_compile_ns = new LocalNamespace(prior->ns.get(),local_cns_cname);
+    //    LocalNamespacePtr local_ns = new LocalNamespace(prior->ns.get(),local_ns_cname);
+    //    LocalNamespacePtr local_compile_ns = new LocalNamespace(prior->ns.get(),local_cns_cname);
 
-    // with Context::composite, we could see our own function definitions.
-    //ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+    // a global namespace and use of context lets us see the import crack.io cout; it 
+    //    ends up cout is present in the wisecrack_ namesapce. 
+    GlobalNamespacePtr local_compile_ns = new GlobalNamespace(prior->ns.get(),local_cns_cname);
 
-    // with Context::module, stuff is clearly in the wisecrack_ namesapce, as 'dum' shows. But we
+    // with Context::composite, we could see our own function definitions. and we can see cout;
+    //    ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+    ContextPtr context = new Context(*builder, Context::composite, prior, local_compile_ns.get(), local_compile_ns.get());  
+
+    // with Context::module, stuff is clearly in the wisecrack_ namesapce, as dm shows. But we
     // cannot call our own function definitions.
 
     // in neither case can we see our own imports.
     // And import crack.io cout; cout `hi\n`; crashes on a null funcCtx->builderData at LLVMBuilder.cc:439
 
-    ContextPtr context = new Context(*builder, Context::module, prior, local_ns.get(), local_compile_ns.get());                                      
-    context->toplevel = true;
+    //ContextPtr context = new Context(*builder, Context::module, prior, local_ns.get(), local_compile_ns.get());                                      
+     context->toplevel = true;
 
     string name = "wisecrack_lineno_";
 
@@ -340,17 +345,21 @@ void Construct::runRepl() {
         Function*   func = 0;
 
         try {
+            // should we be making a whole new module each time??? for now, not.
+
 
             // create a new context in the same scope
             std::string local_ns_cname_sub = anonFuncName.str() + "_ns_cname_subctx";
             std::string local_cns_cname_sub = anonFuncName.str() + "_cns_cname_subctx";
+#if 0
             LocalNamespacePtr local_ns_sub = new LocalNamespace(local_ns.get(), local_ns_cname_sub);
             LocalNamespacePtr local_compile_ns_sub = new LocalNamespace(local_compile_ns.get(), local_cns_cname_sub);
+            //GlobalNamespacePtr local_compile_ns_sub = new GlobalNamespace(prior->ns.get(), local_cns_cname_sub);
             //             ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
             std::string afn = anonFuncName.str();
             ContextPtr lexicalContext = context->createSubContext(Context::composite, local_ns_sub.get(), &afn, local_compile_ns_sub.get()); 
             lexicalContext->toplevel = true;
-
+#endif
 
             // by default we start in function wisecrack_:main aka bldr->func;
 
@@ -359,12 +368,13 @@ void Construct::runRepl() {
 
 
             using namespace builder::mvll;
+#if 0
             LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
             assert(&builder2 == builder);
             // builder.module should already exist from .builtin module
             assert(builder.module);
             assert(builder.module == bldr->module);
-
+#endif
             // generate an anonymous function
             vector<llvm::Type *> argTypes;
             FunctionType *voidFuncNoArgs =
@@ -382,13 +392,20 @@ void Construct::runRepl() {
 
 
             Toker toker(src, path.c_str());
-            Parser parser(toker, lexicalContext.get());
-            //Parser::ContextStackFrame cstack(parser, lexicalContext.get());
+            //Parser parser(toker, lexicalContext.get());
+            Parser parser(toker, context.get());
+
             parser.parse();
 
             // close off the block.
             bldr->builder.CreateRetVoid();
-            
+
+
+
+            //if (!bldr->builder.GetInsertBlock()->getTerminator()) {
+            //    bldr->builder.CreateRetVoid();
+            //}
+
 
             //assert(bldr->builder.GetInsertBlock()->getTerminator());
 
@@ -399,17 +416,8 @@ void Construct::runRepl() {
             //
             // bldr->closeSection(*context, modDef.get());
 
-            // this also doesn't work, also missing bdata obtained by: BBuilderContextData *bdata = BBuilderContextData::get(&context);
-            //
-            // bldr->closeSection(*lexicalContext, modDef.get());
-
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
-
-
-            //if (!bldr->builder.GetInsertBlock()->getTerminator()) {
-            //    bldr->builder.CreateRetVoid();
-            //}
 
             //llvm::Function* f = TheFunction;
             //llvm::Function* f = bldr->func;
