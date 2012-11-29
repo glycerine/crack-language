@@ -276,7 +276,13 @@ void Construct::runRepl() {
 
     // with Context::composite, we could see our own function definitions. and we can see cout;
     //    ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+    // comparison: we could call functions with Context::local
+#define ENCLOSE_IN_ANON_FUNCTION
+#ifdef ENCLOSE_IN_ANON_FUNCTION
     ContextPtr context = new Context(*builder, Context::composite, prior, local_compile_ns.get(), local_compile_ns.get());  
+#else
+    ContextPtr context = new Context(*builder, Context::local, prior, local_compile_ns.get(), local_compile_ns.get());  
+#endif
 
     // with Context::module, stuff is clearly in the wisecrack_ namesapce, as dm shows. But we
     // cannot call our own function definitions.
@@ -291,9 +297,13 @@ void Construct::runRepl() {
 
     ModuleDefPtr modDef = context->createModule(canName, name);
 
+
+#ifdef ENCLOSE_IN_ANON_FUNCTION
     // we want wisecrack_:main function to be closed.
-    bldr->closeSection(*context, modDef.get());
+    bldr->closeModule(*context, modDef.get());
     verifyModule(*bldr->module, llvm::PrintMessageAction);
+#endif
+
 
     // setup to optimize the code at -O2 
     init_llvm_target();
@@ -311,6 +321,10 @@ void Construct::runRepl() {
     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
     LLVMContext &lctx = getGlobalContext();
+
+    // try just innerClose-ing once
+    bool modClosed = false;
+
 
     //
     // main Read-Eval-Print loop
@@ -351,7 +365,9 @@ void Construct::runRepl() {
             // create a new context in the same scope
             std::string local_ns_cname_sub = anonFuncName.str() + "_ns_cname_subctx";
             std::string local_cns_cname_sub = anonFuncName.str() + "_cns_cname_subctx";
-#if 0
+
+
+            /* // variations on namespaces tried include:
             LocalNamespacePtr local_ns_sub = new LocalNamespace(local_ns.get(), local_ns_cname_sub);
             LocalNamespacePtr local_compile_ns_sub = new LocalNamespace(local_compile_ns.get(), local_cns_cname_sub);
             //GlobalNamespacePtr local_compile_ns_sub = new GlobalNamespace(prior->ns.get(), local_cns_cname_sub);
@@ -359,7 +375,8 @@ void Construct::runRepl() {
             std::string afn = anonFuncName.str();
             ContextPtr lexicalContext = context->createSubContext(Context::composite, local_ns_sub.get(), &afn, local_compile_ns_sub.get()); 
             lexicalContext->toplevel = true;
-#endif
+            */
+
 
             // by default we start in function wisecrack_:main aka bldr->func;
 
@@ -368,13 +385,16 @@ void Construct::runRepl() {
 
 
             using namespace builder::mvll;
-#if 0
-            LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
-            assert(&builder2 == builder);
-            // builder.module should already exist from .builtin module
-            assert(builder.module);
-            assert(builder.module == bldr->module);
-#endif
+
+            // the correspondences we expect do hold:
+            //LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
+            //assert(&builder2 == builder);
+            //assert(builder.module);
+            //assert(builder.module == bldr->module);
+
+
+#ifdef ENCLOSE_IN_ANON_FUNCTION
+
             // generate an anonymous function
             vector<llvm::Type *> argTypes;
             FunctionType *voidFuncNoArgs =
@@ -389,6 +409,7 @@ void Construct::runRepl() {
             //BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), anonFuncName.str().c_str(), func);
             //BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), builder.func)
             bldr->builder.SetInsertPoint(BB);
+#endif
 
 
             Toker toker(src, path.c_str());
@@ -397,8 +418,15 @@ void Construct::runRepl() {
 
             parser.parse();
 
+#ifdef ENCLOSE_IN_ANON_FUNCTION
+
             // close off the block.
             bldr->builder.CreateRetVoid();
+#else
+            // like innerCloseModule, without the run at the end--since we run it below.
+            bldr->closeSection(*context, modDef.get());
+#endif
+
 
 
 
@@ -406,6 +434,7 @@ void Construct::runRepl() {
             //    bldr->builder.CreateRetVoid();
             //}
 
+            //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
             //assert(bldr->builder.GetInsertBlock()->getTerminator());
 
@@ -421,8 +450,12 @@ void Construct::runRepl() {
 
             //llvm::Function* f = TheFunction;
             //llvm::Function* f = bldr->func;
-            llvm::Function* f = func;
 
+#ifdef ENCLOSE_IN_ANON_FUNCTION
+            llvm::Function* f = func;
+#else
+            llvm::Function* f = bldr->func;
+#endif
             // Finish off the function.
 
 
