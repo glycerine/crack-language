@@ -48,6 +48,7 @@
 #include <llvm/IntrinsicInst.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Support/Debug.h>
+#include <llvm/Support/IRBuilder.h>
 
 using namespace std;
 using namespace model;
@@ -255,18 +256,17 @@ void Construct::runRepl() {
 
      Context* prior = rootContext.get();
 
-     ContextPtr context =
-         //new Context(*builder, Context::module, prior,
-         new Context(*builder, Context::composite, prior,
-                     new GlobalNamespace(rootContext->ns.get(), canName)
-                     );
-     context->toplevel = true;
+     std::string local_ns_cname = "wisec_local_ns";
+     std::string local_cns_cname = "wisec_local_compile_ns";
+     LocalNamespacePtr local_ns = new LocalNamespace(prior->ns.get(),local_ns_cname);
+     LocalNamespacePtr local_compile_ns = new LocalNamespace(prior->ns.get(),local_cns_cname);
+     ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+     context->toplevel = false;
 
      string name = "wisecrack_lineno_";
      ModuleDefPtr modDef = context->createModule(canName, name);
-
-     bldr->closeSection(*context, modDef.get());
-     verifyModule(*bldr->module, llvm::PrintMessageAction);
+     //bldr->closeSection(*context, modDef.get());
+     //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
      // setup to optimize the code at -O2 
      init_llvm_target();
@@ -283,6 +283,8 @@ void Construct::runRepl() {
 
      printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
+     LLVMContext &lctx = getGlobalContext();
+
      //
      // main Read-Eval-Print loop
      //
@@ -297,11 +299,16 @@ void Construct::runRepl() {
              context->dump();
              continue;
          }
+         else if (0==strcmp("dum",r.getTrimmedLastReadLine())) {
+             // don't print parent namespaces (dump without the p)
+             context->dum();
+             continue;
+         }
 
          std::stringstream src;
-         src << "void repl_" << r.lineno() << "() { ";
+         //         src << "void repl_" << r.lineno() << "() { ";
          src << r.getLastReadLine();
-         src << "}";
+         //   src << "}";
          
          std::stringstream anonFuncName;
          anonFuncName << name << r.lineno() << "_";
@@ -310,52 +317,75 @@ void Construct::runRepl() {
 
          try {
 
-             // create a new context in the same scope, and true => use the 
-             //  compile namespace of the existing context.
-             ContextPtr myCtx =
-                 context->createSubContext(true);
+             // create a new context in the same scope
+             std::string local_ns_cname_sub = anonFuncName.str() + "_ns_cname_subctx";
+             std::string local_cns_cname_sub = anonFuncName.str() + "_cns_cname_subctx";
+             LocalNamespacePtr local_ns_sub = new LocalNamespace(local_ns.get(), local_ns_cname_sub);
+             LocalNamespacePtr local_compile_ns_sub = new LocalNamespace(local_compile_ns.get(), local_cns_cname_sub);
+             //             ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+             context->toplevel = false;
+             std::string afn = anonFuncName.str();
+             ContextPtr lexicalContext = context->createSubContext(Context::composite, local_ns_sub.get(), &afn, local_compile_ns_sub.get()); 
 
 
-
-             LLVMContext &lctx = getGlobalContext();
-
+             // by default we start in function wisecrack_:main aka bldr->func;
 
              // example from kaleidoscope: evaluate into an anonymous function.
-
 #if 0
             llvm::Function *TheFunction = AnonFunctionPrototype_Codegen(anonFuncName.str(), 
                                                                         bldr->module); 
+            assert(modDef.get() == bldr->module);
             assert(TheFunction);
   
             // Create a new basic block to start insertion into.
-            BasicBlock *BB = BasicBlock::Create(lctx, "entry", TheFunction);
+            BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), "entry", TheFunction);
             bldr->builder.SetInsertPoint(BB);
 #endif
 
+using namespace builder::mvll;
+        LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
+        assert(&builder2 == builder);
+        // builder.module should already exist from .builtin module
+        assert(builder.module);
+
+        vector<llvm::Type *> argTypes;
+        FunctionType *voidFuncNoArgs =
+            FunctionType::get(llvm::Type::getVoidTy(lctx), argTypes, false);
+        Function *func = Function::Create(voidFuncNoArgs,
+                                          Function::ExternalLinkage,
+                                          anonFuncName.str().c_str(),
+                                          bldr->module
+                                          );
+        func->setCallingConv(llvm::CallingConv::C);
+        BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), func);
+        //BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), anonFuncName.str().c_str(), func);
+        //BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), builder.func)
+        bldr->builder.SetInsertPoint(BB);
 
 
             Toker toker(src, path.c_str());
-            Parser parser(toker, context.get());
+            Parser parser(toker, lexicalContext.get());
+            //Parser::ContextStackFrame cstack(parser, lexicalContext.get());
             parser.parse();
 
+            // close off the block.
+            bldr->builder.CreateRetVoid();
             
-#if 1
+#if 0
             assert(bldr->builder.GetInsertBlock()->getTerminator());
             // bldr->closeSection(*context, modDef.get());
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
-            llvm::Function* f = bldr->func;
 
-#else
-            if (!bldr->builder.GetInsertBlock()->getTerminator()) {
-                bldr->builder.CreateRetVoid();
-
-                //llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
-                //bldr->builder.CreateRet(RetVal);
-            }
-            llvm::Function* f = TheFunction;
 
 #endif
-
+            if (!bldr->builder.GetInsertBlock()->getTerminator()) {
+                //bldr->builder.CreateRetVoid();
+                //builder.builder.CreateRetVoid();
+                llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
+                bldr->builder.CreateRet(RetVal);
+            }
+            //llvm::Function* f = TheFunction;
+            llvm::Function* f = bldr->func;
 
     // Finish off the function.
 

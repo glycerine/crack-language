@@ -142,6 +142,7 @@ class Namespace : public virtual spug::RCBase {
 
         void dump(std::ostream &out, const std::string &prefix);
         void dump();
+        void dum();
         
         /** Funcs to iterate over the set of definitions. */
         /// @{

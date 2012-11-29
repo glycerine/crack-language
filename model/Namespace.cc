@@ -182,3 +182,19 @@ void Namespace::dump(ostream &out, const string &prefix) {
 void Namespace::dump() {
     dump(cerr, "");
 }
+
+/**
+ * dum: dump without the p - parent namespaces omitted.
+ */
+void Namespace::dum() {
+    ostream& out = std::cerr;
+    const std::string prefix ="";
+    out << canonicalName << " (0x" << this << ") {\n";
+    string childPfx = prefix + "  ";
+    for (VarDefMap::const_iterator varIter = defs.begin();
+         varIter != defs.end();
+         ++varIter
+         )
+        varIter->second->dump(out, childPfx);
+    out << prefix << "}\n";
+}

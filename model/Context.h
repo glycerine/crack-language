@@ -505,6 +505,7 @@ class Context : public spug::RCBase {
         
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();
+        void dum();  // skip parents
 };
 
 inline std::ostream &operator <<(std::ostream &out, const Context &context) {
