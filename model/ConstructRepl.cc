@@ -392,7 +392,16 @@ void Construct::runRepl() {
             //assert(bldr->builder.GetInsertBlock()->getTerminator());
 
             // closeSection() is just a clone (at present) of closeModule()
-            //bldr->closeSection(*context, modDef.get());
+            // doesn't appear to fix the segfault in getUnwindBlock
+            // builder::mvll::BBuilderContextData::getUnwindBlock (this=0x0, func=0xa6ec30) at builder/llvm/BBuilderContextData.cc:37
+            // so we comment out for now; also it prevents more than one repl command from being executed.
+            //
+            // bldr->closeSection(*context, modDef.get());
+
+            // this also doesn't work, also missing bdata obtained by: BBuilderContextData *bdata = BBuilderContextData::get(&context);
+            //
+            // bldr->closeSection(*lexicalContext, modDef.get());
+
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
 
@@ -409,10 +418,6 @@ void Construct::runRepl() {
             llvm::Function* f = func;
 
             // Finish off the function.
-
-            // do I need to add an implicit 'using' of this new module?
-
-            // optimize
 
 
             // Validate the generated code, checking for consistency.
@@ -440,21 +445,12 @@ void Construct::runRepl() {
                 cerr << "Unknown exception caught." << endl;
         }
 
-        
-
-        //delete BB;
-        //BB = 0;
-
+        // cleanup
+        jitExecEngine->freeMachineCodeForFunction(func);
         delete func;
         func = 0;
 
-        /*
-        // if we threw we might be in a bad place, without a terminator...try to remedy that.
-        BasicBlock* badbb = bldr->builder.GetInsertBlock();
-        if (badbb && !badbb->getTerminator()) {
-        bldr->builder.CreateRetVoid();
-        }
-        */
+
 
     } // end while
 
