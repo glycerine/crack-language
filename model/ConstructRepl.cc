@@ -231,7 +231,16 @@ void generate(Context &context, BTypeDef *classType) {
 
 #endif
 
-
+/**
+ * runRepl(): experiemental jit-based interpreter. 
+ *
+ *             NB: flattened as much as possible for ease of
+ *             experimentation. This is not 'production code', which would be much
+ *             much more grouped into subroutines, not be one big function etc. The very
+ *             shallow flow here means we have everything we need at our
+ *             fingertips while conducting trial/error codebase exploration; and
+ *             the llvm calls being made are obvious instead of buried.
+ */
 void Construct::runRepl() {
 
     wisecrack::Repl r;
