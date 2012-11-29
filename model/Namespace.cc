@@ -186,6 +186,7 @@ void Namespace::dump() {
     dump(cerr, "");
 }
 
+<<<<<<< HEAD
 void Namespace::serializeDefs(Serializer &serializer) const {
     
     // count the number of definitions to serialize
@@ -246,4 +247,21 @@ void Namespace::deserializeDefs(Deserializer &deser) {
                 SPUG_CHECK(false, "Bad definition type id " << kind);
         }
     }
+}
+
+
+/**
+ * dum: dump without the p - parent namespaces omitted.
+ */
+void Namespace::dum() {
+    ostream& out = std::cerr;
+    const std::string prefix ="";
+    out << canonicalName << " (0x" << this << ") {\n";
+    string childPfx = prefix + "  ";
+    for (VarDefMap::const_iterator varIter = defs.begin();
+         varIter != defs.end();
+         ++varIter
+         )
+        varIter->second->dump(out, childPfx);
+    out << prefix << "}\n";
 }

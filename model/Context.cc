@@ -1097,3 +1097,7 @@ void Context::dump(ostream &out, const std::string &prefix) const {
 void Context::dump() {
     dump(cerr, "");
 }
+
+void Context::dum() {
+    ns->dum();
+}
