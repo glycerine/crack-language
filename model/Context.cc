@@ -1051,6 +1051,6 @@ void Context::dump() {
     dump(cerr, "");
 }
 
-void Context::dum() {
-    ns->dum();
+void Context::short_dump() {
+    ns->short_dump();
 }
