@@ -251,9 +251,9 @@ void Namespace::deserializeDefs(Deserializer &deser) {
 
 
 /**
- * dum: dump without the p - parent namespaces omitted.
+ * short_dump - parent namespaces omitted.
  */
-void Namespace::dum() {
+void Namespace::short_dump() {
     ostream& out = std::cerr;
     const std::string prefix ="";
     out << canonicalName << " (0x" << this << ") {\n";

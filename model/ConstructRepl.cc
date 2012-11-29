@@ -76,15 +76,15 @@ void construct_jit_and_callfunction1(builder::mvll::LLVMJitBuilder* bldr) {
 
     LLVMAppendBasicBlockInContext
 
-    LLVMPositionBuilderAtEnd(labelBlock)
+        LLVMPositionBuilderAtEnd(labelBlock)
 
-    // create blocks for the true and false conditions
-    LLVMContext &lctx = getGlobalContext();
+        // create blocks for the true and false conditions
+        LLVMContext &lctx = getGlobalContext();
     BasicBlock *trueBlock = BasicBlock::Create(lctx, tLabel, func);
 
     BBranchpointPtr result = new BBranchpoint(
-        BasicBlock::Create(lctx, fLabel, func)
-    );
+                                              BasicBlock::Create(lctx, fLabel, func)
+                                              );
 
     if (condInCleanupFrame) context.createCleanupFrame();
     cond->emitCond(context);
@@ -106,15 +106,15 @@ void construct_jit_and_callfunction1(builder::mvll::LLVMJitBuilder* bldr) {
 // from kaleidoscope, codegen for a double F(); anonymous function declaration.
 llvm::Function *AnonFunctionPrototype_Codegen(std::string Name, llvm::Module* TheModule) {
 
-  // Make the function type:  double(double,double) etc.
+    // Make the function type:  double(double,double) etc.
     std::vector<llvm::Type*> Doubles(0,
                                      llvm::Type::getDoubleTy(llvm::getGlobalContext()));
     llvm::FunctionType *FT = FunctionType::get(llvm::Type::getDoubleTy(getGlobalContext()),
-                                       Doubles, false);
+                                               Doubles, false);
   
     llvm::Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
       
-  return F;
+    return F;
 }
 
 
@@ -159,75 +159,75 @@ void init_fpm(llvm::FunctionPassManager* FPM, llvm::ExecutionEngine* jitExecEngi
 #if 0
 void generate(Context &context, BTypeDef *classType) {
 
-        // for the kinds of things we're about to do, we need a global block
-        // for functions to restore to, and for that we need a function and
-        // module.
-        LLVMContext &lctx = getGlobalContext();
-        LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-        // builder.module should already exist from .builtin module
-        assert(builder.module);
-        vector<Type *> argTypes;
-        FunctionType *voidFuncNoArgs =
-            FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
-        Function *func = Function::Create(voidFuncNoArgs,
-                                          Function::ExternalLinkage,
-                                          "__builtin_init__",
-                                          builder.module
-                                          );
-        func->setCallingConv(llvm::CallingConv::C);
-        builder.builder.SetInsertPoint(BasicBlock::Create(lctx,
-                                                          "__builtin_init__",
-                                                          builder.func
-                                                          )
-                                       );
+    // for the kinds of things we're about to do, we need a global block
+    // for functions to restore to, and for that we need a function and
+    // module.
+    LLVMContext &lctx = getGlobalContext();
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    // builder.module should already exist from .builtin module
+    assert(builder.module);
+    vector<Type *> argTypes;
+    FunctionType *voidFuncNoArgs =
+        FunctionType::get(Type::getVoidTy(lctx), argTypes, false);
+    Function *func = Function::Create(voidFuncNoArgs,
+                                      Function::ExternalLinkage,
+                                      "__builtin_init__",
+                                      builder.module
+                                      );
+    func->setCallingConv(llvm::CallingConv::C);
+    builder.builder.SetInsertPoint(BasicBlock::Create(lctx,
+                                                      "__builtin_init__",
+                                                      builder.func
+                                                      )
+                                   );
 
-        // add "Class"
-        int lineNum = __LINE__ + 1;
-        string temp("    byteptr name;\n"
-                    "    uint numBases;\n"
-                    "    array[Class] bases;\n"
-                    "    bool isSubclass(Class other) {\n"
-                    "        if (this is other)\n"
-                    "            return (1==1);\n"
-                    "        uint i;\n"
-                    "        while (i < numBases) {\n"
-                    "            if (bases[i].isSubclass(other))\n"
-                    "                return (1==1);\n"
-                    "            i = i + uint(1);\n"
-                    "        }\n"
-                    "        return (1==0);\n"
-                    "    }\n"
-                    "}\n"
-                    );
+    // add "Class"
+    int lineNum = __LINE__ + 1;
+    string temp("    byteptr name;\n"
+                "    uint numBases;\n"
+                "    array[Class] bases;\n"
+                "    bool isSubclass(Class other) {\n"
+                "        if (this is other)\n"
+                "            return (1==1);\n"
+                "        uint i;\n"
+                "        while (i < numBases) {\n"
+                "            if (bases[i].isSubclass(other))\n"
+                "                return (1==1);\n"
+                "            i = i + uint(1);\n"
+                "        }\n"
+                "        return (1==0);\n"
+                "    }\n"
+                "}\n"
+                );
 
-        // create the class context - different scope from parent context.
-        ContextPtr classCtx =
-            context.createSubContext(Context::instance, classType);
+    // create the class context - different scope from parent context.
+    ContextPtr classCtx =
+        context.createSubContext(Context::instance, classType);
 
-        CompositeNamespacePtr ns = new CompositeNamespace(classType,
-                                                          context.ns.get()
-                                                          );
-        ContextPtr lexicalContext =
-            classCtx->createSubContext(Context::composite, ns.get());
-        BBuilderContextData *bdata =
-            BBuilderContextData::get(lexicalContext.get());
+    CompositeNamespacePtr ns = new CompositeNamespace(classType,
+                                                      context.ns.get()
+                                                      );
+    ContextPtr lexicalContext =
+        classCtx->createSubContext(Context::composite, ns.get());
+    BBuilderContextData *bdata =
+        BBuilderContextData::get(lexicalContext.get());
 
-        istringstream src(temp);
-        try {
-            parser::Toker toker(src, "<builtin>", lineNum);
-            parser::Parser p(toker, lexicalContext.get());
-            p.parseClassBody();
-        } catch (parser::ParseError &ex) {
-            std::cerr << ex << endl;
-            assert(false);
-        }
-
-        // let the "end class" emitter handle the rest of this.
-        context.builder.emitEndClass(*classCtx);
-
-        // close off the block.
-        builder.builder.CreateRetVoid();
+    istringstream src(temp);
+    try {
+        parser::Toker toker(src, "<builtin>", lineNum);
+        parser::Parser p(toker, lexicalContext.get());
+        p.parseClassBody();
+    } catch (parser::ParseError &ex) {
+        std::cerr << ex << endl;
+        assert(false);
     }
+
+    // let the "end class" emitter handle the rest of this.
+    context.builder.emitEndClass(*classCtx);
+
+    // close off the block.
+    builder.builder.CreateRetVoid();
+}
 
 #endif
 
@@ -254,113 +254,130 @@ void Construct::runRepl() {
 
     // XXX TODO: what should these context parameters actually be???`
 
-     Context* prior = rootContext.get();
+    Context* prior = rootContext.get();
 
-     std::string local_ns_cname = "wisec_local_ns";
-     std::string local_cns_cname = "wisec_local_compile_ns";
-     LocalNamespacePtr local_ns = new LocalNamespace(prior->ns.get(),local_ns_cname);
-     LocalNamespacePtr local_compile_ns = new LocalNamespace(prior->ns.get(),local_cns_cname);
-     ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
-     context->toplevel = false;
+    std::string local_ns_cname = "wisec_local_ns";
+    std::string local_cns_cname = "wisec_local_compile_ns";
+    LocalNamespacePtr local_ns = new LocalNamespace(prior->ns.get(),local_ns_cname);
+    LocalNamespacePtr local_compile_ns = new LocalNamespace(prior->ns.get(),local_cns_cname);
 
-     string name = "wisecrack_lineno_";
-     ModuleDefPtr modDef = context->createModule(canName, name);
-     //bldr->closeSection(*context, modDef.get());
-     //verifyModule(*bldr->module, llvm::PrintMessageAction);
+    // with Context::composite, we could see our own function definitions.
+    //ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
 
-     // setup to optimize the code at -O2 
-     init_llvm_target();
+    // with Context::module, stuff is clearly in the wisecrack_ namesapce, as 'dum' shows. But we
+    // cannot call our own function definitions.
 
-     llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
-     // This is the default optimization used by the JIT.
-     llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
-     bool eager_jit = true;
-     init_fpm(FPM, jitExecEngine, eager_jit);
+    // in neither case can we see our own imports.
+    // And import crack.io cout; cout `hi\n`; crashes on a null funcCtx->builderData at LLVMBuilder.cc:439
 
-     // XXX test / experimental
-     //construct_jit_and_callfunction1(bldr);
+    ContextPtr context = new Context(*builder, Context::module, prior, local_ns.get(), local_compile_ns.get());                                      
+    context->toplevel = true;
+
+    string name = "wisecrack_lineno_";
+
+    ModuleDefPtr modDef = context->createModule(canName, name);
+
+    // we want wisecrack_:main function to be closed.
+    bldr->closeSection(*context, modDef.get());
+    verifyModule(*bldr->module, llvm::PrintMessageAction);
+
+    // setup to optimize the code at -O2 
+    init_llvm_target();
+
+    llvm::ExecutionEngine* jitExecEngine = bldr->getExecEng();
+    // This is the default optimization used by the JIT.
+    llvm::FunctionPassManager *FPM = new llvm::FunctionPassManager(bldr->module);
+    bool eager_jit = true;
+    init_fpm(FPM, jitExecEngine, eager_jit);
+
+    // XXX test / experimental
+    //construct_jit_and_callfunction1(bldr);
 
 
-     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
+    printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
-     LLVMContext &lctx = getGlobalContext();
+    LLVMContext &lctx = getGlobalContext();
 
-     //
-     // main Read-Eval-Print loop
-     //
-     while(!r.done()) {
-         r.nextlineno();
-         r.prompt(stdout);
-         r.read(stdin);
-         if (r.getLastReadLineLen()==0) continue;
+    //
+    // main Read-Eval-Print loop
+    //
+    while(!r.done()) {
+        r.nextlineno();
+        r.prompt(stdout);
+        r.read(stdin);
+        if (r.getLastReadLineLen()==0) continue;
 
-         // special commands
-         if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
-             context->dump();
-             continue;
-         }
-         else if (0==strcmp("dum",r.getTrimmedLastReadLine())) {
-             // don't print parent namespaces (dump without the p)
-             context->dum();
-             continue;
-         }
+        // special commands
+        if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
+            context->dump();
+            continue;
+        }
+        else if (0==strcmp("dm",r.getTrimmedLastReadLine())) {
+            // don't print parent namespaces (dump without the (p)arent namespace and without (u)pper namesapces)
+            context->short_dump();
+            continue;
+        }
 
-         std::stringstream src;
-         //         src << "void repl_" << r.lineno() << "() { ";
-         src << r.getLastReadLine();
-         //   src << "}";
+        std::stringstream src;
+        //         src << "void repl_" << r.lineno() << "() { ";
+        src << r.getLastReadLine();
+        //   src << "}";
          
-         std::stringstream anonFuncName;
-         anonFuncName << name << r.lineno() << "_";
+        std::stringstream anonFuncName;
+        anonFuncName << name << r.lineno() << "_";
 
-         std::string path = r.getPrompt();
+        std::string path = r.getPrompt();
+        BasicBlock* BB = 0;
+        Function*   func = 0;
 
-         try {
+        try {
 
-             // create a new context in the same scope
-             std::string local_ns_cname_sub = anonFuncName.str() + "_ns_cname_subctx";
-             std::string local_cns_cname_sub = anonFuncName.str() + "_cns_cname_subctx";
-             LocalNamespacePtr local_ns_sub = new LocalNamespace(local_ns.get(), local_ns_cname_sub);
-             LocalNamespacePtr local_compile_ns_sub = new LocalNamespace(local_compile_ns.get(), local_cns_cname_sub);
-             //             ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
-             context->toplevel = false;
-             std::string afn = anonFuncName.str();
-             ContextPtr lexicalContext = context->createSubContext(Context::composite, local_ns_sub.get(), &afn, local_compile_ns_sub.get()); 
+            // create a new context in the same scope
+            std::string local_ns_cname_sub = anonFuncName.str() + "_ns_cname_subctx";
+            std::string local_cns_cname_sub = anonFuncName.str() + "_cns_cname_subctx";
+            LocalNamespacePtr local_ns_sub = new LocalNamespace(local_ns.get(), local_ns_cname_sub);
+            LocalNamespacePtr local_compile_ns_sub = new LocalNamespace(local_compile_ns.get(), local_cns_cname_sub);
+            //             ContextPtr context = new Context(*builder, Context::composite, prior, local_ns.get(), local_compile_ns.get());                                      
+            std::string afn = anonFuncName.str();
+            ContextPtr lexicalContext = context->createSubContext(Context::composite, local_ns_sub.get(), &afn, local_compile_ns_sub.get()); 
+            lexicalContext->toplevel = true;
 
 
-             // by default we start in function wisecrack_:main aka bldr->func;
+            // by default we start in function wisecrack_:main aka bldr->func;
 
-             // example from kaleidoscope: evaluate into an anonymous function.
+            // example from kaleidoscope: evaluate into an anonymous function.
+            assert(modDef.get() == bldr->module);
+
 #if 0
             llvm::Function *TheFunction = AnonFunctionPrototype_Codegen(anonFuncName.str(), 
                                                                         bldr->module); 
-            assert(modDef.get() == bldr->module);
             assert(TheFunction);
   
             // Create a new basic block to start insertion into.
-            BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), "entry", TheFunction);
+            BB = BasicBlock::Create(lexicalContext.get(), "entry", TheFunction);
             bldr->builder.SetInsertPoint(BB);
 #endif
 
-using namespace builder::mvll;
-        LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
-        assert(&builder2 == builder);
-        // builder.module should already exist from .builtin module
-        assert(builder.module);
+            using namespace builder::mvll;
+            LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
+            assert(&builder2 == builder);
+            // builder.module should already exist from .builtin module
+            assert(builder.module);
 
-        vector<llvm::Type *> argTypes;
-        FunctionType *voidFuncNoArgs =
-            FunctionType::get(llvm::Type::getVoidTy(lctx), argTypes, false);
-        Function *func = Function::Create(voidFuncNoArgs,
-                                          Function::ExternalLinkage,
-                                          anonFuncName.str().c_str(),
-                                          bldr->module
-                                          );
-        func->setCallingConv(llvm::CallingConv::C);
-        BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), func);
-        //BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), anonFuncName.str().c_str(), func);
-        //BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), builder.func)
-        bldr->builder.SetInsertPoint(BB);
+            // generate an anonymous function
+            vector<llvm::Type *> argTypes;
+            FunctionType *voidFuncNoArgs =
+                FunctionType::get(llvm::Type::getVoidTy(lctx), argTypes, false);
+            func = Function::Create(voidFuncNoArgs,
+                                              Function::ExternalLinkage,
+                                              anonFuncName.str().c_str(),
+                                              bldr->module
+                                              );
+            func->setCallingConv(llvm::CallingConv::C);
+            BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), func);
+            //BasicBlock *BB = BasicBlock::Create(lexicalContext.get(), anonFuncName.str().c_str(), func);
+            //BasicBlock *BB = BasicBlock::Create(lctx, anonFuncName.str().c_str(), builder.func)
+            bldr->builder.SetInsertPoint(BB);
 
 
             Toker toker(src, path.c_str());
@@ -371,23 +388,27 @@ using namespace builder::mvll;
             // close off the block.
             bldr->builder.CreateRetVoid();
             
-#if 0
-            assert(bldr->builder.GetInsertBlock()->getTerminator());
-            // bldr->closeSection(*context, modDef.get());
+
+            //assert(bldr->builder.GetInsertBlock()->getTerminator());
+
+            // closeSection() is just a clone (at present) of closeModule()
+            //bldr->closeSection(*context, modDef.get());
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
 
-#endif
+#if 0
             if (!bldr->builder.GetInsertBlock()->getTerminator()) {
-                //bldr->builder.CreateRetVoid();
+                bldr->builder.CreateRetVoid();
                 //builder.builder.CreateRetVoid();
-                llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
-                bldr->builder.CreateRet(RetVal);
+                //llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
+                //bldr->builder.CreateRet(RetVal);
             }
+#endif
             //llvm::Function* f = TheFunction;
-            llvm::Function* f = bldr->func;
+            //llvm::Function* f = bldr->func;
+            llvm::Function* f = func;
 
-    // Finish off the function.
+            // Finish off the function.
 
             // do I need to add an implicit 'using' of this new module?
 
@@ -419,10 +440,21 @@ using namespace builder::mvll;
                 cerr << "Unknown exception caught." << endl;
         }
 
-         // if we threw we might be in a bad place, without a terminator...try to remedy that.
-         if (!bldr->builder.GetInsertBlock()->getTerminator()) {
-             bldr->builder.CreateRetVoid();
-         }
+        
+
+        //delete BB;
+        //BB = 0;
+
+        delete func;
+        func = 0;
+
+        /*
+        // if we threw we might be in a bad place, without a terminator...try to remedy that.
+        BasicBlock* badbb = bldr->builder.GetInsertBlock();
+        if (badbb && !badbb->getTerminator()) {
+        bldr->builder.CreateRetVoid();
+        }
+        */
 
     } // end while
 
@@ -449,15 +481,15 @@ void crack_function_unresolved()
 // XXX TODO: port this from Pure -> Crack
 static void* resolve_external(const std::string& name)
 {
-  /* If we come here, the dynamic loader has already tried everything to
-     resolve the function, so instead we just print an error message and
-     return a dummy function which raises a Pure exception when called. In any
-     case that's better than aborting the program (which is what the JIT will
-     do when we return NULL here). */
+    /* If we come here, the dynamic loader has already tried everything to
+       resolve the function, so instead we just print an error message and
+       return a dummy function which raises a Pure exception when called. In any
+       case that's better than aborting the program (which is what the JIT will
+       do when we return NULL here). */
     std::cout.flush();
-  cerr << "error trying to resolve external: "
-       << (name.compare(0, 2, "$$") == 0?"<<anonymous>>":name) << '\n';
-  return (void*)crack_function_unresolved;
+    cerr << "error trying to resolve external: "
+         << (name.compare(0, 2, "$$") == 0?"<<anonymous>>":name) << '\n';
+    return (void*)crack_function_unresolved;
 }
 
 void   init_llvm_target();
@@ -465,53 +497,53 @@ void   init_llvm_target();
 void jit_init() {
 
     // fragments to model from pure-lang code by A. Graef.
-  // Initialize the JIT.
+    // Initialize the JIT.
 
-  using namespace llvm;
+    using namespace llvm;
 
-  init_llvm_target();
-  module = new llvm::Module(modname, llvm::getGlobalContext());
+    init_llvm_target();
+    module = new llvm::Module(modname, llvm::getGlobalContext());
 
-  llvm::EngineBuilder factory(module);
-  factory.setEngineKind(llvm::EngineKind::JIT);
-  factory.setAllocateGVsWithCode(false);
+    llvm::EngineBuilder factory(module);
+    factory.setEngineKind(llvm::EngineKind::JIT);
+    factory.setAllocateGVsWithCode(false);
 
-  llvm::TargetOptions Opts;
+    llvm::TargetOptions Opts;
 
-  Opts.GuaranteedTailCallOpt = true;
+    Opts.GuaranteedTailCallOpt = true;
 
-  factory.setTargetOptions(Opts);
+    factory.setTargetOptions(Opts);
 
-  JIT = factory.create();
-  assert(JIT);
+    JIT = factory.create();
+    assert(JIT);
 
-  FPM = new FunctionPassManager(module);
-
-
-  // Set up the optimizer pipeline. Start with registering info about how the
-  // target lays out data structures.
-  FPM->add(new TargetData(*JIT->getTargetData()));
-  // Promote allocas to registers.
-  FPM->add(createPromoteMemoryToRegisterPass());
-  // Do simple "peephole" optimizations and bit-twiddling optimizations.
-  FPM->add(createInstructionCombiningPass());
-  // Reassociate expressions.
-  FPM->add(createReassociatePass());
-  // Eliminate common subexpressions.
-  FPM->add(createGVNPass());
-  // Simplify the control flow graph (deleting unreachable blocks, etc).
-  FPM->add(createCFGSimplificationPass());
-
-  // It seems that this is needed for LLVM 3.1 and later.
-  FPM->doInitialization();
+    FPM = new FunctionPassManager(module);
 
 
-  // Install a fallback mechanism to resolve references to the runtime, on
-  // systems which do not allow the program to dlopen itself.
-  JIT->InstallLazyFunctionCreator(resolve_external);
+    // Set up the optimizer pipeline. Start with registering info about how the
+    // target lays out data structures.
+    FPM->add(new TargetData(*JIT->getTargetData()));
+    // Promote allocas to registers.
+    FPM->add(createPromoteMemoryToRegisterPass());
+    // Do simple "peephole" optimizations and bit-twiddling optimizations.
+    FPM->add(createInstructionCombiningPass());
+    // Reassociate expressions.
+    FPM->add(createReassociatePass());
+    // Eliminate common subexpressions.
+    FPM->add(createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    FPM->add(createCFGSimplificationPass());
 
-  bool eager_jit = true;
-  JIT->DisableLazyCompilation(eager_jit);
+    // It seems that this is needed for LLVM 3.1 and later.
+    FPM->doInitialization();
+
+
+    // Install a fallback mechanism to resolve references to the runtime, on
+    // systems which do not allow the program to dlopen itself.
+    JIT->InstallLazyFunctionCreator(resolve_external);
+
+    bool eager_jit = true;
+    JIT->DisableLazyCompilation(eager_jit);
 
 
 
@@ -524,12 +556,12 @@ void jit_shutdown() {
         JIT = 0;
     }
 
-  if (FPM) {
-    // It seems that this is needed for LLVM 3.1 and later.
-    FPM->doFinalization();
-    delete FPM;
-    FPM = 0;
-  }
+    if (FPM) {
+        // It seems that this is needed for LLVM 3.1 and later.
+        FPM->doFinalization();
+        delete FPM;
+        FPM = 0;
+    }
 
 }
 
@@ -545,7 +577,7 @@ void jit_shutdown() {
 
 void init_llvm_target()
 {
-  llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTarget();
 }
 
 
