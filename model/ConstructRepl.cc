@@ -357,21 +357,13 @@ void Construct::runRepl() {
             // example from kaleidoscope: evaluate into an anonymous function.
             assert(modDef.get() == bldr->module);
 
-#if 0
-            llvm::Function *TheFunction = AnonFunctionPrototype_Codegen(anonFuncName.str(), 
-                                                                        bldr->module); 
-            assert(TheFunction);
-  
-            // Create a new basic block to start insertion into.
-            BB = BasicBlock::Create(lexicalContext.get(), "entry", TheFunction);
-            bldr->builder.SetInsertPoint(BB);
-#endif
 
             using namespace builder::mvll;
             LLVMBuilder &builder2 = dynamic_cast<LLVMBuilder &>(lexicalContext->builder);
             assert(&builder2 == builder);
             // builder.module should already exist from .builtin module
             assert(builder.module);
+            assert(builder.module == bldr->module);
 
             // generate an anonymous function
             vector<llvm::Type *> argTypes;
@@ -414,14 +406,11 @@ void Construct::runRepl() {
             //verifyModule(*bldr->module, llvm::PrintMessageAction);
 
 
-#if 0
-            if (!bldr->builder.GetInsertBlock()->getTerminator()) {
-                bldr->builder.CreateRetVoid();
-                //builder.builder.CreateRetVoid();
-                //llvm::Value *RetVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
-                //bldr->builder.CreateRet(RetVal);
-            }
-#endif
+
+            //if (!bldr->builder.GetInsertBlock()->getTerminator()) {
+            //    bldr->builder.CreateRetVoid();
+            //}
+
             //llvm::Function* f = TheFunction;
             //llvm::Function* f = bldr->func;
             llvm::Function* f = func;
@@ -466,7 +455,7 @@ void Construct::runRepl() {
     // XXX TODO: put FPM in an RAII resource so it gets cleaned up automatically.
     if (FPM) {
         // It seems that this is needed for LLVM 3.1 and later.
-        FPM->doFinalization();
+        //crashes currently: (try again later)        FPM->doFinalization();
         delete FPM;
         FPM = 0;
     }
