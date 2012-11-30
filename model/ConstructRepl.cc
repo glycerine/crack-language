@@ -57,33 +57,12 @@ using namespace builder;
 using namespace crack::ext;
 using namespace llvm;
 
+// helper. at end of file.
+bool continueOnSpecial(wisecrack::Repl& r, Context* context);
 
 
 /**
- *  continueOnSpecial(): a runRepl helper.
- *    returns true if we have a special repl command and should keep looping.
- *    Currently this implements just the two dump commands: 'dump' and 'dm'
- *    that display the global/local namespace; hence are proxies for PRINT.
- */
-bool continueOnSpecial(wisecrack::Repl& r, Context* context) {
-
-    // special commands
-    if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
-        context->dump();
-        return true;
-    }
-    else if (0==strcmp("dm",r.getTrimmedLastReadLine())) {
-        // don't print parent namespaces (dump without the (p)arent namespace and without (u)pper namesapces)
-        context->short_dump();
-        return true;
-    }
-    return false;
-}
-
-
-
-/**
- * runRepl(): experiemental jit-based interpreter. Project name: wisecrack.
+ * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
  *
  */
 void Construct::runRepl() {
@@ -167,5 +146,27 @@ void Construct::runRepl() {
     } // end while
 
 
+}
+
+
+/**
+ *  continueOnSpecial(): a runRepl helper.
+ *    returns true if we have a special repl command and should keep looping.
+ *    Currently this implements just the two dump commands: 'dump' and 'dm'
+ *    that display the global/local namespace; hence are proxies for PRINT.
+ */
+bool continueOnSpecial(wisecrack::Repl& r, Context* context) {
+
+    // special commands
+    if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
+        context->dump();
+        return true;
+    }
+    else if (0==strcmp("dm",r.getTrimmedLastReadLine())) {
+        // don't print parent namespaces (dump without the (p)arent namespace and without (u)pper namesapces)
+        context->short_dump();
+        return true;
+    }
+    return false;
 }
 
