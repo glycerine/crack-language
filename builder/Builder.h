@@ -516,6 +516,17 @@ class Builder : public spug::RCBase {
                                     model::TypeDef *typeDef
                                     ) = 0;
 
+
+        virtual void startSection(model::Context &context,
+                                  model::ModuleDef *modDef,
+                                  const std::string& name
+                                  ) = 0;
+
+        virtual void closeSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  ) = 0;
+
+
 };
 
 } // namespace builder

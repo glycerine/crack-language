@@ -388,6 +388,22 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 }
 
+void LLVMJitBuilder::startSection(Context &context, ModuleDef *moduleDef, const std::string& next_section_name) {
+
+    // start the next section
+
+    Function *mainFunc = func;
+    LLVMContext &lctx = getGlobalContext();
+    llvm::Constant *c =
+        module->getOrInsertFunction(next_section_name.c_str(), Type::getVoidTy(lctx), NULL);
+    func = llvm::cast<llvm::Function>(c);
+    func->setCallingConv(llvm::CallingConv::C);
+
+    // create a new exStruct variable for this context
+    createFuncStartBlocks(next_section_name.c_str());
+
+}
+
 //
 // closeSection(): started as a clone of innerCloseModule for the repl to use.
 //
@@ -395,80 +411,20 @@ void LLVMJitBuilder::closeSection(Context &context, ModuleDef *moduleDef) {
 
     // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
-    if (!builder.GetInsertBlock()->getTerminator())
+    if (!builder.GetInsertBlock()->getTerminator()) {
         builder.CreateRetVoid();
-
-    // emit the cleanup function
-
-    // since the cleanups have to be emitted against the module context, clear
-    // the unwind blocks so we generate them for the del function.
-    clearCachedCleanups(context);
-
-    Function *mainFunc = func;
-    LLVMContext &lctx = getGlobalContext();
-    llvm::Constant *c =
-        module->getOrInsertFunction(":cleanup", Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-
-    // create a new exStruct variable for this context
-    createFuncStartBlocks(":cleanup");
-    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
-
-    closeAllCleanupsStatic(context);
-    builder.CreateRetVoid();
-
-    // restore the main function
-    func = mainFunc;
-
-// XXX in the future, only verify if we're debugging
-//    if (debugInfo)
-        verifyModule(*module, llvm::PrintMessageAction);
-
-    // let jit or linker finish module before run/link
-    engineFinishModule(context, BModuleDefPtr::cast(moduleDef));
-
-    // store primitive functions from an extension
-    if (moduleDef->fromExtension) {
-        for (map<Function *, void *>::iterator iter = primFuncs.begin();
-             iter != primFuncs.end();
-             ++iter)
-            addGlobalFuncMapping(iter->first, iter->second);
     }
 
-    if (debugInfo)
-        delete debugInfo;
+    // JIT the function, returning a function pointer.
+    void (*fptr)() = (void (*)())execEng->getPointerToFunction(func);
+    SPUG_CHECK(fptr, "wisecrack repl-jit error: no address for function " << string(func->getName()));
+    
+    // execute the jit-ed code.
+    fptr();
 
-    // resolve all externals
-    for (int i = 0; i < externals.size(); ++i) {
-        void *realAddr = execEng->getPointerToFunction(externals[i].second);
-        SPUG_CHECK(realAddr,
-                   "no address for function " <<
-                    string(externals[i].second->getName())
-                   );
-        execEng->addGlobalMapping(externals[i].first, realAddr);
-    }
-    externals.clear();
-
-    // build the debug tables
-    Module::FunctionListType &funcList = module->getFunctionList();
-    for (Module::FunctionListType::iterator funcIter = funcList.begin();
-         funcIter != funcList.end();
-         ++funcIter
-         ) {
-        string name = funcIter->getName();
-        if (!funcIter->isDeclaration())
-            crack::debug::registerDebugInfo(
-                execEng->getPointerToGlobal(funcIter),
-                name,
-                "",   // file name
-                0     // line number
-            );
-    }
-
-    //doRunOrDump(context);
-    if (rootBuilder->options->cacheMode)
-        cacheModule(context, moduleDef);
+    // cleanup and discard the code
+    //    execEng->freeMachineCodeForFunction(func);
+    //    func = 0;
 }
 
 void LLVMJitBuilder::dump() {
