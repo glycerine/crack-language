@@ -78,6 +78,16 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         );
 
         virtual llvm::ExecutionEngine *getExecEng() const;
+
+        virtual void startSection(model::Context &context,
+                                  model::ModuleDef *moduleDef,
+                                  const std::string& next_section_name) {}
+        
+        virtual void closeSection(model::Context &context,
+                                  model::ModuleDef *module
+                                  ) {}
+        
+
 };
 
 } } // namespace
