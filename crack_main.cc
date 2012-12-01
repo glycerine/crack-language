@@ -109,8 +109,6 @@ int main(int argc, char **argv) {
     int rc = 0;
     prog = basename(argv[0]);
 
-    if (argc < 2)
-        usage(0);
 
     // top level interface
     Crack crack;
@@ -260,13 +258,8 @@ int main(int argc, char **argv) {
 
     // are there any more arguments?
     if (optind == argc) {
-        if (crack.options->runRepl) {
-            crack.runRepl();
-        } else {
-            cerr << "You need to define a script or the '-' option to read "
-                "from standard input." << endl;
-            rc = -1;
-        }
+        rc = crack.runRepl();
+
     } else if (!strcmp(argv[optind], "-")) {
         crack.setArgv(argc - optind, &argv[optind]);
         // ensure a reasonable output file name in native mode
@@ -276,7 +269,7 @@ int main(int argc, char **argv) {
             crack.options->optionMap["out"] = "crack_output";
         }
         rc = crack.runScript(cin, "<stdin>");
-        if (crack.options->runRepl) { crack.runRepl(); }
+        if (crack.options->runRepl) { rc = crack.runRepl(); }
 
     } else {
         // it's the script name - run it.
@@ -288,7 +281,7 @@ int main(int argc, char **argv) {
         else {
             crack.setArgv(argc - optind, &argv[optind]);
             rc = crack.runScript(src, argv[optind]);
-            if (crack.options->runRepl) { crack.runRepl(); }
+            if (crack.options->runRepl) { rc = crack.runRepl(); }
         }
     }
 
