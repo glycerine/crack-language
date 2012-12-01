@@ -97,7 +97,7 @@ int Construct::runRepl() {
 
     modDef = context->createModule(canName, canName);
 
-    printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
+    //printf("*** wisecrack 0.7.2, ctrl-d to exit. ***\n");
 
     //
     // main Read-Eval-Print loop
@@ -138,7 +138,7 @@ int Construct::runRepl() {
             builder->closeSection(*context,modDef.get());
             
 
-            // PRINT: TODO. for now use dm or dump at repl.
+            // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
 
         } catch (const spug::Exception &ex) {
