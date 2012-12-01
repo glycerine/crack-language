@@ -31,7 +31,7 @@ namespace wisecrack {
     Repl::Repl()
         : _alldone(false),
           _lineno(0),
-          _showLineN(false)
+          _showLineN(true)
     {
         bzero(_readbuf, _readsz);
     }
@@ -43,7 +43,7 @@ namespace wisecrack {
     char* Repl::getPrompt() {
         static char _promptbuf[256];
         if (_showLineN) {
-            sprintf(_promptbuf,"(crack:%ld)",_lineno);
+            sprintf(_promptbuf,"(%ld:crack)",_lineno);
         } else {
             sprintf(_promptbuf,"(crack)",_lineno);
         }
