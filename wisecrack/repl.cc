@@ -30,7 +30,8 @@ namespace wisecrack {
     //ctor
     Repl::Repl()
         : _alldone(false),
-          _lineno(0)
+          _lineno(0),
+          _showLineN(false)
     {
         bzero(_readbuf, _readsz);
     }
@@ -41,7 +42,11 @@ namespace wisecrack {
 
     char* Repl::getPrompt() {
         static char _promptbuf[256];
-        sprintf(_promptbuf,"(crack:%ld)",_lineno);
+        if (_showLineN) {
+            sprintf(_promptbuf,"(crack:%ld)",_lineno);
+        } else {
+            sprintf(_promptbuf,"(crack)",_lineno);
+        }
         return _promptbuf;
     }
 
@@ -135,6 +140,14 @@ namespace wisecrack {
         }
     }
 
+
+    // should we display lines numbers at
+    // the prompt?  returns previous value.
+    bool Repl::showLineNo(bool show) {
+        bool prev = _showLineN;
+        _showLineN = show;
+        return prev;
+    }
 
 
 } // end namespace wisecrack
