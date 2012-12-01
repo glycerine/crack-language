@@ -66,18 +66,25 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context);
  *
  */
 
-
 int Construct::runRepl() {
-    // get the canonical name for the script
-    string canName = ".input";
-    
-    // create the builder and context for the script.
+
+    wisecrack::Repl r;
+
+    // canonical name for module representing input from repl
+    string canName = "wisecrack_";
+
+    // create the builder and context for the repl.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     builderStack.push(builder);
-    ContextPtr context =
-        new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), canName)
-                    );
+
+    Context* prior = rootContext.get();
+
+    GlobalNamespacePtr local_compile_ns = new GlobalNamespace(prior->ns.get(),canName);
+
+    ContextPtr context = new Context(*builder, 
+                                     Context::module, 
+                                     prior, 
+                                     local_compile_ns.get());  
     context->toplevel = true;
 
     ModuleDefPtr modDef;
@@ -89,63 +96,6 @@ int Construct::runRepl() {
 #endif
 
     modDef = context->createModule(canName, canName);
-
-    while (true) {
-        cout << "> " << flush;
-        char buffer[1024];
-        cin.getline(buffer, 1024, '\n');
-
-        try {
-            istringstream src(buffer);
-            Toker toker(src, "<input>");
-            Parser parser(toker, context.get());
-            StatState sState(context.get(), ConstructStats::parser, 
-                             modDef.get()
-                             );
-            if (sState.statsEnabled()) {
-                stats->incParsed();
-            }
-            parser.parse();
-            builder->closeSection(*context, modDef.get());
-        } catch (const spug::Exception &ex) {
-            cerr << ex << endl;
-        } catch (...) {
-            if (!uncaughtExceptionFunc)
-                cerr << "Uncaught exception, no uncaught exception handler!" <<
-                    endl;
-            else if (!uncaughtExceptionFunc())
-                cerr << "Unknown exception caught." << endl;
-        }
-    }
-
-    builderStack.pop();
-    rootBuilder->finishBuild(*context);
-    if (rootBuilder->options->statsMode)
-        stats->setState(ConstructStats::end);
-    return 0;
-}
-
-
-#if 0  // Jason's version:
-void Construct::runRepl() {
-
-    wisecrack::Repl r;
-
-    string canName = "wisecrack_";
-
-    // create the builder and context for the repl.
-    BuilderPtr builder = rootBuilder->createChildBuilder();
-    builderStack.push(builder);
-
-    Context* prior = rootContext.get();
-
-    GlobalNamespacePtr local_compile_ns = new GlobalNamespace(prior->ns.get(),"wisecrack_global");
-
-    ContextPtr context = new Context(*builder, Context::module, prior, local_compile_ns.get(), local_compile_ns.get());  
-    context->toplevel = true;
-
-    string name = "wisecrack_lineno_";
-    ModuleDefPtr modDef = context->createModule(canName, name);
 
     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
@@ -165,9 +115,6 @@ void Construct::runRepl() {
         // EVAL
         std::stringstream src;
         src << r.getLastReadLine();
-         
-        std::stringstream anonFuncName;
-        anonFuncName << name << r.lineno() << "_";
 
         std::string path = r.getPrompt();
 
@@ -175,8 +122,16 @@ void Construct::runRepl() {
 
             Toker toker(src, path.c_str());
             Parser parser(toker, context.get());
-            parser.parse();
-            
+            parser.parse();            
+
+            // stats collection
+            StatState sState(context.get(), ConstructStats::parser, 
+                             modDef.get()
+                             );
+            if (sState.statsEnabled()) {
+                stats->incParsed();
+            }
+
             // currently, closeSection also runs the code.
             // And then it opens a new section, i.e. it starts
             // a new module level function.
@@ -199,9 +154,13 @@ void Construct::runRepl() {
 
     } // end while
 
-
+    builderStack.pop();
+    rootBuilder->finishBuild(*context);
+    if (rootBuilder->options->statsMode)
+        stats->setState(ConstructStats::end);
+    return 0;
 }
-#endif
+
 
 /**
  *  continueOnSpecial(): a runRepl helper.
