@@ -87,6 +87,9 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
 void LLVMJitBuilder::engineFinishModule(Context &context,
                                         BModuleDef *moduleDef) {
 
+#if 0 // the double builder is keeping us from setting -O0, so if out this block
+      // to evalute whether dead code eliminiation is hurting repl correctness.
+
     // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
@@ -113,6 +116,8 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
         passMan.run(*moduleDef->rep);
 
     }
+
+#endif
 
     setupCleanup(moduleDef);
 
