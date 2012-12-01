@@ -116,7 +116,7 @@ class Crack : public model::Options {
         /**
          * run the interpreter
          */
-        void runRepl();
+        int runRepl();
 
 
 

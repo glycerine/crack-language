@@ -393,44 +393,6 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 }
 
-void LLVMJitBuilder::startSection(Context &context, ModuleDef *moduleDef, const std::string& next_section_name) {
-
-    // start the next section
-
-    Function *mainFunc = func;
-    LLVMContext &lctx = getGlobalContext();
-    llvm::Constant *c =
-        module->getOrInsertFunction(next_section_name.c_str(), Type::getVoidTy(lctx), NULL);
-    func = llvm::cast<llvm::Function>(c);
-    func->setCallingConv(llvm::CallingConv::C);
-
-    // create a new exStruct variable for this context
-    createFuncStartBlocks(next_section_name.c_str());
-
-}
-
-//
-// closeSection(): started as a clone of innerCloseModule for the repl to use.
-//
-void LLVMJitBuilder::closeSection(Context &context, ModuleDef *moduleDef) {
-
-    // if there was a top-level throw, we could already have a terminator.
-    // Generate a return instruction if not.
-    if (!builder.GetInsertBlock()->getTerminator()) {
-        builder.CreateRetVoid();
-    }
-
-    // JIT the function, returning a function pointer.
-    void (*fptr)() = (void (*)())execEng->getPointerToFunction(func);
-    SPUG_CHECK(fptr, "wisecrack repl-jit error: no address for function " << string(func->getName()));
-    
-    // execute the jit-ed code.
-    fptr();
-
-    // cleanup and discard the code
-    //    execEng->freeMachineCodeForFunction(func);
-    //    func = 0;
-}
 
 void LLVMJitBuilder::dump() {
     PassManager passMan;
