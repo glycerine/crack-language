@@ -85,14 +85,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                                  model::ModuleDef *module
                                  );
 
-        virtual void startSection(model::Context &context,
-                                  model::ModuleDef *moduleDef,
-                                  const std::string& next_section_name);
-        
-        virtual void closeSection(model::Context &context,
-                                  model::ModuleDef *module
-                                  );
-        
         virtual bool isExec() { return true; }
 
         virtual void finishBuild(model::Context &context) {

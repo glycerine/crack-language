@@ -517,11 +517,6 @@ class Builder : public spug::RCBase {
                                     ) = 0;
 
 
-        virtual void startSection(model::Context &context,
-                                  model::ModuleDef *modDef,
-                                  const std::string& name
-                                  ) = 0;
-
         virtual void closeSection(model::Context &context,
                                   model::ModuleDef *modDef
                                   ) = 0;

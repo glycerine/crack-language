@@ -817,3 +817,4 @@ VarDefPtr Construct::getRegisteredDef(const std::string &name) {
     else
         return 0;
 }
+

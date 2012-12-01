@@ -65,6 +65,68 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context);
  * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
  *
  */
+
+
+int Construct::runRepl() {
+    // get the canonical name for the script
+    string canName = ".input";
+    
+    // create the builder and context for the script.
+    BuilderPtr builder = rootBuilder->createChildBuilder();
+    builderStack.push(builder);
+    ContextPtr context =
+        new Context(*builder, Context::module, rootContext.get(),
+                    new GlobalNamespace(rootContext->ns.get(), canName)
+                    );
+    context->toplevel = true;
+
+    ModuleDefPtr modDef;
+    bool cached = false;
+
+#if 0 // we don't have cacheMode yet in 0.7.1, that comes later.
+    if (rootContext->construct->cacheMode)
+        builder::initCacheDirectory(rootBuilder->options.get(), *this);
+#endif
+
+    modDef = context->createModule(canName, canName);
+
+    while (true) {
+        cout << "> " << flush;
+        char buffer[1024];
+        cin.getline(buffer, 1024, '\n');
+
+        try {
+            istringstream src(buffer);
+            Toker toker(src, "<input>");
+            Parser parser(toker, context.get());
+            StatState sState(context.get(), ConstructStats::parser, 
+                             modDef.get()
+                             );
+            if (sState.statsEnabled()) {
+                stats->incParsed();
+            }
+            parser.parse();
+            builder->closeSection(*context, modDef.get());
+        } catch (const spug::Exception &ex) {
+            cerr << ex << endl;
+        } catch (...) {
+            if (!uncaughtExceptionFunc)
+                cerr << "Uncaught exception, no uncaught exception handler!" <<
+                    endl;
+            else if (!uncaughtExceptionFunc())
+                cerr << "Unknown exception caught." << endl;
+        }
+    }
+
+    builderStack.pop();
+    rootBuilder->finishBuild(*context);
+    if (rootBuilder->options->statsMode)
+        stats->setState(ConstructStats::end);
+    return 0;
+}
+
+
+#if 0  // Jason's version:
 void Construct::runRepl() {
 
     wisecrack::Repl r;
@@ -84,11 +146,6 @@ void Construct::runRepl() {
 
     string name = "wisecrack_lineno_";
     ModuleDefPtr modDef = context->createModule(canName, name);
-
-    // close :main, so it isn't dangling open.
-    builder->closeSection(*context, modDef.get());
-    builder->closeModule(*context, modDef.get());
-
 
     printf("*** starting wisecrack jit-compilation based interpreter, ctrl-d to exit. ***\n");
 
@@ -116,16 +173,13 @@ void Construct::runRepl() {
 
         try {
 
-            builder->startSection(*context, modDef.get(),anonFuncName.str());
-
             Toker toker(src, path.c_str());
             Parser parser(toker, context.get());
             parser.parse();
             
-            // currently, closeSection also runs the code--only because, with
-            //  two minutes of looking, I couldn't figure out how to return a 
-            //  llvm::Function* wrapped in a FuncDefPtr. And we are the only
-            //  clients at this point.
+            // currently, closeSection also runs the code.
+            // And then it opens a new section, i.e. it starts
+            // a new module level function.
             builder->closeSection(*context,modDef.get());
             
 
@@ -147,7 +201,7 @@ void Construct::runRepl() {
 
 
 }
-
+#endif
 
 /**
  *  continueOnSpecial(): a runRepl helper.

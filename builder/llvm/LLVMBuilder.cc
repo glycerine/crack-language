@@ -2039,6 +2039,24 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     return new BResultExpr(assign, temp);
 }
 
+
+void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
+    closeModule(context, modDef);
+
+    // create a new module function
+    vector<Type *> argTypes;
+    FunctionType *voidFuncNoArgs =
+        FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
+    func = Function::Create(voidFuncNoArgs,
+                            Function::ExternalLinkage,
+                            "__section__",
+                            module
+                            );
+    createFuncStartBlocks("__section__");
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+}
+
+
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     assert(!context.getParent()->getParent() && "parent context must be root");
@@ -2785,7 +2803,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 }
 
 std::string LLVMBuilder::getSourcePath(const std::string &path) {
-    char *rp = realpath(path.c_str(), NULL);
+    char *temp = strdup(path.c_str());
+    char *rp = realpath(temp, NULL);
+    free(temp);
     string result;
     if (!rp) {
         result = path;

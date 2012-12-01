@@ -119,7 +119,7 @@ class Crack {
         /**
          * run the interpreter
          */
-        void runRepl();
+        int runRepl();
 
 
 

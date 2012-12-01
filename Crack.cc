@@ -109,6 +109,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
     construct->runScript(src, name);
 }
 
+
 void Crack::callModuleDestructors() {
 
     // run through all of the destructors backwards.
@@ -126,9 +127,10 @@ void Crack::printStats(std::ostream &out) {
         construct->compileTimeConstruct->stats->write(out);
 }
 
-void Crack::runRepl() {
+int Crack::runRepl() {
     if (!init())
-        return;
-    construct->runRepl();
+        return 1;
+    int rc = construct->runRepl();
     //? callModuleDestructors();
+    return rc;
 }
