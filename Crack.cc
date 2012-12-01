@@ -124,8 +124,14 @@ void Crack::printStats(std::ostream &out) {
 }
 
 int Crack::runRepl() {
+    // if we are dumping, skip the prelude.
+    bool dm = options->dumpMode;
+    options->dumpMode = false;
+
     if (!init())
         return 1;
+
+    options->dumpMode = dm;
     int rc = construct->runRepl();
     //? callModuleDestructors();
     return rc;
