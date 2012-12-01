@@ -60,6 +60,14 @@ namespace wisecrack {
          */
         char* getTrimmedLastReadLine();
 
+        /**
+         * should we display lines numbers at
+         *  the prompt?  returns previous value.
+         */
+        bool showLineNo(bool show);
+
+
+
     private:
         bool _alldone;
         long _lineno;
@@ -67,6 +75,8 @@ namespace wisecrack {
         const static int _readsz = 4096;
         char       _readbuf[_readsz];
         int        _readlen;
+
+        bool  _showLineN;
 
         void trimr();
 
