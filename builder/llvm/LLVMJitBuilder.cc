@@ -294,12 +294,15 @@ void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 
-    // DEBUG... print where we are (in which function)...
-    BasicBlock* bb = builder.GetInsertBlock();
-    Function*   fn = bb->getParent();
-    std::string nm = fn->getName();
-
-    cerr << "DEBUG: in LLVMJitBuilder::innerCloseModule() in function: " << nm << endl;
+    // DEBUG: print where we are (in which function)...
+    static bool show_func = false;
+    if (show_func) {
+        BasicBlock* bb = builder.GetInsertBlock();
+        Function*   fn = bb->getParent();
+        std::string nm = fn->getName();
+        
+        cerr << "DEBUG: in LLVMJitBuilder::innerCloseModule() in function: " << nm << endl;
+    }
 
     // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
@@ -365,18 +368,26 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
          ++funcIter
          ) {
         string name = funcIter->getName();
-        if (!funcIter->isDeclaration())
+        if (!funcIter->isDeclaration()) {
+#if 0
+            cerr << "building debug table for '" << name << "'" << endl;
             crack::debug::registerDebugInfo(
                 execEng->getPointerToGlobal(funcIter),
                 name,
                 "",   // file name
                 0     // line number
             );
+#endif
+        }
     }
 
     doRunOrDump(context);
     if (rootBuilder->options->cacheMode)
         cacheModule(context, moduleDef);
+
+    // cleanup so next repl function has blank slate of cleanups.
+    clearCachedCleanups(context);
+
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -395,8 +406,8 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
 
 }
 
-void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
+void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     assert(module);
     StatState sStats(&context, ConstructStats::builder, moduleDef);
     BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);

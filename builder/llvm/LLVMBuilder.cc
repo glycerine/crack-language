@@ -46,6 +46,7 @@
 #include <llvm/CallingConv.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Intrinsics.h>
+#include <llvm/Assembly/PrintModulePass.h>
 
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
@@ -2039,9 +2040,29 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     return new BResultExpr(assign, temp);
 }
 
+#include "LLVMJitBuilder.h"
+#include <fstream>
+void debug_dump_llvmcode(Module* module) {
+    // debug code
+    PassManager passMan;
+    passMan.add(llvm::createPrintModulePass(&llvm::outs()));
+    //    passMan.run(*module);
+
+    static int n=0;
+    ostringstream fname;
+    fname << "llvmdump_" << n++;
+    std::string ErrorInfo;
+    raw_fd_ostream raw(fname.str().c_str(), ErrorInfo);
+    passMan.add(llvm::createPrintModulePass(&raw));
+    passMan.run(*module);
+}
 
 void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
     closeModule(context, modDef);
+
+#if 0
+    debug_dump_llvmcode(module);
+#endif
 
     // create a new module function
     vector<Type *> argTypes;
@@ -2055,12 +2076,15 @@ void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
     createFuncStartBlocks("__section__");
     createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 
+#if 0
     // DEBUG
     BasicBlock* bb = builder.GetInsertBlock();
     Function*   fn = bb->getParent();
-    std::string nm = fn->getName();
-    
-    cerr << "DEBUG: at end of closeSection(), in function: " << nm << endl;
+    std::string nm = fn->getName();    
+    cerr << "close_section_DEBUG: at end of closeSection(), in function: " << nm << " ... here is llvmcode:" << endl;
+    debug_dump_llvmcode(module);
+    cerr << "done with llvmcode dump" << endl;
+#endif
 }
 
 
