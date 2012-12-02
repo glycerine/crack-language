@@ -2054,6 +2054,13 @@ void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
                             );
     createFuncStartBlocks("__section__");
     createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+
+    // DEBUG
+    BasicBlock* bb = builder.GetInsertBlock();
+    Function*   fn = bb->getParent();
+    std::string nm = fn->getName();
+    
+    cerr << "DEBUG: at end of closeSection(), in function: " << nm << endl;
 }
 
 

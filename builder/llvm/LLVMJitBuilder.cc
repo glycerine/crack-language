@@ -293,6 +293,14 @@ void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
 }
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
+
+    // DEBUG... print where we are (in which function)...
+    BasicBlock* bb = builder.GetInsertBlock();
+    Function*   fn = bb->getParent();
+    std::string nm = fn->getName();
+
+    cerr << "DEBUG: in LLVMJitBuilder::innerCloseModule() in function: " << nm << endl;
+
     // if there was a top-level throw, we could already have a terminator.
     // Generate a return instruction if not.
     if (!builder.GetInsertBlock()->getTerminator())
