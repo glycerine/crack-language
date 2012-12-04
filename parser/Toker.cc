@@ -953,9 +953,9 @@ Token Toker::readToken() {
         state = st_none;
         return Token(Token::ident, buf.str(), getLocation());
     } else {
-        ParseError::abort(Token(Token::end, "", getLocation()),
-                          "End of stream in the middle of a token"
-                          );
+        EndStreamMidToken::abort(Token(Token::end, "", getLocation()),
+                                 "End of stream in the middle of a token"
+                                 );
     }
 }
 

@@ -48,6 +48,25 @@ class ParseError : public spug::Exception {
 
 };
 
+/*
+ * class indicating repl should ask for another line
+ */
+
+class  EndStreamMidToken : public ParseError {
+ public:
+
+ EndStreamMidToken(const Location &loc, const char *msg) :
+    ParseError(loc,msg) {
+        
+    }
+    
+    virtual const char *getClassName() const { return "EndStreamMidToken"; }
+
+    static void abort(const Token &tok, const char *msg);
+
+};
+
+
 } // namespace parser
 
 #endif
