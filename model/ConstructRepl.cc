@@ -97,7 +97,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             return 1;
         }
 
-        // the previous script running will have
+        // the previous script will have
         // already closed the last function and run it
         // so we just need to start a new section here,
         // without issuing another closeModule (as closeSection() would)
@@ -155,7 +155,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         r.read(stdin);
         if (r.getLastReadLineLen()==0) continue;
 
-        if (continueOnSpecial(r,context.get())) continue;
+        if (continueOnSpecial(r,ctx)) continue;
 
         // EVAL
         std::stringstream src;
