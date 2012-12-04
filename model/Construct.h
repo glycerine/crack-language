@@ -13,6 +13,7 @@
 #include <list>
 #include <stack>
 #include <sys/time.h>
+#include "builder/Builder.h"
 
 #include "model/StrConst.h"
 #include "ModuleDef.h"
@@ -373,8 +374,11 @@ class Construct : public spug::RCBase, public Options {
          * @param src the script's source stream.
          * @param name the script's name (for use in error reporting and 
          *  script module creation).
+         * @param runRepl if true, start repl the module left by the script.
          */
-        int runScript(std::istream &src, const std::string &name);
+        int runScript(std::istream &src, 
+                      const std::string &name, 
+                      bool doRepl = false);
 
         /**
          * Returns the current builder.
@@ -398,7 +402,7 @@ class Construct : public spug::RCBase, public Options {
         /**
          * run the interpreter 
          */
-        int runRepl();
+        int runRepl(Context* ctx = 0, ModuleDef* mod = 0, builder::Builder* bdr = 0);
 
 };
 

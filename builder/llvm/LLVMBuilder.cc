@@ -2132,6 +2132,23 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
     out.keep();
 }
 
+
+void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
+
+    // create a new module function
+    vector<Type *> argTypes;
+    FunctionType *voidFuncNoArgs =
+        FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
+    func = Function::Create(voidFuncNoArgs,
+                            Function::ExternalLinkage,
+                            "__section__",
+                            module
+                            );
+    createFuncStartBlocks("__section__");
+    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+}
+
+
 void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
     closeModule(context, modDef);
 

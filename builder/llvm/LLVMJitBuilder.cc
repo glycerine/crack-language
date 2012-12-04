@@ -386,7 +386,7 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (options->dumpMode)
         dump();
 
-    if (   options->runRepl   // allow dumping at the repl, for debugging.
+    if (   options->dropintoRepl   // allow dumping at the repl, for debugging.
         || !options->dumpMode 
         || !context.construct->compileTimeConstruct)
         run();

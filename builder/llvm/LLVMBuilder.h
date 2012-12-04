@@ -466,6 +466,10 @@ class LLVMBuilder : public Builder {
             model::ModuleDef *module
         );
         
+        virtual void beginSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  );
+
         virtual void closeSection(model::Context &context,
                                   model::ModuleDef *modDef
                                   );

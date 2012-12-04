@@ -64,38 +64,83 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context);
 /**
  * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
  *
+ * @param ctx : if non-null, use this context
+ * @param mod : if non-null, use this module
+ * @param bdr : if non-null, use this builder
+ *
+ * To work well, either all three parameters should be supplied at
+ *  once (e.g. after runScript), or they should all be null.
  */
 
-int Construct::runRepl() {
+int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) {
 
     wisecrack::Repl r;
 
-    // canonical name for module representing input from repl
-    string canName = "wisecrack_";
-
-    // create the builder and context for the repl.
-    BuilderPtr builder = rootBuilder->createChildBuilder();
-    builderStack.push(builder);
-
-    Context* prior = rootContext.get();
-
-    GlobalNamespacePtr local_compile_ns = new GlobalNamespace(prior->ns.get(),canName);
-
-    ContextPtr context = new Context(*builder, 
-                                     Context::module, 
-                                     prior, 
-                                     local_compile_ns.get());  
-    context->toplevel = true;
-
+    // smart pointers
     ModuleDefPtr modDef;
-    bool cached = false;
+    ContextPtr   context;
+    BuilderPtr   builder;
+    GlobalNamespacePtr local_compile_ns;
+
+    // point to passed in arguments, unless none given, in which
+    // case they will point to the smart pointers above.
+    ModuleDef* mod = arg_modd;
+    Context*   ctx = arg_ctx;
+    Builder*   bdr = arg_bdr;
+
+    // are we starting fresh, or dropping into a previously defined
+    //  ctx, modd, bdr triple?
+    if (arg_ctx) {
+        if (0==arg_modd || 0==arg_bdr) {
+            cerr << "internal error in Construct::runRepl: all three {ctx,modd,bdr} must be set or must all be null." << endl;
+            assert(0);
+            return 1;
+        }
+
+        // the previous script running will have
+        // already closed the last function and run it
+        // so we just need to start a new section here,
+        // without issuing another closeModule (as closeSection() would)
+        // which would run the script a second time.
+        bdr->beginSection(*ctx,mod);
+
+    } else {
+
+        // starting fresh context/module/builder
+
+        // canonical name for module representing input from repl
+        string canName = "wisecrack_";
+        
+        // create the builder and context for the repl.
+        builder = rootBuilder->createChildBuilder();
+        builderStack.push(builder);
+        
+        Context* prior = rootContext.get();
+        
+        local_compile_ns = new GlobalNamespace(prior->ns.get(),canName);
+        
+        context = new Context(*builder,
+                              Context::module, 
+                              prior,
+                              local_compile_ns.get());
+        context->toplevel = true;
+        
+        bool cached = false;
 
 #if 0 // we don't have cacheMode yet in 0.7.1, that comes later.
-    if (rootContext->construct->cacheMode)
-        builder::initCacheDirectory(rootBuilder->options.get(), *this);
+        if (rootContext->construct->cacheMode)
+            builder::initCacheDirectory(rootBuilder->options.get(), *this);
 #endif
 
-    modDef = context->createModule(canName, canName);
+        modDef = context->createModule(canName, canName);
+
+        // set the pointers we will use below
+        mod = modDef.get();
+        ctx = context.get();
+        bdr = builder.get();
+
+    } // end else start fresh context/module/builder
+
 
     //printf("*** wisecrack 0.7.2, ctrl-d to exit. ***\n");
 
@@ -121,13 +166,11 @@ int Construct::runRepl() {
         try {
 
             Toker toker(src, path.c_str());
-            Parser parser(toker, context.get());
+            Parser parser(toker, ctx);
             parser.parse();            
 
             // stats collection
-            StatState sState(context.get(), ConstructStats::parser, 
-                             modDef.get()
-                             );
+            StatState sState(ctx, ConstructStats::parser, mod);
             if (sState.statsEnabled()) {
                 stats->incParsed();
             }
@@ -135,7 +178,7 @@ int Construct::runRepl() {
             // currently, closeSection also runs the code.
             // And then it opens a new section, i.e. it starts
             // a new module level function.
-            builder->closeSection(*context,modDef.get());
+            bdr->closeSection(*ctx,mod);
             
 
             // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
@@ -155,7 +198,7 @@ int Construct::runRepl() {
     } // end while
 
     builderStack.pop();
-    rootBuilder->finishBuild(*context);
+    rootBuilder->finishBuild(*ctx);
     if (rootBuilder->options->statsMode)
         stats->setState(ConstructStats::end);
     return 0;
