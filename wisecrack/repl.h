@@ -46,17 +46,30 @@ namespace wisecrack {
         void print(FILE* fout);
         void run(FILE* fin, FILE* fout);
 
+        /**
+         * get the current line number.
+         */
         long lineno();
+
+        /**
+         * advance the current line number by one.
+         */
         long nextlineno();
+
+        /**
+         * get the length of the last current line.
+         */
         long  getLastReadLineLen();
 
         /**
-         * always right trimmed of whitespace
+         * Returns the curent line, which is always right trimmed of (trailing) whitespace.
+         *  Probably the desired default.
          */
         char* getLastReadLine();
 
         /**
-         * any left whitespace trimmed too.
+         * any left whitespace trimmed too. Probably not what you want
+         *  as a default, given i-strings.
          */
         char* getTrimmedLastReadLine();
 
@@ -66,6 +79,20 @@ namespace wisecrack {
          */
         bool showLineNo(bool show);
 
+        /**
+         * set the default prompt
+         */
+        void set_default_prompt(const char* p);
+        
+        /**
+         * set a new prompt (useful for continuation lines)
+         */
+        void set_prompt(const char* p);
+
+        /**
+         * reset to using the default prompt
+         */
+        void reset_prompt_to_default();
 
 
     private:
@@ -80,6 +107,9 @@ namespace wisecrack {
 
         void trimr();
 
+        const static int _promptsz = 256;
+        char             _prompt[_promptsz];
+        char             _default_prompt[_promptsz];
     };
 
 

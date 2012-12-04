@@ -144,6 +144,11 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
     //printf("*** wisecrack 0.7.2, ctrl-d to exit. ***\n");
 
+    // move outside while so it can be persisted with previous
+    // lines for multi-line input.
+    std::stringstream src;
+    bool multiline = false;
+
     //
     // main Read-Eval-Print loop
     //
@@ -158,7 +163,6 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         if (continueOnSpecial(r,ctx)) continue;
 
         // EVAL
-        std::stringstream src;
         src << r.getLastReadLine();
 
         std::string path = r.getPrompt();
@@ -183,6 +187,11 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
+        } catch (const parser::EndStreamMidToken& ex) {
+            // tell the end-of-while loop src handling
+            //  to keep the current src contents, so we
+            //  can add the next line and try again.
+            multiline = true;
 
         } catch (const spug::Exception &ex) {
             cerr << ex << endl;
@@ -194,6 +203,20 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             else if (!uncaughtExceptionFunc())
                 cerr << "Unknown exception caught." << endl;
         }
+
+        // clear eof on src
+        src.clear();
+        if (multiline) {
+            src << "\n";
+            // go to beginning for gets
+            src.seekg(0);
+            r.set_prompt("...");
+        } else {
+            // reset src to be empty
+            src.str(std::string());
+            r.reset_prompt_to_default();
+        }
+        multiline = false;
 
     } // end while
 
