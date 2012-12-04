@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'r':
-                crack.options->runRepl = true;
+                crack.options->dropintoRepl = true;
                 //
                 // At present we try to turn off optimizations, else too much
                 // repl code (names of sections) get eliminated as dead code
@@ -281,7 +281,7 @@ int main(int argc, char **argv) {
             crack.options->optionMap["out"] = "crack_output";
         }
         rc = crack.runScript(cin, "<stdin>");
-        if (crack.options->runRepl) { rc = crack.runRepl(); }
+        if (crack.options->dropintoRepl) { rc = crack.runRepl(); }
 
     } else {
         // it's the script name - run it.
@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
         else {
             crack.setArgv(argc - optind, &argv[optind]);
             rc = crack.runScript(src, argv[optind]);
-            if (crack.options->runRepl) { rc = crack.runRepl(); }
+            if (crack.options->dropintoRepl) { rc = crack.runRepl(); }
         }
     }
 

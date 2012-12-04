@@ -744,7 +744,7 @@ namespace model {
     }
 }
 
-int Construct::runScript(istream &src, const string &name) {
+int Construct::runScript(istream &src, const string &name, bool doRepl) {
     
     // get the canonical name for the script
     string canName = model::modNameFromFile(name);
@@ -783,6 +783,9 @@ int Construct::runScript(istream &src, const string &name) {
             loadedModules.push_back(modDef);
         } else {
             // XXX hook to run/finish cached module
+        }
+        if (doRepl) {
+            runRepl(context.get(), modDef.get(), builder.get());
         }
     } catch (const spug::Exception &ex) {
         cerr << ex << endl;

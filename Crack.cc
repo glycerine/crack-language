@@ -106,7 +106,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
             // from the script.
             options->optionMap["out"] = name + ".bin";
     }
-    construct->runScript(src, name);
+    construct->runScript(src, name, options->dropintoRepl);
 }
 
 

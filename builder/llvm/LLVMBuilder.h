@@ -434,6 +434,10 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
+        virtual void beginSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  );
+
         virtual void closeSection(model::Context &context,
                                   model::ModuleDef *modDef
                                   );
