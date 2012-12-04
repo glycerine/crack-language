@@ -281,7 +281,6 @@ int main(int argc, char **argv) {
             crack.options->optionMap["out"] = "crack_output";
         }
         rc = crack.runScript(cin, "<stdin>");
-        if (crack.options->dropintoRepl) { rc = crack.runRepl(); }
 
     } else {
         // it's the script name - run it.
@@ -293,7 +292,6 @@ int main(int argc, char **argv) {
         else {
             crack.setArgv(argc - optind, &argv[optind]);
             rc = crack.runScript(src, argv[optind]);
-            if (crack.options->dropintoRepl) { rc = crack.runRepl(); }
         }
     }
 
