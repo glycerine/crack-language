@@ -86,6 +86,9 @@ class Parser {
       // sequential identifier used in nested block namespaces
       int nestID;
 
+      // are we invoked from repl?
+      bool atRepl;
+
       /**
        * This class essentially lets us manage the context stack with the
        * program's stack.  We push the context by creating an instance, and
@@ -121,6 +124,9 @@ class Parser {
 
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
+
+      /** version of unexpected to indicate repl can recover with more info. */
+      void unexpected_recoverable(const Token &tok, const char *userMsg = 0);
 
       /**
        * Get the next token and make sure it is of type 'type' otherwise
@@ -450,6 +456,10 @@ class Parser {
       void error(const Token &tok, const std::string &msg);
       void error(const Location &loc, const std::string &msg);
 
+      void error_recoverable(const Token &tok, const std::string &msg);
+      void error_recoverable(const Location &loc, const std::string &msg);
+
+
       /** Writes a warning message to standard error. */
       void warn(const Location &loc, const std::string &msg);
 
@@ -477,6 +487,17 @@ class Parser {
        * Returns true if any callbacks were called.
        */
       bool runCallbacks(Event event);
+
+
+      /**
+       *
+       *  @param atRepl : setting atRepl to true
+       *   tells the parser we are calling from repl, so
+       *   certain checks like declarations without definitions
+       *   don't generate errors.
+       */
+      void setAtRepl(bool atr);
+
 };
 
 } // namespace parser

@@ -25,6 +25,6 @@ void ParseError::abort(const Token &tok, const char *msg) {
 }
 
 
-void EndStreamMidToken::abort(const Token &tok, const char *msg) {
-   throw EndStreamMidToken(tok.getLocation(), msg);
+void ParseErrorRecoverable::abort(const Token &tok, const char *msg) {
+   throw ParseErrorRecoverable(tok.getLocation(), msg);
 }

@@ -985,7 +985,8 @@ namespace {
 }
 
 void Context::error(const parser::Location &loc, const string &msg, 
-                    bool throwException
+                    bool throwException,
+                    bool recoverable
                     ) {
     
     list<string> &ec = construct->errorContexts;
@@ -994,13 +995,23 @@ void Context::error(const parser::Location &loc, const string &msg,
         if (!construct->rootBuilder->options->quiet) {
             showSourceLoc(loc, diag);
         }
-        throw parser::ParseError(loc,
-                                 SPUG_FSTR(msg <<
-                                            ContextStack(ec) <<
-                                            endl <<
-                                            diag.str()
-                                           )
-                                 );
+        if (!recoverable) {
+            throw parser::ParseError(loc,
+                                     SPUG_FSTR(msg <<
+                                               ContextStack(ec) <<
+                                               endl <<
+                                               diag.str()
+                                               )
+                                     );
+        } else {
+            throw parser::ParseErrorRecoverable(loc,
+                                     SPUG_FSTR(msg <<
+                                               ContextStack(ec) <<
+                                               endl <<
+                                               diag.str()
+                                               )
+                                     );
+        }
     }
     else {
         cerr << "ParseError: " << loc.getName() << ":" <<

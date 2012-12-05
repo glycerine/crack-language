@@ -459,9 +459,14 @@ class Context : public spug::RCBase {
          * Emit an error message.  If 'throwException' is true, a 
          * ParseException will be thrown.  Otherwise, exit() is called to 
          * terminate the program.
+         * 
+         * @param recoverable : if true and if throwExeception, then
+         *                      throw a ParseErrorRecoverable to let
+         *                      the repl ask for more input.
          */
         void error(const parser::Location &loc, const std::string &msg, 
-                   bool throwException = true
+                   bool throwException = true,
+                   bool recoverable = false
                    );
         
         /**

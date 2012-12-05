@@ -171,6 +171,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             Toker toker(src, path.c_str());
             Parser parser(toker, ctx);
+            parser.setAtRepl(true);
             parser.parse();            
 
             // stats collection
@@ -187,7 +188,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
-        } catch (const parser::EndStreamMidToken& ex) {
+        } catch (const parser::ParseErrorRecoverable& ex) {
             // tell the end-of-while loop src handling
             //  to keep the current src contents, so we
             //  can add the next line and try again.

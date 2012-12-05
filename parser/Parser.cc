@@ -122,6 +122,19 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
    error(tok, msg.str());
 }
 
+void Parser::unexpected_recoverable(const Token &tok, const char *userMsg) {
+   Location loc = tok.getLocation();
+   stringstream msg;
+   msg << "token " << tok.getData() << " was not expected at this time";
+
+   // add the user message, if provided
+   if (userMsg)
+      msg << ", " << userMsg;
+
+   error_recoverable(tok, msg.str());
+}
+
+
 void Parser::expectToken(Token::Type type, const char *error) {
    Token tok = getToken();
    if (tok.getType() != type)
@@ -459,7 +472,9 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
          }
 
          // make sure that the context contains no forward declarations
-         context->checkForUnresolvedForwards();
+         if (!atRepl) { 
+             context->checkForUnresolvedForwards();
+         }
 
          // generate all of the cleanups, but not if we already did this (got 
          // a terminal statement) or we're at the top-level module (in which 
@@ -1532,7 +1547,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
          typeofType = parseTypeof();
       }
    } else if (!tok.isIdent()) {
-      unexpected(tok, "type identifier expected");
+      unexpected_recoverable(tok, "type identifier expected");
    }
    if (generic) generic->addToken(tok);
    
@@ -3279,7 +3294,7 @@ TypeDefPtr Parser::parseClassDef() {
       // forward declaration
       return context->createForwardClass(className);
    else if (!tok.isLCurly())
-      unexpected(tok, "expected colon or opening brace.");
+      unexpected_recoverable(tok, "expected colon or opening brace.");
 
    // get any user flags
    TypeDef::Flags flags = context->nextClassFlags;
@@ -3566,6 +3581,15 @@ void Parser::error(const Location &loc, const std::string &msg) {
    context->error(loc, msg);
 }
 
+void Parser::error_recoverable(const Token &tok, const std::string &msg) {
+    context->error(tok.getLocation(), msg, true, true);
+}
+
+void Parser::error_recoverable(const Location &loc, const std::string &msg) {
+    context->error(loc, msg, true, true);
+}
+
+
 void Parser::warn(const Location &loc, const std::string &msg) {
    context->warn(loc, msg);
 }
@@ -3599,4 +3623,8 @@ bool Parser::runCallbacks(Event event) {
    for (int i = 0; i < cbs.size(); ++i)
       cbs[i]->run(this, &toker, context.get());
    return gotCallbacks;
+}
+
+void Parser::setAtRepl(bool atr) {
+    atRepl = atr; 
 }

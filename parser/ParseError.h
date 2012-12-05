@@ -52,15 +52,20 @@ class ParseError : public spug::Exception {
  * class indicating repl should ask for another line
  */
 
-class  EndStreamMidToken : public ParseError {
+class  ParseErrorRecoverable : public ParseError {
  public:
 
- EndStreamMidToken(const Location &loc, const char *msg) :
+ ParseErrorRecoverable(const Location &loc, const char *msg) :
+    ParseError(loc,msg) {
+        
+    }
+
+ ParseErrorRecoverable(const Location &loc, const std::string &msg) :
     ParseError(loc,msg) {
         
     }
     
-    virtual const char *getClassName() const { return "EndStreamMidToken"; }
+    virtual const char *getClassName() const { return "ParseErrorRecoverable"; }
 
     static void abort(const Token &tok, const char *msg);
 
