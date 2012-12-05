@@ -186,7 +186,6 @@ void Namespace::dump() {
     dump(cerr, "");
 }
 
-<<<<<<< HEAD
 void Namespace::serializeDefs(Serializer &serializer) const {
     
     // count the number of definitions to serialize

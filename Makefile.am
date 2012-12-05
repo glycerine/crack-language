@@ -11,18 +11,20 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
-lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la libCrackNativeRuntime.la
+lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
+    libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = ext/Module.cc \
     ext/Func.cc \
     ext/RCObj.cc \
     ext/Type.cc \
-    wisecrack/repl.cc \
     model/Annotation.cc \
+    model/ArgDef.cc \
     model/Construct.cc \
     model/ConstructRepl.cc \
     model/ConstSequenceExpr.cc \
     model/Deserializer.cc \
     model/GetRegisterExpr.cc \
+    model/GlobalNamespace.cc \
     model/StrConst.cc \
     model/AssignExpr.cc \
     model/VarRef.cc \
@@ -55,9 +57,6 @@ libCrackLang_la_SOURCES = ext/Module.cc \
     parser/Parser.cc \
     parser/ParseError.cc \
     parser/Token.cc \
-    builder/util/md5.c \
-    builder/util/SourceDigest.cc \
-    builder/util/CacheFiles.cc \
     builder/llvm/ArrayTypeDef.cc \
     builder/llvm/BModuleDef.cc \
     builder/llvm/BBuilderContextData.cc \
@@ -88,12 +87,15 @@ libCrackLang_la_SOURCES = ext/Module.cc \
     compiler/CrackContext.cc \
     compiler/Token2.cc \
     compiler/Location2.cc \
-    Crack.cc
+    wisecrack/repl.cc \
+    Crack.cc \
+    util/CacheFiles.cc
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
 libCrackLang_la_LDFLAGS = -version-info 4:1:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
-libCrackDebugTools_la_SOURCES = debug/DebugTools.cc
+libCrackDebugTools_la_SOURCES = debug/DebugTools.cc util/md5.c \
+    util/SourceDigest.cc
 libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
 libCrackDebugTools_la_LDFLAGS = -version-info 1:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@
 
@@ -116,8 +118,7 @@ runtime_la_SOURCES = runtime/BorrowedExceptions.cc \
     runtime/Process.cc \
     runtime/Time.cc \
     runtime/MD5.cc \
-    runtime/XDR.cc \
-    builder/util/md5.c
+    runtime/XDR.cc
 runtime_la_LIBADD = libCrackDebugTools.la
 
 # this is really annoying, testext needs to be installed in order to generate 
@@ -129,7 +130,7 @@ test_testext_la_LDFLAGS = -avoid-version -module
 test_testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _alsa_midi _sdlgfx _fluidsynth \
-             _cairosdl _xs
+             _cairosdl _xs _ssl _png
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -194,11 +195,24 @@ _alsa_midi_la_CXXFLAGS = @ALSA_CFLAGS@
 _alsa_midi_la_SOURCES = opt/_alsa_midi.cc
 endif
 
+if HAVE_SSL
+extlib_LTLIBRARIES += _ssl.la
+_ssl_la_LDFLAGS = -avoid-version -module @SSL_LIBS@
+_ssl_la_CXXFLAGS = @SSL_CPPFLAGS@
+_ssl_la_SOURCES = opt/_ssl.cc
+endif
+
 if HAVE_FLUIDSYNTH
 extlib_LTLIBRARIES += _fluidsynth.la
 _fluidsynth_la_LDFLAGS = -avoid-version -module @FLUIDSYNTH_LIBS@
 _fluidsynth_la_CXXFLAGS = @FLUIDSYNTH_CPPFLAGS@
 _fluidsynth_la_SOURCES = opt/_fluidsynth.cc
+endif
+
+if HAVE_PNG
+extlib_LTLIBRARIES += _png.la
+_png_la_LDFLAGS = -avoid-version -module @PNG_LIBS@
+_png_la_SOURCES = opt/_png.cc
 endif
 
 noinst_HEADERS = \
@@ -233,12 +247,8 @@ noinst_HEADERS = \
     builder/llvm/VTableBuilder.h \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
-    builder/util/md5.h \
-    builder/util/SourceDigest.h \
-    builder/util/CacheFiles.h \
     debug/DebugTools.h \
     ext/Stub.h \
-    wisecrack/repl.h \
     model/AllocExpr.h \
     model/Annotation.h \
     model/ArgDef.h \
@@ -251,6 +261,7 @@ noinst_HEADERS = \
     model/ConstSequenceExpr.h \
     model/ConstVarDef.h \
     model/Context.h \
+    model/ContextStackFrame.h \
     model/Deserializer.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
@@ -303,8 +314,15 @@ noinst_HEADERS = \
     spug/StringFmt.h \
     spug/TypeInfo.h \
     spug/check.h \
+    tests/MockBuilder.h \
+    tests/MockFuncDef.h \
+    tests/MockModuleDef.h \
+    util/CacheFiles.h \
+    util/md5.h \
+    util/SourceDigest.h \
     compiler/init.h \
     opt/cairosdl.h \
+    config.h \
     Crack.h
 
 compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
@@ -321,8 +339,7 @@ extinc_HEADERS = \
     ext/RCObj.h \
     ext/Type.h \
     ext/util.h \
-    ext/Var.h \
-    ext/crack_config.h
+    ext/Var.h
 
 EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
     sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
@@ -334,6 +351,10 @@ bin_PROGRAMS = crack
 
 crack_SOURCES = crack_main.cc
 crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
+
+noinst_PROGRAMS = unittests
+unittests_SOURCES = test/unittests_main.cc
+unittests_LDADD = libCrackLang.la libCrackDebugTools.la
 
 # install under prefix/lib instead of libdir so it's not platform dependent.
 cracklib = ${prefix}/lib/crack-${VERSION}
@@ -389,4 +410,5 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 	done
 
 check: testbed
+	./unittests
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen

@@ -458,6 +458,17 @@ class MockBuilder : public builder::Builder {
                                     model::TypeDef *typeDef
                                     ) {
         }
+
+        virtual void beginSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  ) {
+        }
+
+        virtual void closeSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  ) {
+        }
+
 };
 
 #endif

@@ -29,8 +29,8 @@
 #include "StrConst.h"
 #include "TypeDef.h"
 #include "compiler/init.h"
-#include "builder/util/CacheFiles.h"
-#include "builder/util/SourceDigest.h"
+#include "util/CacheFiles.h"
+#include "util/SourceDigest.h"
 #include "wisecrack/repl.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 
