@@ -14,6 +14,7 @@
 #include <list>
 #include <string>
 #include "Token.h"
+#include "wisecrack/repl.h"
 
 namespace parser {
 
@@ -130,10 +131,16 @@ class Toker {
          fixIndentation(val);
       }
 
+      // repl for more input (optional)
+      wisecrack::Repl* repl;
+
    public:
 
       /** constructs a tokenizer from the source stream */
       Toker(std::istream &src, const char *sourceName, int lineNumber = 1);
+
+      /** set a repl to ask for more input if necessary */
+      void setRepl(wisecrack::Repl& r); 
 
       /**
        * Returns the next token in the stream.

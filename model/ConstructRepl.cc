@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
 #include "parser/Toker.h"
@@ -92,7 +93,9 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     //  ctx, modd, bdr triple?
     if (arg_ctx) {
         if (0==arg_modd || 0==arg_bdr) {
-            cerr << "internal error in Construct::runRepl: all three {ctx,modd,bdr} must be set or must all be null." << endl;
+            cerr << "internal error in Construct::runRepl: all three"
+                " {ctx,modd,bdr} must be set or must all be null." 
+                 << endl;
             assert(0);
             return 1;
         }
@@ -142,84 +145,70 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     } // end else start fresh context/module/builder
 
 
-    //printf("*** wisecrack 0.7.2, ctrl-d to exit. ***\n");
-
-    // move outside while so it can be persisted with previous
-    // lines for multi-line input.
-    std::stringstream src;
-    bool multiline = false;
-
     //
     // main Read-Eval-Print loop
     //
     while(!r.done()) {
 
-        // READ
-        r.nextlineno();
-        r.prompt(stdout);
-        r.read(stdin);
-        if (r.getLastReadLineLen()==0) continue;
-
-        if (continueOnSpecial(r,ctx)) continue;
-
-        // EVAL
-        src << r.getLastReadLine();
-
-        std::string path = r.getPrompt();
-
+        // outer try block to catch ctrl-c
         try {
 
-            Toker toker(src, path.c_str());
-            Parser parser(toker, ctx);
-            parser.setAtRepl(true);
-            parser.parse();            
+            // READ
+            r.nextlineno();
+            r.prompt(stdout);
+            r.read(stdin);
+            if (r.getLastReadLineLen()==0) continue;
 
-            // stats collection
-            StatState sState(ctx, ConstructStats::parser, mod);
-            if (sState.statsEnabled()) {
-                stats->incParsed();
-            }
+            if (continueOnSpecial(r,ctx)) continue;
 
-            // currently, closeSection also runs the code.
-            // And then it opens a new section, i.e. it starts
-            // a new module level function.
-            bdr->closeSection(*ctx,mod);
+            // EVAL
+            r.reset_src_to_empty();
+            r.src << r.getLastReadLine();
+
+            std::string path = r.getPrompt();
+
+            try {
+
+                Toker toker(r.src, path.c_str());
+                Parser parser(toker, ctx);
+                parser.setAtRepl(r);
+                parser.parse();
+
+                // stats collection
+                StatState sState(ctx, ConstructStats::parser, mod);
+                if (sState.statsEnabled()) {
+                    stats->incParsed();
+                }
+
+                // currently, closeSection also runs the code.
+                // And then it opens a new section, i.e. it starts
+                // a new module level function.
+                bdr->closeSection(*ctx,mod);
             
 
-            // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
+                // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
-        } catch (const parser::ParseErrorRecoverable& ex) {
-            // tell the end-of-while loop src handling
-            //  to keep the current src contents, so we
-            //  can add the next line and try again.
-            multiline = true;
+            } catch (const spug::Exception &ex) {
+                cerr << ex << endl;
 
-        } catch (const spug::Exception &ex) {
-            cerr << ex << endl;
+            } catch (...) {
+                if (!uncaughtExceptionFunc)
+                    cerr << "Uncaught exception, no uncaught exception handler!" <<
+                        endl;
+                else if (!uncaughtExceptionFunc())
+                    cerr << "Unknown exception caught." << endl;
+            }
 
-        } catch (...) {
-            if (!uncaughtExceptionFunc)
-                cerr << "Uncaught exception, no uncaught exception handler!" <<
-                    endl;
-            else if (!uncaughtExceptionFunc())
-                cerr << "Unknown exception caught." << endl;
+            
+            // end outer try block
+        } catch (char const* msg) {
+            cerr << msg << endl;
+            printf("press ctrl-d to exit\n");
         }
 
-        // clear eof on src
-        src.clear();
-        if (multiline) {
-            src << "\n";
-            // go to beginning for gets
-            src.seekg(0);
-            r.set_prompt("...");
-        } else {
-            // reset src to be empty
-            src.str(std::string());
-            r.reset_prompt_to_default();
-        }
-        multiline = false;
 
     } // end while
+
 
     builderStack.pop();
     rootBuilder->finishBuild(*ctx);

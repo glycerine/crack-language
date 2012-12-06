@@ -22,6 +22,7 @@
 #include "model/GenericParm.h"
 #include "model/Context.h"
 #include "model/ContextStackFrame.h"
+#include "wisecrack/repl.h"
 
 namespace model {
    SPUG_RCPTR(ArgDef);
@@ -33,6 +34,7 @@ namespace model {
    SPUG_RCPTR(TypeDef);
    SPUG_RCPTR(VarDef);
 };
+
 
 namespace parser {
 
@@ -89,6 +91,9 @@ class Parser {
       // are we invoked from repl?
       bool atRepl;
 
+      // repl to ask for more input
+      wisecrack::Repl* repl;
+
       /**
        * This class essentially lets us manage the context stack with the
        * program's stack.  We push the context by creating an instance, and
@@ -114,8 +119,15 @@ class Parser {
       /**
        * Returns the next token from the tokenizer and stores its location in
        * the current context.
+       *
+       * @param eofRecoverable : if true, on hitting eof (Token::end), try
+       *                         checking with the repl for more input. This
+       *                         can only succeed if setAtRepl() has been done.
        */
-      Token getToken();
+      Token getToken(bool eofRecoverable = false);
+
+      /** similar logic as in getToken(true), but we already got tok back. */
+      Token eof_requires_repl_input(Token& tok);
 
       /**
        * Returns the precedence of the specified operator.
@@ -496,7 +508,7 @@ class Parser {
        *   certain checks like declarations without definitions
        *   don't generate errors.
        */
-      void setAtRepl(bool atr);
+      void setAtRepl(wisecrack::Repl& r);
 
 };
 

@@ -87,7 +87,25 @@ void Parser::addFuncDef(FuncDef *funcDef) {
    addDef(funcDef);
 }
 
-Token Parser::getToken() {
+
+Token Parser::eof_requires_repl_input(Token& tok) {
+
+    Token tok2;
+    // if at end, perhaps repl wants to ask for more input
+    if (tok.isEnd() && repl) {
+        repl->get_more_input();
+        // skip end token, get next.
+        tok2 = toker.getToken();
+        context->setLocation(tok2.getLocation());
+        return tok2;
+    }
+
+    // else just return what we got.
+    return tok;
+}
+
+
+Token Parser::getToken(bool eofRecoverable) {
    Token tok = toker.getToken();
    context->setLocation(tok.getLocation());
    
@@ -99,6 +117,15 @@ Token Parser::getToken() {
          context->popErrorContext();
       tok = toker.getToken();
       context->setLocation(tok.getLocation());
+   }
+
+   // if at end, perhaps repl wants to ask for more input
+   if (eofRecoverable && tok.isEnd() && repl) {
+       if (repl->get_more_input()) {
+           // skip end token, get next.
+           tok = toker.getToken();
+           context->setLocation(tok.getLocation());           
+       }
    }
 
    return tok;
@@ -1535,7 +1562,7 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
 }
 
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
-   Token tok = getToken();
+   Token tok = getToken(true);
    TypeDefPtr typeofType;
    if (tok.isTypeof()) {
       if (generic) {
@@ -3235,7 +3262,7 @@ void Parser::recordParenthesized(Generic *generic) {
 TypeDefPtr Parser::parseClassDef() {
    runCallbacks(classDef);
 
-   Token tok = getToken();
+   Token tok = getToken(true);
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
    string className = tok.getData();
@@ -3244,7 +3271,7 @@ TypeDefPtr Parser::parseClassDef() {
    TypeDefPtr existing = checkForExistingDef(tok, className);
    
    // check for a generic parameter list
-   tok = getToken();
+   tok = getToken(true);
    Generic *generic = 0;
    if (tok.isLBracket()) {
       if (existing)
@@ -3375,7 +3402,9 @@ Parser::Parser(Toker &toker, model::Context *context) :
    toker(toker),
    nestID(0),
    moduleCtx(context),
-   context(context) {
+   context(context),
+   atRepl(false),
+   repl(0) {
    
    // build the precedence table
    enum {  noPrec, logOrPrec, logAndPrec, bitOrPrec, bitXorPrec, bitAndPrec, 
@@ -3433,7 +3462,7 @@ void Parser::parseClassBody() {
       state = st_base;
       
       // check for a closing brace or a nested class definition
-      Token tok = getToken();
+      Token tok = getToken(true);
       if (tok.isRCurly()) {
          // run callbacks, this can change the token stream so make sure we've 
          // still got an end curly
@@ -3468,7 +3497,15 @@ void Parser::parseClassBody() {
          parseAlias();
          continue;
       }
-      
+
+      if (repl && tok.isEnd()) {
+          while (tok.isEnd()) {
+              tok = eof_requires_repl_input(tok);
+          }
+          toker.putBack(tok);
+          continue;
+      }
+          
       // parse some other kind of definition
       toker.putBack(tok);
       state = st_notBase;
@@ -3625,6 +3662,8 @@ bool Parser::runCallbacks(Event event) {
    return gotCallbacks;
 }
 
-void Parser::setAtRepl(bool atr) {
-    atRepl = atr; 
+void Parser::setAtRepl(wisecrack::Repl& r) {
+    atRepl = true;
+    repl = &r;
+    toker.setRepl(r);
 }

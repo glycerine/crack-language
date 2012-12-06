@@ -6,6 +6,9 @@
 // 
 
 #include "repl.h"
+#include <signal.h>
+#include <setjmp.h>
+#include <stdlib.h>
 
 //
 // wisecrack: an interpreter for crack
@@ -24,6 +27,37 @@
 #include <ctype.h> // isspace
 
 namespace wisecrack {
+
+    jmp_buf   ctrl_c_jb;
+    sigset_t  sigset;
+
+    const static int caught_ctrl_c = -1;
+
+    /** signal handler for ctrl-c */
+    void repl_sa_sigaction(int signum, siginfo_t* si, void* vs) {
+        
+        printf(" [ctrl-c]\n");
+        siglongjmp(ctrl_c_jb, caught_ctrl_c);
+    }
+
+/** setup handler on ctrl-c press */
+
+struct sigaction old_sigint_action;
+void init_ctrl_c_handling() {
+
+    struct sigaction sa;
+    bzero(&sa,sizeof(struct sigaction));
+
+    sa.sa_sigaction = &repl_sa_sigaction;
+    sa.sa_flags = SA_SIGINFO;
+    if (-1 == sigaction(SIGINT , &sa, &old_sigint_action)) {
+        perror("error: wisecrack::init_ctrl_c_handling() could not setup "
+               "SIGINT signal handler. Aborting.");
+        exit(1);
+    }
+}
+
+
 
 
 
@@ -62,7 +96,48 @@ namespace wisecrack {
         
         _readlen = 0;
         bzero(_readbuf, _readsz);
-        char* r = fgets(_readbuf, _readsz, fin);
+
+        volatile char* r = 0;
+        volatile bool cc = true;
+        volatile int rc = 0;
+
+        // should come before sigsetjmp so
+        // that siglongjmp doesn't undo it...?
+        init_ctrl_c_handling();
+
+        // no reason comes to mind to save/restore signal mask,
+        // so 2nd param here is (arbitrarily really) set to 0.
+        rc = sigsetjmp(ctrl_c_jb, 0);
+
+        switch (rc) {
+
+            case  0: {
+                // initial time, no siglongjmp yet.
+                printf("case 0 initial sigsetjmp\n");
+                r = fgets(_readbuf, _readsz, fin);
+                cc = false;
+                siglongjmp(ctrl_c_jb, -2);  
+                break;
+            }
+
+            case caught_ctrl_c: {
+                printf( "siglongjmp() function was called\n" );
+                
+                cc = true;
+                break;
+            }
+
+            default: {
+                // the normal path exit, from -2
+                //printf( "in default, rc = %d\n", rc);
+                break;
+            }
+
+        } // end switch(rc)
+
+        if (cc) {
+            throw "ctrl-c caught";
+        }
 
         if (NULL == r) {
             // eof or error
@@ -173,6 +248,37 @@ namespace wisecrack {
      */
     void Repl::reset_prompt_to_default() {
         set_prompt(_default_prompt);
+    }
+
+
+    /** restart src stringstream with an empty string */
+    void Repl::reset_src_to_empty() { 
+        src.str(std::string());
+        // clear eof flags so we can read again
+        src.clear();
+    }
+
+    /** return true if more input obtained. */
+    bool Repl::get_more_input() {
+        set_prompt("...");
+        
+        nextlineno();
+        prompt(stdout);
+        read(stdin);
+
+        // crude, but perhaps effective?
+        //  if we get no input, tell the Toker so.
+        if (*getTrimmedLastReadLine() == '\0') {
+            return false;
+        }
+
+        src.clear();
+        src << "\n";
+        src << getLastReadLine();
+
+        reset_prompt_to_default();
+
+        return true;
     }
 
 

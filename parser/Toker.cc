@@ -141,7 +141,8 @@ Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     currentName(sourceName),
     currentLine(lineNumber),
     currentStartCol(1),
-    currentEndCol(1) {
+    currentEndCol(1),
+    repl(0) {
     lastLoc = new LocationImpl(sourceName, 1, 1, 0);
 }
 
@@ -1020,4 +1021,8 @@ Token Toker::getToken() {
         }
         return toks[0];
     }
+}
+
+void Toker::setRepl(wisecrack::Repl& r) {
+    repl = &r;
 }

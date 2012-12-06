@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <strings.h> // bzero
 #include <string.h>  // strlen
+#include <sstream>
 
 //
 // wisecrack: an interpreter for crack
@@ -41,7 +42,9 @@ namespace wisecrack {
         void prompt(FILE* fout);
         char* getPrompt();
 
+        /** read one line, ctrl-c interrupt will throw */
         void read(FILE* fin);
+
         void eval();
         void print(FILE* fout);
         void run(FILE* fin, FILE* fout);
@@ -94,6 +97,14 @@ namespace wisecrack {
          */
         void reset_prompt_to_default();
 
+        /** src, a stream version, is what other components expect */
+        std::stringstream src;
+
+        /** restart src stringstream with an empty string */
+        void reset_src_to_empty();
+
+        /** return true if more input obtained. */
+        bool get_more_input();
 
     private:
         bool _alldone;
@@ -110,6 +121,7 @@ namespace wisecrack {
         const static int _promptsz = 256;
         char             _prompt[_promptsz];
         char             _default_prompt[_promptsz];
+
     };
 
 
