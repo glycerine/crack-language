@@ -157,6 +157,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
 
     bool doCleanup = false;
+    Namespace::Txmark ns_start_point;
     
     //
     // main Read-Eval-Print loop
@@ -165,7 +166,8 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
         try {
             doCleanup = false;
-
+            ns_start_point = (ctx->ns.get())->markTransactionStart();
+            
             // READ
             r.nextlineno();
             r.reset_prompt_to_default();
@@ -236,6 +238,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         
         if (doCleanup) {
             cleanup_unfinished_input(bdr, ctx, mod);
+            (ctx->ns.get())->undoTransactionTo(ns_start_point);
         }
 
     } // end while

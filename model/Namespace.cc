@@ -283,17 +283,27 @@ Namespace::Txmark Namespace::markTransactionStart() {
 void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
     
     assert(this == txstart.ns);
-    //    assert(ordered.size() == orderedForCache.size());
 
     if (t.last_commit < 0) return;
 
-    long n = (long)ordered.size();
+    long n = (long)orderedForCache.size();
 
     VarDefMap::iterator mapit;
     for(long i = t.last_commit + 1; i < n; ++i) {
         mapit = defs.find(orderedForCache[i]->name);
-        assert(mapit != defs.end());
-        defs.erase(mapit);
+
+        // we can't assert because orderedForCache contains
+        // duplicates, such as :exStruct
+        // No: assert(map != defs.end())
+        // 
+
+        if (mapit != defs.end()) { 
+            cerr << "undo in namespace '" 
+                 << canonicalName
+                 << "'removing name: '" 
+                 << orderedForCache[i]->name << "'" << endl;
+            defs.erase(mapit);
+        }
     }
 
     //    ordered.erase(ordered.begin() + t.last_commit + 1,
