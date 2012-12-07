@@ -99,7 +99,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             assert(0);
             return 1;
         }
-
+ 
         // the previous script will have
         // already closed the last function and run it
         // so we just need to start a new section here,
@@ -150,11 +150,11 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     //
     while(!r.done()) {
 
-        // outer try block to catch ctrl-c
         try {
 
             // READ
             r.nextlineno();
+            r.reset_prompt_to_default();
             r.prompt(stdout);
             r.read(stdin);
             if (r.getLastReadLineLen()==0) continue;
@@ -167,44 +167,43 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             std::string path = r.getPrompt();
 
-            try {
+            Toker toker(r.src, path.c_str());
+            Parser parser(toker, ctx);
+            parser.setAtRepl(r);
+            parser.parse();
 
-                Toker toker(r.src, path.c_str());
-                Parser parser(toker, ctx);
-                parser.setAtRepl(r);
-                parser.parse();
-
-                // stats collection
-                StatState sState(ctx, ConstructStats::parser, mod);
-                if (sState.statsEnabled()) {
-                    stats->incParsed();
-                }
-
-                // currently, closeSection also runs the code.
-                // And then it opens a new section, i.e. it starts
-                // a new module level function.
-                bdr->closeSection(*ctx,mod);
-            
-
-                // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
-
-            } catch (const spug::Exception &ex) {
-                cerr << ex << endl;
-
-            } catch (...) {
-                if (!uncaughtExceptionFunc)
-                    cerr << "Uncaught exception, no uncaught exception handler!" <<
-                        endl;
-                else if (!uncaughtExceptionFunc())
-                    cerr << "Unknown exception caught." << endl;
+            // stats collection
+            StatState sState(ctx, ConstructStats::parser, mod);
+            if (sState.statsEnabled()) {
+                stats->incParsed();
             }
 
+            // currently, closeSection also runs the code.
+            // And then it opens a new section, i.e. it starts
+            // a new module level function.
+            bdr->closeSection(*ctx,mod);
             
-            // end outer try block
+
+            // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
+
+        } catch (const wisecrack::ExceptionCtrlC &ex) {
+            printf(" [ctrl-c]\n");
+
+        } catch (const spug::Exception &ex) {
+            cerr << ex << endl;
+
         } catch (char const* msg) {
             cerr << msg << endl;
             printf("press ctrl-d to exit\n");
+            
+        } catch (...) {
+            if (!uncaughtExceptionFunc)
+                cerr << "Uncaught exception, no uncaught exception handler!" <<
+                    endl;
+            else if (!uncaughtExceptionFunc())
+                cerr << "Unknown exception caught." << endl;
         }
+        
 
 
     } // end while

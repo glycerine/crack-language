@@ -11,6 +11,7 @@
 #include <strings.h> // bzero
 #include <string.h>  // strlen
 #include <sstream>
+#include "spug/Exception.h"
 
 //
 // wisecrack: an interpreter for crack
@@ -28,6 +29,14 @@
 
 
 namespace wisecrack {
+
+    
+    /** thrown on ctrl-c SIGINT interrupt while at the repl*/
+    class ExceptionCtrlC : public spug::Exception {
+    public:
+        ExceptionCtrlC() {}
+        ExceptionCtrlC(const char *msg) : Exception(msg) {}
+    };
 
     class Repl {
 

@@ -6,6 +6,7 @@
 // 
 
 #include "repl.h"
+#include "spug/Exception.h"
 #include <signal.h>
 #include <setjmp.h>
 #include <stdlib.h>
@@ -28,15 +29,42 @@
 
 namespace wisecrack {
 
+    void print_signal_mask() {
+        
+        sigset_t print_cur_sset;
+        sigset_t print_old_sset;
+        
+        bzero(&print_cur_sset, sizeof(sigset_t));
+        bzero(&print_old_sset, sizeof(sigset_t));
+        sigemptyset(&print_cur_sset);
+        sigemptyset(&print_old_sset);
+        
+        int how = SIG_SETMASK;
+        if (-1 == sigprocmask(how, NULL, &print_old_sset)) {
+            perror("sigprocmask returned -1");
+            exit(1);
+        }
+        
+        if (sigismember(&print_old_sset, SIGINT)) {
+            printf("SIGINT is blocked\n");
+        } else {
+            printf("SIGINT is not blocked\n");
+        }
+        
+    }
+
+
     jmp_buf   ctrl_c_jb;
     sigset_t  sigset;
 
     const static int caught_ctrl_c = -1;
+    const static int normal_finish_after_read = -2;
 
     /** signal handler for ctrl-c */
     void repl_sa_sigaction(int signum, siginfo_t* si, void* vs) {
         
-        printf(" [ctrl-c]\n");
+        //printf(" [ctrl-c]\n");
+
         siglongjmp(ctrl_c_jb, caught_ctrl_c);
     }
 
@@ -50,13 +78,13 @@ void init_ctrl_c_handling() {
 
     sa.sa_sigaction = &repl_sa_sigaction;
     sa.sa_flags = SA_SIGINFO;
-    if (-1 == sigaction(SIGINT , &sa, &old_sigint_action)) {
+    if (-1 == sigaction(SIGINT, &sa, &old_sigint_action)) {
         perror("error: wisecrack::init_ctrl_c_handling() could not setup "
                "SIGINT signal handler. Aborting.");
         exit(1);
     }
+    //    print_signal_mask();
 }
-
 
 
 
@@ -92,51 +120,46 @@ void init_ctrl_c_handling() {
     }
 
 
+    /** 
+     *  read(fin) takes a line of input from fin, and if ctrl-c SIGINT is detected,
+     *     then it throws an ExceptionCtrlC.
+     */
     void Repl::read(FILE* fin) {
         
         _readlen = 0;
         bzero(_readbuf, _readsz);
 
         volatile char* r = 0;
-        volatile bool cc = true;
         volatile int rc = 0;
 
-        // should come before sigsetjmp so
-        // that siglongjmp doesn't undo it...?
         init_ctrl_c_handling();
-
-        // no reason comes to mind to save/restore signal mask,
-        // so 2nd param here is (arbitrarily really) set to 0.
-        rc = sigsetjmp(ctrl_c_jb, 0);
+        rc = sigsetjmp(ctrl_c_jb, 1);
 
         switch (rc) {
 
             case  0: {
                 // initial time, no siglongjmp yet.
-                printf("case 0 initial sigsetjmp\n");
                 r = fgets(_readbuf, _readsz, fin);
-                cc = false;
-                siglongjmp(ctrl_c_jb, -2);  
+
+                siglongjmp(ctrl_c_jb, normal_finish_after_read);  
                 break;
             }
 
             case caught_ctrl_c: {
-                printf( "siglongjmp() function was called\n" );
-                
-                cc = true;
+                throw wisecrack::ExceptionCtrlC();                
+                break;
+            }
+
+            case normal_finish_after_read: {
                 break;
             }
 
             default: {
-                // the normal path exit, from -2
-                //printf( "in default, rc = %d\n", rc);
+                fprintf(stderr, "Wierd and unhandled return in repl.cc  switch(sigsetjmp) , rc = %d\n", rc);
+                assert(0);                
                 break;
             }
 
-        } // end switch(rc)
-
-        if (cc) {
-            throw "ctrl-c caught";
         }
 
         if (NULL == r) {
@@ -149,6 +172,7 @@ void init_ctrl_c_handling() {
             }
         }
         
+        // trimr needs _readlen set correctly.
         _readlen = strlen(_readbuf);
         trimr();
     }
