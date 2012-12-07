@@ -12,7 +12,8 @@ using namespace std;
 using namespace parser;
 
 Token::Token() :
-   type(Token::end) {
+    type(Token::end),
+    data("*eof*") {
 }
 
 Token::Token(Type type, const std::string &data, const Location &loc) :

@@ -58,8 +58,11 @@ using namespace builder;
 using namespace crack::ext;
 using namespace llvm;
 
-// helper. at end of file.
+// helpers. at end of file.
 bool continueOnSpecial(wisecrack::Repl& r, Context* context);
+
+// cleanup ctrl-c aborted input.
+void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 
 
 /**
@@ -145,12 +148,15 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     } // end else start fresh context/module/builder
 
 
+    bool doCleanup = false;
+    
     //
     // main Read-Eval-Print loop
     //
     while(!r.done()) {
 
         try {
+            doCleanup = false;
 
             // READ
             r.nextlineno();
@@ -178,33 +184,38 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
                 stats->incParsed();
             }
 
-            // currently, closeSection also runs the code.
+            // currently, also runs the code.
             // And then it opens a new section, i.e. it starts
             // a new module level function.
-            bdr->closeSection(*ctx,mod);
-            
+            bdr->closeExecAndBeginNewSection(*ctx,mod);
 
             // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
         } catch (const wisecrack::ExceptionCtrlC &ex) {
             printf(" [ctrl-c]\n");
+            doCleanup = true;
 
         } catch (const spug::Exception &ex) {
             cerr << ex << endl;
+            doCleanup = true;
 
         } catch (char const* msg) {
             cerr << msg << endl;
             printf("press ctrl-d to exit\n");
-            
+            doCleanup = true;
+
         } catch (...) {
             if (!uncaughtExceptionFunc)
                 cerr << "Uncaught exception, no uncaught exception handler!" <<
                     endl;
             else if (!uncaughtExceptionFunc())
                 cerr << "Unknown exception caught." << endl;
+            doCleanup = true;
         }
         
-
+        if (doCleanup) {
+            cleanup_unfinished_input(bdr, ctx, mod);
+        }
 
     } // end while
 
@@ -238,3 +249,12 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context) {
     return false;
 }
 
+
+void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
+    printf(" [cleaning up unfinished line]\n");
+    bdr->eraseSection(*ctx,mod);
+    
+    // XXX TODO: figure out how to erase any newly half-finished classes
+    
+    bdr->beginSection(*ctx,mod);
+}

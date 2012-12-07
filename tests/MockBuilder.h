@@ -464,9 +464,19 @@ class MockBuilder : public builder::Builder {
                                   ) {
         }
 
+        virtual void eraseSection(model::Context &context,
+                                  model::ModuleDef *modDef
+                                  ) {
+        }
+
         virtual void closeSection(model::Context &context,
                                   model::ModuleDef *modDef
                                   ) {
+        }
+
+        virtual void closeExecAndBeginNewSection(model::Context &context,
+                                                 model::ModuleDef *modDef
+                                                 ) {
         }
 
 };

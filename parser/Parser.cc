@@ -466,6 +466,10 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
 
       // peek at the next token
       tok = getToken();
+      
+      //      if (nested && tok.isEnd()) {
+      //          tok_was_end_but_repl_got_more_input(tok);
+      //      }
 
       // check for a different block terminator depending on whether we are
       // nested or not.
@@ -475,7 +479,7 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
             unexpected(tok, "expected statement or end-of-file.");
          gotBlockTerminator = true;
       } else if (tok.isEnd()) {
-         if (nested)
+         if (nested) 
              unexpected(tok, "expected statement or closing brace.");
          gotBlockTerminator = true;
       }
@@ -3498,14 +3502,8 @@ void Parser::parseClassBody() {
          continue;
       }
 
-      if (repl && tok.isEnd()) {
-          while (tok.isEnd()) {
-              tok = eof_requires_repl_input(tok);
-          }
-          toker.putBack(tok);
-          continue;
-      }
-          
+      if (tok_was_end_but_repl_got_more_input(tok)) continue;
+
       // parse some other kind of definition
       toker.putBack(tok);
       state = st_notBase;
@@ -3667,3 +3665,15 @@ void Parser::setAtRepl(wisecrack::Repl& r) {
     repl = &r;
     toker.setRepl(r);
 }
+
+bool Parser::tok_was_end_but_repl_got_more_input(Token& tok) {
+    if (repl && tok.isEnd()) {
+        while (tok.isEnd()) {
+            tok = eof_requires_repl_input(tok);
+        }
+        toker.putBack(tok);
+        return true;
+    }
+    return false;
+}
+

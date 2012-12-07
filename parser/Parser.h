@@ -510,6 +510,17 @@ class Parser {
        */
       void setAtRepl(wisecrack::Repl& r);
 
+      /**
+       * if we seem to be halting a parse for lack of input,
+       *  try this function which will detect if setAtRepl
+       *  has been called and if so will try to get more
+       *  input from the user. Returns true if that attempt
+       *  was successful.  May throw an exception such as
+       *  wisecrack::ExceptionCtrlC(). Only calls into the
+       *  repl if tok.isEnd() is true, then does a toker.putBack
+       *  on the newly gotten token.
+       */
+      bool tok_was_end_but_repl_got_more_input(Token& tok);
 };
 
 } // namespace parser

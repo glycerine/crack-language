@@ -2149,20 +2149,26 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
 }
 
 
+void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
+    
+    // enumerate the symbols defined by this func and
+    // delete them from the namespace.
+    VarDef* def = 0;
+    context->ns->removeDef(def);
+
+    // cleanup an aborted function construction.
+    func->eraseFromParent();
+}
+
+
 void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
     closeModule(context, modDef);
 
-    // create a new module function
-    vector<Type *> argTypes;
-    FunctionType *voidFuncNoArgs =
-        FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
-    func = Function::Create(voidFuncNoArgs,
-                            Function::ExternalLinkage,
-                            "__section__",
-                            module
-                            );
-    createFuncStartBlocks("__section__");
-    createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
+}
+
+void LLVMBuilder::closeExecAndBeginNewSection(Context &context, ModuleDef *modDef) {
+    closeSection(context, modDef);
+    beginSection(context, modDef);
 }
 
 

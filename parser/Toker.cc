@@ -948,13 +948,13 @@ Token Toker::readToken() {
     // expected
     if (state == st_none || state == st_comment) {
         state = st_none;
-        return Token(Token::end, "", getLocation());
+        return Token(Token::end, "*eof*", getLocation());
     } else if (state == st_ident) {
         // it's ok for identifiers to be up against the end of the stream
         state = st_none;
         return Token(Token::ident, buf.str(), getLocation());
     } else {
-        ParseErrorRecoverable::abort(Token(Token::end, "", getLocation()),
+        ParseErrorRecoverable::abort(Token(Token::end, "*eof*", getLocation()),
                                      "End of stream in the middle of a token"
                                      );
     }
