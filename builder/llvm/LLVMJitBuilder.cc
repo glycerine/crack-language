@@ -33,6 +33,7 @@
 #include <llvm/IntrinsicInst.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Support/Debug.h>
+#include <stdio.h>
 
 using namespace std;
 using namespace llvm;
@@ -222,6 +223,7 @@ void LLVMJitBuilder::run() {
     fptr();
 }
 
+
 BuilderPtr LLVMJitBuilder::createChildBuilder() {
     LLVMJitBuilder *result = new LLVMJitBuilder();
     result->rootBuilder = rootBuilder ? rootBuilder : this;
@@ -386,9 +388,12 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (options->dumpMode)
         dump();
 
-    if (   options->dropintoRepl   // allow dumping at the repl, for debugging.
-        || !options->dumpMode 
-        || !context.construct->compileTimeConstruct)
+    if (options->dropintoRepl) {
+        run();
+        return;
+    }
+
+    if (!options->dumpMode || !context.construct->compileTimeConstruct)
         run();
 
 }

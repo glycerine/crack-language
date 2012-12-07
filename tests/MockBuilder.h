@@ -474,11 +474,7 @@ class MockBuilder : public builder::Builder {
                                   ) {
         }
 
-        virtual void closeExecAndBeginNewSection(model::Context &context,
-                                                 model::ModuleDef *modDef
-                                                 ) {
-        }
-
+        virtual void dump() {}
 };
 
 #endif

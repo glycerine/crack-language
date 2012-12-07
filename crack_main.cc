@@ -240,18 +240,6 @@ int main(int argc, char **argv) {
                 break;
             case 'r':
                 crack.options->dropintoRepl = true;
-                //
-                // At present we try to turn off optimizations, else too much
-                // repl code (names of sections) get eliminated as dead code
-                // and this hurts out ability to debug.
-                //
-                // Unfortunately, at present this setting
-                // is ignored. To workaround, we #if 0 ommitted code in 
-                // LLVMJitBuilder.cc, specifically ommitting the PassMan in
-                // LLVMJitBuilder::engineFinishModule to avoid
-                // false dead-code elimination.
-                //
-                crack.options->optimizeLevel = 0;
                 break;
             case doubleBuilder:
                 useDoubleBuilder = true;
@@ -291,6 +279,7 @@ int main(int argc, char **argv) {
 
     // are there any more arguments?
     if (optind == argc) {
+        crack.options->dropintoRepl = true;
         rc = crack.runRepl();
 
     } else if (!strcmp(argv[optind], "-")) {

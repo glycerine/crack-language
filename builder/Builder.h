@@ -576,9 +576,7 @@ class Builder : public spug::RCBase {
                                   model::ModuleDef *modDef
                                   ) = 0;
 
-        virtual void closeExecAndBeginNewSection(model::Context &context,
-                                                 model::ModuleDef *modDef
-                                                 ) = 0;
+        virtual void dump() = 0;
 
 
 };

@@ -186,6 +186,31 @@ class Namespace : public virtual spug::RCBase {
          * namespace.
          */
         void deserializeDefs(Deserializer &deser);
+
+        /**
+         * note where we are in the ordered defs, so we
+         *  know how far back to delete if we have to undo
+         *  the transaction implicit in the repl parsing.
+         */
+        struct Txmark { 
+            Namespace* ns; // sanity check we're at the right place.
+            long last_commit; // -1 => empty ns, don't delete last_commit.
+            Txmark() : ns(0), last_commit(-1) {}
+        };
+        Txmark markTransactionStart();
+
+        /** 
+         * do the roll back, deleting var defs up to but not 
+         * including last_commit. 
+         */
+        void undoTransactionTo(const Txmark& txstart);
+
+        /**
+         * roll back the tail of the log, e.g. using txLog.back()
+         */
+        void undo();
+        
+        std::vector<Txmark> txLog; // stack of transactions
 };
 
 } // namespace model

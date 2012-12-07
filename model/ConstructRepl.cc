@@ -59,7 +59,7 @@ using namespace crack::ext;
 using namespace llvm;
 
 // helpers. at end of file.
-bool continueOnSpecial(wisecrack::Repl& r, Context* context);
+bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr);
 
 // cleanup ctrl-c aborted input.
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
@@ -92,6 +92,10 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     Context*   ctx = arg_ctx;
     Builder*   bdr = arg_bdr;
 
+    // do we need to start or close a function before entering repl
+    bool closeFunc = false;
+    bool startFunc = false;
+
     // are we starting fresh, or dropping into a previously defined
     //  ctx, modd, bdr triple?
     if (arg_ctx) {
@@ -103,12 +107,12 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             return 1;
         }
  
-        // the previous script will have
-        // already closed the last function and run it
+        // already closed the last function and ran it
         // so we just need to start a new section here,
         // without issuing another closeModule (as closeSection() would)
         // which would run the script a second time.
-        bdr->beginSection(*ctx,mod);
+        // bdr->beginSection(*ctx,mod);
+        startFunc = true;
 
     } else {
 
@@ -145,6 +149,10 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         ctx = context.get();
         bdr = builder.get();
 
+        // createModule starts one for us, don't start
+        // another or that :main will never get closed.
+        startFunc = false;
+
     } // end else start fresh context/module/builder
 
 
@@ -165,9 +173,15 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             r.read(stdin);
             if (r.getLastReadLineLen()==0) continue;
 
-            if (continueOnSpecial(r,ctx)) continue;
+            if (continueOnSpecial(r,ctx,bdr)) continue;
 
             // EVAL
+            if (startFunc) {
+                // must come *after* the continueOnSpecial() call.
+                bdr->beginSection(*ctx,mod);
+            }
+            startFunc = true; // every time after first for sure.
+            
             r.reset_src_to_empty();
             r.src << r.getLastReadLine();
 
@@ -184,10 +198,17 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
                 stats->incParsed();
             }
 
-            // currently, also runs the code.
-            // And then it opens a new section, i.e. it starts
-            // a new module level function.
-            bdr->closeExecAndBeginNewSection(*ctx,mod);
+            // We can't split up the close and the exec,
+            // because import statements themselves will
+            // try to closeModule, and they won't know
+            // that the exec is missing; i.e. they require
+            // the closeModule() to do a run() on their own 
+            // module function's main function
+            // to finish the import.
+
+            // closeSection() finishes the module and runs 
+            // the last function constructed in it.
+            bdr->closeSection(*ctx,mod);
 
             // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
 
@@ -234,7 +255,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
  *    Currently this implements just the two dump commands: 'dump' and 'dm'
  *    that display the global/local namespace; hence are proxies for PRINT.
  */
-bool continueOnSpecial(wisecrack::Repl& r, Context* context) {
+bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
     // special commands
     if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
@@ -244,6 +265,11 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context) {
     else if (0==strcmp("dm",r.getTrimmedLastReadLine())) {
         // don't print parent namespaces (dump without the (p)arent namespace and without (u)pper namesapces)
         context->short_dump();
+        return true;
+
+    } else if (0==strcmp("dc",r.getTrimmedLastReadLine())) {
+        // dc: dump bit-code
+        bdr->dump();
         return true;
     }
     return false;

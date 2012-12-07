@@ -2154,7 +2154,7 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     // enumerate the symbols defined by this func and
     // delete them from the namespace.
     VarDef* def = 0;
-    context->ns->removeDef(def);
+    //    context.ns->removeDef(def);
 
     // cleanup an aborted function construction.
     func->eraseFromParent();
@@ -2166,10 +2166,6 @@ void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
 
 }
 
-void LLVMBuilder::closeExecAndBeginNewSection(Context &context, ModuleDef *modDef) {
-    closeSection(context, modDef);
-    beginSection(context, modDef);
-}
 
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {

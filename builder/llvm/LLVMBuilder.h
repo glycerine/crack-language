@@ -478,10 +478,8 @@ class LLVMBuilder : public Builder {
                                   model::ModuleDef *modDef
                                   );
 
-        virtual void closeExecAndBeginNewSection(model::Context &context,
-                                                 model::ModuleDef *modDef
-                                                 );
-        
+        virtual void dump() {}
+
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);

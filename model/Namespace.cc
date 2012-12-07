@@ -16,11 +16,14 @@
 #include "OverloadDef.h"
 #include "Serializer.h"
 #include "VarDef.h"
+#include <stdio.h>
 
 using namespace std;
 using namespace model;
 
 void Namespace::storeDef(VarDef *def) {
+    //printf("NSLOG: '%s' ::storeDef(%s)\n", canonicalName.c_str(), def->getFullName().c_str());
+
     assert(!FuncDefPtr::cast(def) && 
            "it is illegal to store a FuncDef directly (should be wrapped "
            "in an OverloadDef)");
@@ -117,6 +120,8 @@ void Namespace::addAlias(VarDef *def) {
 OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
+
+    //printf("NSLOG: addAlias(%s,%s)\n", name.c_str(), def->getFullName().c_str());
 
     // overloads should never be aliased - otherwise the new context could 
     // extend them.
@@ -263,4 +268,44 @@ void Namespace::short_dump() {
          )
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
+}
+
+
+
+Namespace::Txmark Namespace::markTransactionStart() {
+    Namespace::Txmark t;
+    t.ns = this;
+    t.last_commit = orderedForCache.size()-1;
+    txLog.push_back(t);
+    return t;
+}
+
+void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
+    
+    assert(this == txstart.ns);
+    //    assert(ordered.size() == orderedForCache.size());
+
+    if (t.last_commit < 0) return;
+
+    long n = (long)ordered.size();
+
+    VarDefMap::iterator mapit;
+    for(long i = t.last_commit + 1; i < n; ++i) {
+        mapit = defs.find(orderedForCache[i]->name);
+        assert(mapit != defs.end());
+        defs.erase(mapit);
+    }
+
+    //    ordered.erase(ordered.begin() + t.last_commit + 1,
+    //                  ordered.end());
+    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
+                          orderedForCache.end());
+
+}
+
+void Namespace::undo() {
+    assert(txLog.size());
+    Namespace::Txmark t = txLog.back();
+    undoTransactionTo(t);
+    txLog.pop_back();
 }
