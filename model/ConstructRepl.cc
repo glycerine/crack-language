@@ -262,11 +262,12 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
     // special commands
     if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
+        // dump: do full global dump of all namespaces.
         context->dump();
         return true;
     }
-    else if (0==strcmp("dm",r.getTrimmedLastReadLine())) {
-        // don't print parent namespaces (dump without the (p)arent namespace and without (u)pper namesapces)
+    else if (0==strcmp("dn",r.getTrimmedLastReadLine())) {
+        // dn: dump namespace, local only
         context->short_dump();
         return true;
 
