@@ -296,6 +296,12 @@ void init_ctrl_c_handling() {
             return false;
         }
 
+        // ; on line alone => evaluate now.
+        static const char evalnow[] = ";";
+        if (0==strncmp(evalnow,getTrimmedLastReadLine(),sizeof(evalnow))) {
+            return false;
+        }
+
         src.clear();
         src << "\n";
         src << getLastReadLine();

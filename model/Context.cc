@@ -995,23 +995,13 @@ void Context::error(const parser::Location &loc, const string &msg,
         if (!construct->rootBuilder->options->quiet) {
             showSourceLoc(loc, diag);
         }
-        if (!recoverable) {
-            throw parser::ParseError(loc,
-                                     SPUG_FSTR(msg <<
-                                               ContextStack(ec) <<
-                                               endl <<
-                                               diag.str()
-                                               )
-                                     );
-        } else {
-            throw parser::ParseErrorRecoverable(loc,
-                                     SPUG_FSTR(msg <<
-                                               ContextStack(ec) <<
-                                               endl <<
-                                               diag.str()
-                                               )
-                                     );
-        }
+        throw parser::ParseError(loc,
+                                 SPUG_FSTR(msg <<
+                                           ContextStack(ec) <<
+                                           endl <<
+                                           diag.str()
+                                           )
+                                 );
     }
     else {
         cerr << "ParseError: " << loc.getName() << ":" <<

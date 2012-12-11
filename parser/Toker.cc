@@ -37,6 +37,12 @@ bool Toker::getChar(char &ch) {
         result = true;
     } else {
         result = src.read(&ch, 1);
+        
+        if (!result && repl) {
+            if (repl->get_more_input()) {
+                result = src.read(&ch, 1);
+            }
+        }
     }
     currentEndCol++;
     if (result && ch == '\n') {
@@ -954,9 +960,9 @@ Token Toker::readToken() {
         state = st_none;
         return Token(Token::ident, buf.str(), getLocation());
     } else {
-        ParseErrorRecoverable::abort(Token(Token::end, "*eof*", getLocation()),
-                                     "End of stream in the middle of a token"
-                                     );
+        ParseError::abort(Token(Token::end, "*eof*", getLocation()),
+                          "End of stream in the middle of a token"
+                          );
     }
 }
 

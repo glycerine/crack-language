@@ -25,6 +25,4 @@ void ParseError::abort(const Token &tok, const char *msg) {
 }
 
 
-void ParseErrorRecoverable::abort(const Token &tok, const char *msg) {
-   throw ParseErrorRecoverable(tok.getLocation(), msg);
-}
+

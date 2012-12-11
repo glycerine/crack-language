@@ -88,39 +88,10 @@ void Parser::addFuncDef(FuncDef *funcDef) {
 }
 
 
-Token Parser::eof_requires_repl_input(Token& tok) {
-
-    Token tok2;
-    // if at end, perhaps repl wants to ask for more input
-    if (tok.isEnd() && repl) {
-        repl->get_more_input();
-        // skip end token, get next.
-        tok2 = toker.getToken();
-        context->setLocation(tok2.getLocation());
-        return tok2;
-    }
-
-    // else just return what we got.
-    return tok;
-}
-
-
-Token Parser::getToken(bool eofRecoverable) {
+Token Parser::getToken() {
    
-    Token tok;
-    while(true) {
-        try {
-            tok = toker.getToken();
-            context->setLocation(tok.getLocation());
-        } catch (const ParseErrorRecoverable& e) {
-            if (eofRecoverable && repl) {
-                if (repl->get_more_input()) {
-                    continue;
-                }
-            }
-        }
-        break;
-    }
+    Token tok = toker.getToken();
+    context->setLocation(tok.getLocation());
     
    // short-circuit the parser for an annotation, which can occur anywhere.
    while (tok.isAnn() || tok.getType() == Token::popErrCtx) {
@@ -130,15 +101,6 @@ Token Parser::getToken(bool eofRecoverable) {
          context->popErrorContext();
       tok = toker.getToken();
       context->setLocation(tok.getLocation());
-   }
-
-   // if at end, perhaps repl wants to ask for more input
-   if (eofRecoverable && tok.isEnd() && repl) {
-       if (repl->get_more_input()) {
-           // skip end token, get next.
-           tok = toker.getToken();
-           context->setLocation(tok.getLocation());           
-       }
    }
 
    return tok;
@@ -160,18 +122,6 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
       msg << ", " << userMsg;
 
    error(tok, msg.str());
-}
-
-void Parser::unexpected_recoverable(const Token &tok, const char *userMsg) {
-   Location loc = tok.getLocation();
-   stringstream msg;
-   msg << "token " << tok.getData() << " was not expected at this time";
-
-   // add the user message, if provided
-   if (userMsg)
-      msg << ", " << userMsg;
-
-   error_recoverable(tok, msg.str());
 }
 
 
@@ -478,7 +428,7 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
       state = st_base;
 
       // peek at the next token
-      tok = getToken(nested);
+      tok = getToken();
 
       // check for a different block terminator depending on whether we are
       // nested or not.
@@ -489,9 +439,6 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
          gotBlockTerminator = true;
       } else if (tok.isEnd()) {
           if (nested) {
-              if (tok_was_end_but_repl_got_more_input(tok)) {
-                  continue;
-              }
               unexpected(tok, "expected statement or closing brace.");
           }
          gotBlockTerminator = true;
@@ -1362,13 +1309,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    ExprPtr expr;
 
    // check for null
- GETTOK:
    Token tok = getToken();
-
-   if (tok_was_end_but_repl_got_more_input(tok)) {
-       goto GETTOK;
-   }
-
    if (tok.isNull()) {
       expr = new NullConst(context->construct->voidptrType.get());
    
@@ -1585,11 +1526,7 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
 }
 
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
-   Token tok = getToken(true);
-
-   while (tok_was_end_but_repl_got_more_input(tok)) {
-       tok = getToken(true);
-   }
+   Token tok = getToken();
 
    TypeDefPtr typeofType;
    if (tok.isTypeof()) {
@@ -1602,7 +1539,7 @@ TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
          typeofType = parseTypeof();
       }
    } else if (!tok.isIdent()) {
-      unexpected_recoverable(tok, "type identifier expected");
+      unexpected(tok, "type identifier expected");
    }
    if (generic) generic->addToken(tok);
    
@@ -2258,7 +2195,7 @@ bool Parser::parseDef(TypeDef *&type) {
          string varName = tok2.getData();
    
          // this could be a variable or a function
-         Token tok3 = getToken(true);
+         Token tok3 = getToken();
          if (tok3.isSemi() || tok3.isComma()) {
             // it's a variable.
             runCallbacks(variableDef);
@@ -3290,7 +3227,7 @@ void Parser::recordParenthesized(Generic *generic) {
 TypeDefPtr Parser::parseClassDef() {
    runCallbacks(classDef);
 
-   Token tok = getToken(true);
+   Token tok = getToken();
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
    string className = tok.getData();
@@ -3299,7 +3236,7 @@ TypeDefPtr Parser::parseClassDef() {
    TypeDefPtr existing = checkForExistingDef(tok, className);
    
    // check for a generic parameter list
-   tok = getToken(true);
+   tok = getToken();
    Generic *generic = 0;
    if (tok.isLBracket()) {
       if (existing)
@@ -3349,7 +3286,7 @@ TypeDefPtr Parser::parseClassDef() {
       // forward declaration
       return context->createForwardClass(className);
    else if (!tok.isLCurly())
-      unexpected_recoverable(tok, "expected colon or opening brace.");
+      unexpected(tok, "expected colon or opening brace.");
 
    // get any user flags
    TypeDef::Flags flags = context->nextClassFlags;
@@ -3490,7 +3427,7 @@ void Parser::parseClassBody() {
       state = st_base;
       
       // check for a closing brace or a nested class definition
-      Token tok = getToken(true);
+      Token tok = getToken();
       if (tok.isRCurly()) {
          // run callbacks, this can change the token stream so make sure we've 
          // still got an end curly
@@ -3525,8 +3462,6 @@ void Parser::parseClassBody() {
          parseAlias();
          continue;
       }
-
-      if (tok_was_end_but_repl_got_more_input(tok)) continue;
 
       // parse some other kind of definition
       toker.putBack(tok);
@@ -3640,15 +3575,6 @@ void Parser::error(const Location &loc, const std::string &msg) {
    context->error(loc, msg);
 }
 
-void Parser::error_recoverable(const Token &tok, const std::string &msg) {
-    context->error(tok.getLocation(), msg, true, true);
-}
-
-void Parser::error_recoverable(const Location &loc, const std::string &msg) {
-    context->error(loc, msg, true, true);
-}
-
-
 void Parser::warn(const Location &loc, const std::string &msg) {
    context->warn(loc, msg);
 }
@@ -3690,14 +3616,4 @@ void Parser::setAtRepl(wisecrack::Repl& r) {
     toker.setRepl(r);
 }
 
-bool Parser::tok_was_end_but_repl_got_more_input(Token& tok) {
-    if (repl && tok.isEnd()) {
-        while (tok.isEnd()) {
-            tok = eof_requires_repl_input(tok);
-        }
-        toker.putBack(tok);
-        return true;
-    }
-    return false;
-}
 

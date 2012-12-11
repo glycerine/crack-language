@@ -119,15 +119,8 @@ class Parser {
       /**
        * Returns the next token from the tokenizer and stores its location in
        * the current context.
-       *
-       * @param eofRecoverable : if true, on hitting eof (Token::end), try
-       *                         checking with the repl for more input. This
-       *                         can only succeed if setAtRepl() has been done.
        */
-      Token getToken(bool eofRecoverable = false);
-
-      /** similar logic as in getToken(true), but we already got tok back. */
-      Token eof_requires_repl_input(Token& tok);
+      Token getToken();
 
       /**
        * Returns the precedence of the specified operator.
@@ -136,9 +129,6 @@ class Parser {
 
       /** Special kind of error function used for unexpected tokens. */
       void unexpected(const Token &tok, const char *userMsg = 0);
-
-      /** version of unexpected to indicate repl can recover with more info. */
-      void unexpected_recoverable(const Token &tok, const char *userMsg = 0);
 
       /**
        * Get the next token and make sure it is of type 'type' otherwise
@@ -468,10 +458,6 @@ class Parser {
       void error(const Token &tok, const std::string &msg);
       void error(const Location &loc, const std::string &msg);
 
-      void error_recoverable(const Token &tok, const std::string &msg);
-      void error_recoverable(const Location &loc, const std::string &msg);
-
-
       /** Writes a warning message to standard error. */
       void warn(const Location &loc, const std::string &msg);
 
@@ -510,17 +496,6 @@ class Parser {
        */
       void setAtRepl(wisecrack::Repl& r);
 
-      /**
-       * if we seem to be halting a parse for lack of input,
-       *  try this function which will detect if setAtRepl
-       *  has been called and if so will try to get more
-       *  input from the user. Returns true if that attempt
-       *  was successful.  May throw an exception such as
-       *  wisecrack::ExceptionCtrlC(). Only calls into the
-       *  repl if tok.isEnd() is true, then does a toker.putBack
-       *  on the newly gotten token.
-       */
-      bool tok_was_end_but_repl_got_more_input(Token& tok);
 };
 
 } // namespace parser
