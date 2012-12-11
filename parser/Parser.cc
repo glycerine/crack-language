@@ -1349,7 +1349,13 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    ExprPtr expr;
 
    // check for null
+ GETTOK:
    Token tok = getToken();
+
+   if (tok_was_end_but_repl_got_more_input(tok)) {
+       goto GETTOK;
+   }
+
    if (tok.isNull()) {
       expr = new NullConst(context->construct->voidptrType.get());
    
