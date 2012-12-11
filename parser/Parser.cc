@@ -106,9 +106,22 @@ Token Parser::eof_requires_repl_input(Token& tok) {
 
 
 Token Parser::getToken(bool eofRecoverable) {
-   Token tok = toker.getToken();
-   context->setLocation(tok.getLocation());
    
+    Token tok;
+    while(true) {
+        try {
+            tok = toker.getToken();
+            context->setLocation(tok.getLocation());
+        } catch (const ParseErrorRecoverable& e) {
+            if (eofRecoverable && repl) {
+                if (repl->get_more_input()) {
+                    continue;
+                }
+            }
+        }
+        break;
+    }
+    
    // short-circuit the parser for an annotation, which can occur anywhere.
    while (tok.isAnn() || tok.getType() == Token::popErrCtx) {
       if (tok.isAnn())
@@ -1573,6 +1586,11 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
 
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
    Token tok = getToken(true);
+
+   while (tok_was_end_but_repl_got_more_input(tok)) {
+       tok = getToken(true);
+   }
+
    TypeDefPtr typeofType;
    if (tok.isTypeof()) {
       if (generic) {
@@ -2240,7 +2258,7 @@ bool Parser::parseDef(TypeDef *&type) {
          string varName = tok2.getData();
    
          // this could be a variable or a function
-         Token tok3 = getToken();
+         Token tok3 = getToken(true);
          if (tok3.isSemi() || tok3.isComma()) {
             // it's a variable.
             runCallbacks(variableDef);
