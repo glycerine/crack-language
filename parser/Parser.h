@@ -47,6 +47,8 @@ struct ParserCallback {
                     ) = 0;
 };
 
+
+
 class Parser {
 
    public:
@@ -120,7 +122,7 @@ class Parser {
        * Returns the next token from the tokenizer and stores its location in
        * the current context.
        */
-      Token getToken();
+      Token getToken(Fly z);
 
       /**
        * Returns the precedence of the specified operator.
@@ -134,7 +136,7 @@ class Parser {
        * Get the next token and make sure it is of type 'type' otherwise
        * unexpected(tok, error);
        */
-      void expectToken(Token::Type type, const char *error);
+      void expectToken(Fly z, Token::Type type, const char *error);
 
       /** Look up a binary operator, either as a stand-alone operator
        * defintiion with two args or a method with one arg.
@@ -152,7 +154,7 @@ class Parser {
       /**
        * Parse an annotation and execute it.
        */
-      void parseAnnotation();
+      void parseAnnotation(Fly z);
 
       /**
        * Parse a single statement.
@@ -163,7 +165,7 @@ class Parser {
        *    the statement is terminal in all contexts from the current context
        *    to the returned context (non-inclusive).
        */
-      model::ContextPtr parseStatement(bool defsAllowed);
+      model::ContextPtr parseStatement(Fly z, bool defsAllowed);
 
       /**
        * Parse a block - a sequence of statements in the same execution
@@ -172,7 +174,7 @@ class Parser {
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseBlock(bool nested, Event closeEvent);
+      model::ContextPtr parseBlock(Fly z, bool nested, Event closeEvent);
 
       /**
        * Creates a variable reference complete with an implicit "this" if
@@ -204,12 +206,13 @@ class Parser {
       /**
        * Parse the rest of an explicit "oper" name.
        */
-      std::string parseOperSpec();
+      std::string parseOperSpec(Fly z);
 
       /**
        * Parse and emit a function call.
        */
-      model::FuncCallPtr parseFuncCall(const Token &ident,
+      model::FuncCallPtr parseFuncCall(Fly z,
+                                       const Token &ident,
                                        const std::string &funcName,
                                        model::Namespace *ns,
                                        model::Expr *container
@@ -223,16 +226,16 @@ class Parser {
        *   identifier is scoped to the local context.
        * @param ident The identifier's token.
        */
-      model::ExprPtr parsePostIdent(model::Expr *container,
-                                    const Token &ident
-                                    );
+      model::ExprPtr parsePostIdent(Fly z, 
+                                    model::Expr *container,
+                                    const Token &ident                                    );
 
       /**
        * Parse an interpolated string.
        *
        * @param expr the receiver of the interpolated string operation.
        */
-      model::ExprPtr parseIString(model::Expr *expr);
+      model::ExprPtr parseIString(Fly z, model::Expr *expr);
 
       /**
        * Parse a sequence constant.
@@ -240,12 +243,12 @@ class Parser {
        * @param containerType the type of the sequence that we are
        * initializing.
        */
-      model::ExprPtr parseConstSequence(model::TypeDef *containerType);
+      model::ExprPtr parseConstSequence(Fly z, model::TypeDef *containerType);
 
       /**
        * Parse a "typeof" expression.
        */
-      model::TypeDefPtr parseTypeof();
+      model::TypeDefPtr parseTypeof(Fly z);
 
       /**
        * If the expression is a VarRef referencing a TypeDef, return the
@@ -257,7 +260,7 @@ class Parser {
        * Parse the ternary operator's expression.
        * @param cond the conditional expression.
        */
-      model::ExprPtr parseTernary(model::Expr *cond);
+      model::ExprPtr parseTernary(Fly z, model::Expr *cond);
 
       /**
        * Parse a secondary expression.  Secondary expressions include a the
@@ -268,7 +271,8 @@ class Parser {
        *        modifies.
        * @param precedence the current level of operator precedence.
        */
-      model::ExprPtr parseSecondary(model::Expr *expr,
+      model::ExprPtr parseSecondary(Fly z,
+                                    model::Expr *expr,
                                     unsigned precedence = 0
                                     );
 
@@ -281,8 +285,9 @@ class Parser {
        *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing
        *    after the 'a'.
        */
-      model::ExprPtr parseExpression(unsigned precedence = 0);
-      void parseMethodArgs(std::vector<model::ExprPtr> &args,
+      model::ExprPtr parseExpression(Fly z, unsigned precedence = 0);
+      void parseMethodArgs(Fly z,
+                           std::vector<model::ExprPtr> &args,
                            Token::Type terminator = Token::rparen
                            );
 
@@ -291,21 +296,24 @@ class Parser {
        * @param tok the left bracket token of the generic specifier.
        * @param generic defined when doing this within a generic definition.
        */
-      model::TypeDef *parseSpecializer(const Token &tok,
+      model::TypeDef *parseSpecializer(Fly z,
+                                       const Token &tok,
                                        model::TypeDef *typeDef,
                                        model::Generic *generic = 0
                                        );
 
 
-      model::ExprPtr parseConstructor(const Token &tok, model::TypeDef *type,
+      model::ExprPtr parseConstructor(Fly z, 
+                                      const Token &tok, model::TypeDef *type,
                                       Token::Type terminator
                                       );
 
-      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 0,
+      model::TypeDefPtr parseTypeSpec(Fly z,
+                                      const char *errorMsg = 0,
                                       model::Generic *generic = 0
                                       );
-      void parseModuleName(std::vector<std::string> &moduleName);
-      void parseArgDefs(std::vector<model::ArgDefPtr> &args, bool isMethod);
+      void parseModuleName(Fly z, std::vector<std::string> &moduleName);
+      void parseArgDefs(Fly z, std::vector<model::ArgDefPtr> &args, bool isMethod);
 
       enum FuncFlags {
          normal,           // normal function
@@ -327,7 +335,7 @@ class Parser {
        * @param expectedArgCount if > -1, this is the expected number of arguments.
        * @returns the number of actual arguments.
        */
-      int parseFuncDef(model::TypeDef *returnType, const Token &nameTok,
+      int parseFuncDef(Fly z, model::TypeDef *returnType, const Token &nameTok,
                        const std::string &name,
                        FuncFlags funcFlags,
                        int expectedArgCount
@@ -337,14 +345,15 @@ class Parser {
        * Parse a variable definition initializer.  Deals with the special
        * syntax for constructors and sequence constants.
        */
-      model::ExprPtr parseInitializer(model::TypeDef *type,
+      model::ExprPtr parseInitializer(Fly z,
+                                      model::TypeDef *type,
                                       const std::string &varName
                                       );
 
       /**
        * Parse an alias statement.
        */
-      void parseAlias();
+      void parseAlias(Fly z);
 
       /**
        * Parse a definition. Returns false if there was no definition.
@@ -352,10 +361,10 @@ class Parser {
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
-      bool parseDef(model::TypeDef *&type);
+      bool parseDef(Fly z, model::TypeDef *&type);
 
       /** Parse a constant definition. */
-      void parseConstDef();
+      void parseConstDef(Fly z);
 
       // statements
 
@@ -363,48 +372,48 @@ class Parser {
        * Parse a clause, which can either be a an expression statement or a
        * definition.
        */
-      void parseClause(bool defsAllowed);
+      void parseClause(Fly z, bool defsAllowed);
 
       /*
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseIfClause();
+      model::ContextPtr parseIfClause(Fly z);
 
       /** Parse the condition in a 'while', 'for' or 'if' statement */
-      model::ExprPtr parseCondExpr();
+      model::ExprPtr parseCondExpr(Fly z);
 
       /*
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseIfStmt();
+      model::ContextPtr parseIfStmt(Fly z);
 
-      void parseWhileStmt();
-      void parseForStmt();
-      void parseReturnStmt();
-      model::ContextPtr parseTryStmt();
-      model::ContextPtr parseThrowStmt();
+      void parseWhileStmt(Fly z);
+      void parseForStmt(Fly z);
+      void parseReturnStmt(Fly z);
+      model::ContextPtr parseTryStmt(Fly z);
+      model::ContextPtr parseThrowStmt(Fly z);
 
       /**
        * Parse an import statement.  'ns' is the namespace in which to alias
        * imported symbols.
        */
-      void parseImportStmt(model::Namespace *ns);
+      void parseImportStmt(Fly z, model::Namespace *ns);
 
       /**
        * Parse a function definition after an "oper" keyword.
        */
-      void parsePostOper(model::TypeDef *returnType);
+      void parsePostOper(Fly z, model::TypeDef *returnType);
 
       /** Parse the generic parameter list */
-      void parseGenericParms(model::GenericParmVec &parms);
+      void parseGenericParms(Fly z, model::GenericParmVec &parms);
 
       void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
       void recordParenthesized(model::Generic *generic);
 
-      model::TypeDefPtr parseClassDef();
+      model::TypeDefPtr parseClassDef(Fly z);
 
    public:
       // XXX should be protected, once required functionality is migrated out.
@@ -437,9 +446,9 @@ class Parser {
       /**
        * Parse the initializer list after an oper init.
        */
-      void parseInitializers(model::Initializers *inits, model::Expr *receiver);
+      void parseInitializers(Fly z, model::Initializers *inits, model::Expr *receiver);
 
-      void parseClassBody();
+      void parseClassBody(Fly z);
 
       /**
        * Throws a parse error about an attempt to override a variable that has

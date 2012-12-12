@@ -34,6 +34,7 @@
 
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
+#include "parser/Toker.h"
 
 #include <dlfcn.h>
 #include <stddef.h>
@@ -245,11 +246,13 @@ namespace {
         BBuilderContextData *bdata =
             BBuilderContextData::get(lexicalContext.get());
 
+        parser::Fly z; 
+        z.nested = true;
         istringstream src(temp);
         try {
             parser::Toker toker(src, "<builtin>", lineNum);
             parser::Parser p(toker, lexicalContext.get());
-            p.parseClassBody();
+            p.parseClassBody(z);
         } catch (parser::ParseError &ex) {
             std::cerr << ex << endl;
             assert(false);

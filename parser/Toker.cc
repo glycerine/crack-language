@@ -30,7 +30,7 @@ Location Toker::getLocation() {
     return lastLoc;
 }
 
-bool Toker::getChar(char &ch) {
+bool Toker::getChar(char &ch, Fly z) {
     bool result;
     if (putbackIndex < putbackSize) {
         ch = putbackBuf[putbackIndex++];
@@ -209,7 +209,7 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
                      );
 }
 
-Token Toker::readToken() {
+Token Toker::readToken(Fly z) {
     char ch, terminator;
     
     // information on the preceeding characters for compound symbols
@@ -233,7 +233,7 @@ Token Toker::readToken() {
 
     while (true) {
         // read the next character from the stream
-        if (!getChar(ch)) break;
+        if (!getChar(ch,z)) break;
 
         // processing varies according to state
         switch (state) {
@@ -966,7 +966,7 @@ Token Toker::readToken() {
     }
 }
 
-Token Toker::getToken() {
+Token Toker::getToken(Fly z) {
     // if any tokens have been put back, use them first
     if (tokens.size()) {
         Token temp = tokens.back();
@@ -982,7 +982,7 @@ Token Toker::getToken() {
         return temp;
     } else {
         vector<Token> toks;
-        toks.push_back(readToken());
+        toks.push_back(readToken(z));
 
         // we want to read all of the i-string tokens as a batch so that we 
         // can apply the indentation transforms to them all collectively. 
@@ -1011,7 +1011,7 @@ Token Toker::getToken() {
                 } else if (tok.isIdent()) {
                     continueIString();
                 }
-                toks.push_back(readToken());
+                toks.push_back(readToken(z));
             }
             
             for (int i = 0; i < toks.size(); ++i)

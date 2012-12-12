@@ -338,7 +338,8 @@ void Type::finish() {
         std::istringstream codeStream(impl->beginCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        parser.parseClassBody();
+        Fly z;
+        parser.parseClassBody(z);
     }
 
     // emit all of the method defs
@@ -361,7 +362,8 @@ void Type::finish() {
         std::istringstream codeStream(impl->endCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        parser.parseClassBody();
+        Fly z;
+        parser.parseClassBody(z);
     }
 
     // pad the class to the instance size

@@ -18,6 +18,15 @@
 
 namespace parser {
 
+// send repl state (nested/not) into
+// the tokenizer using this fly on the wall.
+struct Fly { 
+    bool nested;
+    Fly() : nested(false) {}
+    //    Fly(bool n) : nested(n) {}
+};
+
+
 /** The tokenizer. */
 class Toker {
    private:
@@ -42,7 +51,7 @@ class Toker {
       Token fixIdent(const std::string &raw, const Location &loc);
 
       // reads the next token directly from the source stream
-      Token readToken();
+      Token readToken(Fly z);
 
       // info for tracking the state of the tokenizer.
       enum { 
@@ -107,7 +116,7 @@ class Toker {
       enum { tabWidth = 8 };
       
       // get the next character from the stream.
-      bool getChar(char &ch);
+      bool getChar(char &ch, Fly z);
 
       // put back the character      
       void ungetChar(char ch);
@@ -145,7 +154,7 @@ class Toker {
       /**
        * Returns the next token in the stream.
        */
-      Token getToken();
+      Token getToken(Fly z);
 
       /**
        * Puts the token back onto the stream.  A subsequent getToken() will
