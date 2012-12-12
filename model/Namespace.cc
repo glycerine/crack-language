@@ -293,7 +293,8 @@ Namespace::Txmark Namespace::markTransactionStart() {
     return t;
 }
 
-void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
+void Namespace::undoTransactionTo(const Namespace::Txmark& t,
+                                  Repl* repl) {
     
     assert(this == txstart.ns);
 
@@ -311,10 +312,14 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
         // 
 
         if (mapit != defs.end()) { 
-            cerr << "undo in namespace '" 
-                 << canonicalName
-                 << "'removing name: '" 
-                 << orderedForTxn[i]->name << "'" << endl;
+
+            if (repl && repl->debuglevel() > 0) {
+                cerr << "undo in namespace '" 
+                     << canonicalName
+                     << "'removing name: '" 
+                     << orderedForTxn[i]->name << "'" << endl;
+            }
+
             defs.erase(mapit);
         }
     }
@@ -328,9 +333,9 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
 
 }
 
-void Namespace::undo() {
+void Namespace::undo(Repl *r) {
     assert(txLog.size());
     Namespace::Txmark t = txLog.back();
-    undoTransactionTo(t);
+    undoTransactionTo(t, r);
     txLog.pop_back();
 }

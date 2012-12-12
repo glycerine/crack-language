@@ -13,6 +13,9 @@
 #include <vector>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
+#include "wisecrack/repl.h"
+
+using wisecrack::Repl;
 
 namespace model {
 
@@ -207,12 +210,12 @@ class Namespace : public virtual spug::RCBase {
          * do the roll back, deleting var defs up to but not 
          * including last_commit. 
          */
-        void undoTransactionTo(const Txmark& txstart);
+        void undoTransactionTo(const Txmark& txstart, Repl *r = 0);
 
         /**
          * roll back the tail of the log, e.g. using txLog.back()
          */
-        void undo();
+        void undo(Repl *r = 0);
         
         std::vector<Txmark> txLog; // stack of transactions
 };

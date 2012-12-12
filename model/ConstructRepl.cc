@@ -107,12 +107,12 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             return 1;
         }
  
-        // already closed the last function and ran it
-        // so we just need to start a new section here,
+        // already closed the last function and ran it.
+        // so we just need to start a new section inside the main loop,
         // without issuing another closeModule (as closeSection() would)
         // which would run the script a second time.
-        // bdr->beginSection(*ctx,mod);
 
+        ctx->repl = &r;
 
     } else {
 
@@ -160,6 +160,8 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     bool sectionStarted = false;
     bool doCleanup = false;
     Namespace::Txmark ns_start_point;
+
+    printf("wisecrack Read-Eval-Print-Loop [type .help for hints]\n");
     
     //
     // main Read-Eval-Print loop
@@ -249,7 +251,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
     } // end while
 
-
+    if (ctx) { ctx->repl = 0; }
     builderStack.pop();
     rootBuilder->finishBuild(*ctx);
     if (rootBuilder->options->statsMode)
@@ -300,7 +302,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         r.set_debuglevel(d);
         return true;
     }
-    else if (0==strcmp(".dn",r.getTrimmedLastReadLine())) {
+    else if (0==strcmp(".dn",r.getTrimmedLastReadLine()) ||
+             0==strcmp(".ls",r.getTrimmedLastReadLine())) {
         // dn: dump namespace, local only
         context->short_dump();
         return true;
@@ -309,12 +312,31 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // dc: dump bit-code
         bdr->dump();
         return true;
+
+    } else if (0==strcmp(".help",r.getTrimmedLastReadLine())) {
+        printf("wisecrack repl help:\n"
+               "\n"
+               "  .help    = show this hint page\n"
+               "  .dn      = dump wisecrack namespace (also .ls)\n"
+               "  .dump    = dump global namespace (everything)\n"
+               "  .dc      = display code (LLVM bitcode)\n"
+               "  .debug   = increase the debug messages\n"
+               "  .undebug = reduce debug messages (0 => off)\n"
+               "  .quit    = quit repl (also .q)\n"
+               "  ctrl-d   = EOF also quits\n"
+               "  ctrl-c   = interrupt line and return to the repl\n"
+               "\n"
+               );
+              
+        return true;
     }
     return false;
 }
 
 
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
-    printf(" [cleaning up unfinished line]\n");
+    if (ctx->repl && ctx->repl->debuglevel() > 0) {
+        printf(" [cleaning up unfinished line]\n");
+    }
     bdr->eraseSection(*ctx,mod);
 }
