@@ -656,6 +656,7 @@ LLVMBuilder::LLVMBuilder() :
     bModDef(0),
     module(0),
     builder(getGlobalContext()),
+    first_section_func(0),
     func(0),
     lastValue(0) {
 
@@ -2147,6 +2148,7 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
                             "__section__",
                             module
                             );
+    first_section_func = func;
 
     // debug
     printf("[[[ create section '%s'\n",func->getName().str().c_str());
@@ -2163,11 +2165,23 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     VarDef* def = 0;
     //    context.ns->removeDef(def);
 
+    // when a section aborts in the middle of constructing another
+    // function, both are left dangling, unless we do this:
+    if (first_section_func != func) {
+        // debug
+        printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
+        
+        // cleanup an aborted function construction.
+        first_section_func->eraseFromParent();
+        first_section_func = 0;
+    }
+
     // debug
     printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
 
     // cleanup an aborted function construction.
     func->eraseFromParent();
+    func = 0;
 }
 
 

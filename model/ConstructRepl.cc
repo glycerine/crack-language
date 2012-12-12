@@ -180,7 +180,9 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             // EVAL
 
-            // must come *after* the continueOnSpecial() call.
+            // beginSection() must come *after* the continueOnSpecial() 
+            // call. Otherwise we begin multiple times and leave
+            // dangling half-finished sections lying around. :-(
             bdr->beginSection(*ctx,mod);
             sectionStarted = true;
             

@@ -156,6 +156,10 @@ class LLVMBuilder : public Builder {
         // seems to be cutting down on the amount of code necessary to do this.
         BModuleDef *bModDef;
         llvm::Module *module;
+
+        // the first function made in beginSection(). Faciliates cleanup.
+        llvm::Function *first_section_func;
+
         llvm::Function *func;
         llvm::PointerType *llvmVoidPtrType;
         llvm::IRBuilder<> builder;
