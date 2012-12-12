@@ -38,7 +38,7 @@ bool Toker::getChar(char &ch, Fly z) {
     } else {
         result = src.read(&ch, 1);
         
-        if (!result && repl) {
+        if (!result && repl && z.nested) {
             if (repl->get_more_input()) {
                 result = src.read(&ch, 1);
             }

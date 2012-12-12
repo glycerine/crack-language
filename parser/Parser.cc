@@ -247,7 +247,9 @@ void Parser::parseClause(Fly z, bool defsAllowed) {
       TypeDef *typeDef = primaryType.get();
       context->checkAccessible(typeDef);
       identLoc = tok.getLocation();
-      if (parseDef(z, typeDef)) {
+
+      Fly zdef; zdef.nested = true;
+      if (parseDef(zdef, typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
          // bypass expression emission and semicolon parsing (parseDef() 
@@ -1826,6 +1828,7 @@ int Parser::parseFuncDef(Fly z, TypeDef *returnType, const Token &nameTok,
 
    // parse the arguments
    ArgVec argDefs;
+   z.nested = true;
    parseArgDefs(z, argDefs, isMethod);
    
    // if we are expecting an argument definition, check for it.
@@ -3232,7 +3235,8 @@ void Parser::recordParenthesized(Generic *generic) {
 //      ^     ^
 TypeDefPtr Parser::parseClassDef(Fly z) {
    runCallbacks(classDef);
-
+   
+   z.nested = true;
    Token tok = getToken(z);
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
