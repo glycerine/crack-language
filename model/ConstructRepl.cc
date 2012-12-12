@@ -74,6 +74,11 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 //       possibly with a temp namespace that is merge upon correctness, or
 //       discarded upon error.
 //
+// But if you're strongly motivated to do correct cleanup, I wonder if we could
+// make use of a temporary repl ModuleDef object and then transfer its
+// definitions to a longer lived one?  Then we could drive the rollback
+// functionality from ModuleDef -> BModuleDef -> LLVM.  -- mmuller
+//
 //   _ allow re-defining of functions/variables/classes at the repl
 //
 //    Michael's thoughts: (7 Dec 2012)
@@ -186,7 +191,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     bool doCleanup = false;
     Namespace::Txmark ns_start_point;
 
-    printf("wisecrack Read-Eval-Print-Loop [type .help for hints]\n");
+    printf("wisecrack read-eval-print-loop [type .help for hints]\n");
     
     //
     // main Read-Eval-Print loop
