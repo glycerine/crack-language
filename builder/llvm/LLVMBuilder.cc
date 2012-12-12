@@ -2147,6 +2147,10 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
                             "__section__",
                             module
                             );
+
+    // debug
+    printf("[[[ create section '%s'\n",func->getName().str().c_str());
+
     createFuncStartBlocks("__section__");
     createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
 }
@@ -2158,6 +2162,9 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     // delete them from the namespace.
     VarDef* def = 0;
     //    context.ns->removeDef(def);
+
+    // debug
+    printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
 
     // cleanup an aborted function construction.
     func->eraseFromParent();

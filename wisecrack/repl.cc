@@ -60,6 +60,9 @@ namespace wisecrack {
     const static int caught_ctrl_c = -1;
     const static int normal_finish_after_read = -2;
 
+    // gdb setup for testing ctrl-c:
+    // (gdb) handle SIGINT nostop print pass 
+
     /** signal handler for ctrl-c */
     void repl_sa_sigaction(int signum, siginfo_t* si, void* vs) {
         

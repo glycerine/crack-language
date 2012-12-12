@@ -94,7 +94,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
     // do we need to start or close a function before entering repl
     bool closeFunc = false;
-    bool startFunc = false;
+
 
     // are we starting fresh, or dropping into a previously defined
     //  ctx, modd, bdr triple?
@@ -112,7 +112,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         // without issuing another closeModule (as closeSection() would)
         // which would run the script a second time.
         // bdr->beginSection(*ctx,mod);
-        startFunc = true;
+
 
     } else {
 
@@ -149,13 +149,13 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         ctx = context.get();
         bdr = builder.get();
 
-        // createModule starts one for us, don't start
-        // another or that :main will never get closed.
-        startFunc = false;
+        // close :main - now we open a new section after receiving
+        // each individual command.
+        bdr->closeSection(*ctx,mod);
 
     } // end else start fresh context/module/builder
 
-
+    bool sectionStarted = false;
     bool doCleanup = false;
     Namespace::Txmark ns_start_point;
     
@@ -166,23 +166,23 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
         try {
             doCleanup = false;
+            sectionStarted = false;
             ns_start_point = (ctx->ns.get())->markTransactionStart();
             
             // READ
             r.nextlineno();
             r.reset_prompt_to_default();
             r.prompt(stdout);
-            r.read(stdin);
+            r.read(stdin); // can throw
             if (r.getLastReadLineLen()==0) continue;
 
             if (continueOnSpecial(r,ctx,bdr)) continue;
 
             // EVAL
-            if (startFunc) {
-                // must come *after* the continueOnSpecial() call.
-                bdr->beginSection(*ctx,mod);
-            }
-            startFunc = true; // every time after first for sure.
+
+            // must come *after* the continueOnSpecial() call.
+            bdr->beginSection(*ctx,mod);
+            sectionStarted = true;
             
             r.reset_src_to_empty();
             r.src << r.getLastReadLine();
@@ -237,7 +237,9 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         }
         
         if (doCleanup) {
-            cleanup_unfinished_input(bdr, ctx, mod);
+            if (sectionStarted) {
+                cleanup_unfinished_input(bdr, ctx, mod);
+            }
             (ctx->ns.get())->undoTransactionTo(ns_start_point);
         }
 
@@ -260,18 +262,31 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
  */
 bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
+    // check for ctrl-d and nothing else
+    if (0==strcmp("\n",r.getLastReadLine())) {
+        if (r.done()) {
+            return true;
+        }
+    }
+
     // special commands
-    if (0==strcmp("dump",r.getTrimmedLastReadLine())) {
+    if (0==strcmp(".q",r.getTrimmedLastReadLine()) ||
+        0==strcmp(".quit",r.getTrimmedLastReadLine())) {
+        // quitting time.
+        r.setDone();
+        return true;
+
+    } else if (0==strcmp(".dump",r.getTrimmedLastReadLine())) {
         // dump: do full global dump of all namespaces.
         context->dump();
         return true;
     }
-    else if (0==strcmp("dn",r.getTrimmedLastReadLine())) {
+    else if (0==strcmp(".dn",r.getTrimmedLastReadLine())) {
         // dn: dump namespace, local only
         context->short_dump();
         return true;
 
-    } else if (0==strcmp("dc",r.getTrimmedLastReadLine())) {
+    } else if (0==strcmp(".dc",r.getTrimmedLastReadLine())) {
         // dc: dump bit-code
         bdr->dump();
         return true;
@@ -286,5 +301,5 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
     
     // XXX TODO: figure out how to erase any newly half-finished classes
     
-    bdr->beginSection(*ctx,mod);
+    //    bdr->beginSection(*ctx,mod);
 }
