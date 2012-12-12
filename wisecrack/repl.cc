@@ -296,11 +296,13 @@ void init_ctrl_c_handling() {
             return false;
         }
 
-        // ; on line alone => evaluate now.
-        static const char evalnow[] = ";";
+#if 0 // not needed now that we have Fly enabled parser.
+        // ;;; on line alone => evaluate now.
+        static const char evalnow[] = ";;;";
         if (0==strncmp(evalnow,getTrimmedLastReadLine(),sizeof(evalnow))) {
             return false;
         }
+#endif
 
         src.clear();
         src << "\n";
