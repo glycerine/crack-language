@@ -215,7 +215,9 @@ void Parser::parseClause(Fly z, bool defsAllowed) {
             if (tok2.isDefine()) {
                if (!defsAllowed)
                   error(tok, "definition is not allowed in this context.");
-               expr = parseExpression(z);
+               Fly zdef;
+               zdef.nested = true;
+               expr = parseExpression(zdef);
                context->emitVarDef(expr->type.get(), tok, expr.get());
                
                // trick the expression processing into not happening
