@@ -29,6 +29,7 @@ void Namespace::storeDef(VarDef *def) {
            "in an OverloadDef)");
     defs[def->name] = def;
     orderedForCache.push_back(def);
+    orderedForTxn.push_back(def);
 }
 
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
@@ -99,6 +100,18 @@ void Namespace::removeDef(VarDef *def) {
             break;
         }
     }
+
+
+    for (VarDefVec::iterator iter = orderedForTxn.begin();
+         iter != orderedForTxn.end();
+         ++iter
+         ) {
+        if (def->name == (*iter->get()).name) {
+            orderedForTxn.erase(iter);
+            break;
+        }
+    }
+
 }
 
 void Namespace::addAlias(VarDef *def) {
@@ -275,7 +288,7 @@ void Namespace::short_dump() {
 Namespace::Txmark Namespace::markTransactionStart() {
     Namespace::Txmark t;
     t.ns = this;
-    t.last_commit = orderedForCache.size()-1;
+    t.last_commit = orderedForTxn.size()-1;
     txLog.push_back(t);
     return t;
 }
@@ -286,13 +299,13 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
 
     if (t.last_commit < 0) return;
 
-    long n = (long)orderedForCache.size();
+    long n = (long)orderedForTxn.size();
 
     VarDefMap::iterator mapit;
     for(long i = t.last_commit + 1; i < n; ++i) {
-        mapit = defs.find(orderedForCache[i]->name);
+        mapit = defs.find(orderedForTxn[i]->name);
 
-        // we can't assert because orderedForCache contains
+        // we can't assert because orderedForTxn contains
         // duplicates, such as :exStruct
         // No: assert(map != defs.end())
         // 
@@ -301,15 +314,17 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t) {
             cerr << "undo in namespace '" 
                  << canonicalName
                  << "'removing name: '" 
-                 << orderedForCache[i]->name << "'" << endl;
+                 << orderedForTxn[i]->name << "'" << endl;
             defs.erase(mapit);
         }
     }
 
     //    ordered.erase(ordered.begin() + t.last_commit + 1,
     //                  ordered.end());
-    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
-                          orderedForCache.end());
+    //    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
+    //                          orderedForCache.end());
+    orderedForTxn.erase(orderedForTxn.begin() + t.last_commit + 1,
+                          orderedForTxn.end());
 
 }
 

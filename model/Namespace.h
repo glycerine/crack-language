@@ -49,6 +49,10 @@ class Namespace : public virtual spug::RCBase {
         // caching currently
         VarDefVec orderedForCache;
 
+        // ordered list of all vardefs for transactions delete
+        // used by repl for syntax error cleanup.
+        VarDefVec orderedForTxn;
+
         // fully qualified namespace name, e.g. "crack.io"
         std::string canonicalName;
 
