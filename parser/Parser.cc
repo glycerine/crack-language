@@ -2613,7 +2613,7 @@ void Parser::parseForStmt(Fly z) {
       context->createCleanupFrame();
       afterBody->emit(*context)->handleTransient(*context);
       context->closeCleanupFrame();
-      terminal = false;
+      terminal = 0;
    }
 
    BSTATS_GO(s2)
@@ -2712,6 +2712,13 @@ void Parser::parseImportStmt(Fly z, Namespace *ns) {
                           " recursively."
                          )
                );
+      
+      // add an implicit dependency to the current module (assuming we're 
+      // currently in a module, in an annotation we might not be).
+      if (ModuleDef *curMod = 
+            ModuleDefPtr::rcast(context->getModuleContext()->ns)
+          )
+         curMod->imports.push_back(mod);
 
    } else if (!tok.isString()) {
       unexpected(tok, "expected string constant");
