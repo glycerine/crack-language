@@ -64,6 +64,31 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr);
 // cleanup ctrl-c or syntax error aborted input.
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 
+// Status: the repl is now quite usable. Multiline input works well.
+//         Cleanup after syntax error in functions or expressions is there.
+//         The remaining big items are outlined below.
+//
+// XXX TODO list 12 Dec 2012
+//
+//   _ cleanup aborted (due to syntax error or other error) class definitions.
+//       possibly with a temp namespace that is merge upon correctness, or
+//       discarded upon error.
+//
+//   _ allow re-defining of functions/variables/classes at the repl
+//
+//    Michael's thoughts: (7 Dec 2012)
+//
+//   I think the best way to handle redefinition is just to give the context a flag
+//   to avoid the error.  The cleanest way to deal with it is if that flag is set,
+//   do a delete on the underlying LLVM "rep" objects.  That needs to be something
+//   passed in through the FuncDef object and actually implemented in the BFuncDef
+//   object, though, and I don't think it's crucial.  For a repl I wouldn't be too
+//   concerned about leakage.
+//
+//   _ Print functionality is missing, ease of displaying output at repl.
+//
+//   _ .crackrc startup in cwd or ~/.crackd : automatically run these scripts
+//      upon startup unless suppressed with a startup flag.
 
 /**
  * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
