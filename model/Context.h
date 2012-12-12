@@ -16,6 +16,9 @@
 #include "Construct.h"
 #include "FuncDef.h"
 #include "parser/Location.h"
+#include "wisecrack/repl.h"
+
+using wisecrack::Repl;
 
 namespace builder {
     class Builder;
@@ -133,15 +136,20 @@ class Context : public spug::RCBase {
 
         // the construct
         Construct *construct;
+
+        // the repl, if any.
+        Repl *repl;
     
         Context(builder::Builder &builder, Scope scope, Context *parentContext,
                 Namespace *ns,
-                Namespace *compileNS = 0
+                Namespace *compileNS = 0,
+                Repl *r = 0
                 );
         
         Context(builder::Builder &builder, Scope scope, Construct *construct,
                 Namespace *ns,
-                Namespace *compileNS
+                Namespace *compileNS,
+                Repl *r = 0
                 );
         
         ~Context();

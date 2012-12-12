@@ -2150,8 +2150,9 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
                             );
     first_section_func = func;
 
-    // debug
-    printf("[[[ create section '%s'\n",func->getName().str().c_str());
+    if (context.repl && context.repl->debuglevel() > 0) {
+        printf("[[[ create section '%s'\n",func->getName().str().c_str());
+    }
 
     createFuncStartBlocks("__section__");
     createSpecialVar(context.ns.get(), getExStructType(), ":exStruct");
@@ -2168,16 +2169,19 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     // when a section aborts in the middle of constructing another
     // function, both are left dangling, unless we do this:
     if (first_section_func != func) {
-        // debug
-        printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
+
+        if (context.repl && context.repl->debuglevel() > 0) {
+            printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
+        }
         
         // cleanup an aborted function construction.
         first_section_func->eraseFromParent();
         first_section_func = 0;
     }
 
-    // debug
-    printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
+    if (context.repl && context.repl->debuglevel() > 0) {
+        printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
+    }
 
     // cleanup an aborted function construction.
     func->eraseFromParent();

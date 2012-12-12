@@ -32,7 +32,7 @@ class LLVMJitBuilder : public LLVMBuilder {
         typedef std::map<std::string, llvm::GlobalValue *> CacheMapType;
         CacheMapType *cacheMap;
 
-        virtual void run();
+        virtual void run(model::Context& context);
 
         void doRunOrDump(model::Context &context);
 

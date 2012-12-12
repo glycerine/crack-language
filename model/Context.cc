@@ -42,10 +42,12 @@
 #include "VarDef.h"
 #include "VarDefImpl.h"
 #include "VarRef.h"
+#include "wisecrack/repl.h"
 
 using namespace model;
 using namespace std;
 using namespace crack::util;
+using wisecrack::Repl;
 
 parser::Location Context::emptyLoc;
 
@@ -145,7 +147,8 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Context *parentContext,
                  Namespace *ns,
-                 Namespace *compileNS
+                 Namespace *compileNS,
+                 Repl *r
                  ) :
     loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
@@ -167,6 +170,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     nextClassFlags(TypeDef::noFlags),
     vtableOffset(0),
     construct(parentContext->construct),
+    repl(r),
     cleanupFrame(builder.createCleanupFrame(*this)) {
     assert(construct && "parent context must have a construct");
 }
@@ -174,7 +178,8 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
 Context::Context(builder::Builder &builder, Context::Scope scope,
                  Construct *construct,
                  Namespace *ns,
-                 Namespace *compileNS
+                 Namespace *compileNS,
+                 Repl *r
                  ) :
     ns(ns),
     compileNS(compileNS),
@@ -187,6 +192,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     nextFuncFlags(FuncDef::noFlags),
     vtableOffset(0),
     construct(construct),
+    repl(r),
     cleanupFrame(builder.createCleanupFrame(*this)) {
     assert(compileNS);
 }

@@ -217,9 +217,11 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
     return addr;
 }
 
-void LLVMJitBuilder::run() {
-    // debug
-    printf("*** running '%s'\n",func->getName().str().c_str());
+void LLVMJitBuilder::run(Context& context) {
+
+    if (context.repl && context.repl->debuglevel() > 0) {
+        printf("*** running '%s'\n",func->getName().str().c_str());
+    }
 
     int (*fptr)() = (int (*)())execEng->getPointerToFunction(func);
     SPUG_CHECK(fptr, "no address for function " << string(func->getName()));
@@ -392,12 +394,12 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
         dump();
 
     if (options->dropintoRepl) {
-        run();
+        run(context);
         return;
     }
 
     if (!options->dumpMode || !context.construct->compileTimeConstruct)
-        run();
+        run(context);
 
 }
 

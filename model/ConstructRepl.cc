@@ -61,7 +61,7 @@ using namespace llvm;
 // helpers. at end of file.
 bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr);
 
-// cleanup ctrl-c aborted input.
+// cleanup ctrl-c or syntax error aborted input.
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 
 
@@ -132,7 +132,9 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         context = new Context(*builder,
                               Context::module, 
                               prior,
-                              local_compile_ns.get());
+                              local_compile_ns.get(),
+                              0,
+                              &r);
         context->toplevel = true;
         
         bool cached = false;
@@ -282,6 +284,21 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // dump: do full global dump of all namespaces.
         context->dump();
         return true;
+    } else if (0==strcmp(".debug",r.getTrimmedLastReadLine())) {
+        // up the debugging level
+        int d = r.debuglevel();
+        ++d;
+        printf("debug level: %d\n",d);
+        r.set_debuglevel(d);
+        return true;
+    } else if (0==strcmp(".undebug",r.getTrimmedLastReadLine())) {
+        // reduce debugging
+        int d = r.debuglevel();
+        --d;
+        if (d < 0) { d=0; }
+        printf("debug level: %d\n",d);
+        r.set_debuglevel(d);
+        return true;
     }
     else if (0==strcmp(".dn",r.getTrimmedLastReadLine())) {
         // dn: dump namespace, local only
@@ -300,8 +317,4 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
     printf(" [cleaning up unfinished line]\n");
     bdr->eraseSection(*ctx,mod);
-    
-    // XXX TODO: figure out how to erase any newly half-finished classes
-    
-    //    bdr->beginSection(*ctx,mod);
 }

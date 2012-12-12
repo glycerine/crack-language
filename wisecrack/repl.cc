@@ -96,7 +96,8 @@ void init_ctrl_c_handling() {
     Repl::Repl()
         : _alldone(false),
           _lineno(0),
-          _showLineN(true)
+          _showLineN(true),
+          _debuglevel(0)
     {
         bzero(_readbuf, _readsz);
         set_default_prompt("crk");
@@ -105,6 +106,9 @@ void init_ctrl_c_handling() {
 
     bool Repl::done() { return _alldone; }
     void Repl::setDone() { _alldone = true; }
+
+    void Repl::set_debuglevel(int level) { _debuglevel = level; }
+    int Repl::debuglevel() { return _debuglevel; }
 
 
     char* Repl::getPrompt() {
@@ -298,14 +302,6 @@ void init_ctrl_c_handling() {
         if (*getTrimmedLastReadLine() == '\0') {
             return false;
         }
-
-#if 0 // not needed now that we have Fly enabled parser.
-        // ;;; on line alone => evaluate now.
-        static const char evalnow[] = ";;;";
-        if (0==strncmp(evalnow,getTrimmedLastReadLine(),sizeof(evalnow))) {
-            return false;
-        }
-#endif
 
         src.clear();
         src << "\n";

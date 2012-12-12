@@ -115,6 +115,11 @@ namespace wisecrack {
         /** return true if more input obtained. */
         bool get_more_input();
 
+        /** set (get) debug level */
+        void set_debuglevel(int level);
+        int debuglevel();
+
+
     private:
         bool _alldone;
         long _lineno;
@@ -131,6 +136,7 @@ namespace wisecrack {
         char             _prompt[_promptsz];
         char             _default_prompt[_promptsz];
 
+        int _debuglevel;
     };
 
 
