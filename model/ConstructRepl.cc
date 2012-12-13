@@ -364,6 +364,15 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         
         printf(".rm got request to delete symbol '%s'\n", sym);
 
+        VarDefPtr var = context->ns->lookUp(sym);
+
+        if (!var) {
+            printf("error using .rm: could not locate symbol '%s' to delete.\n", sym);
+            return true;
+        }
+
+        printf(".rm located variable 0x%lx to delete.\n", *(unsigned long*)var.get());
+
         return true;
 
     }
