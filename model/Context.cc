@@ -991,8 +991,7 @@ namespace {
 }
 
 void Context::error(const parser::Location &loc, const string &msg, 
-                    bool throwException,
-                    bool recoverable
+                    bool throwException
                     ) {
     
     list<string> &ec = construct->errorContexts;

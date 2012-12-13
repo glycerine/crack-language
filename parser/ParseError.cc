@@ -23,6 +23,3 @@ std::string ParseError::getMessage() const {
 void ParseError::abort(const Token &tok, const char *msg) {
    throw ParseError(tok.getLocation(), msg);
 }
-
-
-
