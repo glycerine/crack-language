@@ -88,7 +88,7 @@ void Parser::addFuncDef(FuncDef *funcDef) {
 }
 
 
-Token Parser::getToken(Fly z) {
+Token Parser::getToken(Zt z) {
    
     Token tok = toker.getToken(z);
     context->setLocation(tok.getLocation());
@@ -125,7 +125,7 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
 }
 
 
-void Parser::expectToken(Fly z, Token::Type type, const char *error) {
+void Parser::expectToken(Zt z, Token::Type type, const char *error) {
     Token tok = getToken(z);
     if (tok.getType() != type)
         unexpected(tok, error);
@@ -185,7 +185,7 @@ FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
    return func;
 }   
 
-void Parser::parseClause(Fly z, bool defsAllowed) {
+void Parser::parseClause(Zt z, bool defsAllowed) {
    Token tok = getToken(z);
    state = st_notBase;
    ExprPtr expr;
@@ -215,7 +215,7 @@ void Parser::parseClause(Fly z, bool defsAllowed) {
             if (tok2.isDefine()) {
                if (!defsAllowed)
                   error(tok, "definition is not allowed in this context.");
-               Fly zdef;
+               Zt zdef;
                zdef.nested = true;
                expr = parseExpression(zdef);
                context->emitVarDef(expr->type.get(), tok, expr.get());
@@ -250,7 +250,7 @@ void Parser::parseClause(Fly z, bool defsAllowed) {
       context->checkAccessible(typeDef);
       identLoc = tok.getLocation();
 
-      Fly zdef; zdef.nested = true;
+      Zt zdef; zdef.nested = true;
       if (parseDef(zdef, typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
@@ -299,7 +299,7 @@ void Parser::parseClause(Fly z, bool defsAllowed) {
       unexpected(tok, "expected semicolon or a block terminator");
 }
 
-void Parser::parseAnnotation(Fly z) {
+void Parser::parseAnnotation(Zt z) {
    AnnotationPtr ann;
    {
       // create a new context whose construct is tha annotation construct.
@@ -330,7 +330,7 @@ void Parser::parseAnnotation(Fly z) {
    ann->invoke(this, &toker, context.get());
 }
 
-ContextPtr Parser::parseStatement(Fly z, bool defsAllowed) {
+ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
    // peek at the next token
    Token tok = getToken(z);
    state = st_notBase;
@@ -420,7 +420,7 @@ ContextPtr Parser::parseStatement(Fly z, bool defsAllowed) {
    return 0;
 }
 
-ContextPtr Parser::parseBlock(Fly z, bool nested, Parser::Event closeEvent) {
+ContextPtr Parser::parseBlock(Zt z, bool nested, Parser::Event closeEvent) {
    Token tok;
    ContextPtr terminal;
 
@@ -588,7 +588,7 @@ ExprPtr Parser::createAssign(Expr *container, const Token &ident,
 }
 
 // obj.oper <symbol>
-string Parser::parseOperSpec(Fly z) {
+string Parser::parseOperSpec(Zt z) {
    Token tok = getToken(z);
    const string &ident = tok.isIdent() ? tok.getData() : "";
    if (tok.isMinus() || tok.isTilde() || tok.isBang() ||
@@ -647,7 +647,7 @@ string Parser::parseOperSpec(Fly z) {
    }
 }
 
-FuncCallPtr Parser::parseFuncCall(Fly z, 
+FuncCallPtr Parser::parseFuncCall(Zt z, 
                                   const Token &ident, const string &funcName,
                                   Namespace *ns, 
                                   Expr *container
@@ -760,7 +760,7 @@ FuncCallPtr Parser::parseFuncCall(Fly z,
    return funcCall;
 }
 
-ExprPtr Parser::parsePostIdent(Fly z, Expr *container, const Token &ident) {
+ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
    Namespace *ns = container ? container->type.get() : context->ns.get();
 
    Token tok1 = getToken(z);
@@ -892,7 +892,7 @@ ExprPtr Parser::parsePostIdent(Fly z, Expr *container, const Token &ident) {
 
 // ` ... `
 //  ^     ^
-ExprPtr Parser::parseIString(Fly z, Expr *expr) {
+ExprPtr Parser::parseIString(Zt z, Expr *expr) {
    
    // wrap the formatter expression in a register setter so it will get stored 
    // for reuse.
@@ -982,7 +982,7 @@ ExprPtr Parser::parseIString(Fly z, Expr *expr) {
 
 // [ expr, expr, ... ]
 //  ^                 ^
-ExprPtr Parser::parseConstSequence(Fly z, TypeDef *containerType) {
+ExprPtr Parser::parseConstSequence(Zt z, TypeDef *containerType) {
    vector<ExprPtr> elems;
    Token tok = getToken(z);
    while (!tok.isRBracket()) {
@@ -1003,7 +1003,7 @@ ExprPtr Parser::parseConstSequence(Fly z, TypeDef *containerType) {
 
 // typeof ( expr )
 //       ^        ^
-TypeDefPtr Parser::parseTypeof(Fly z) {
+TypeDefPtr Parser::parseTypeof(Zt z) {
    Token tok = getToken(z);
    if (!tok.isLParen())
       unexpected(tok, 
@@ -1031,7 +1031,7 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
 
 // cond ? trueVal : falseVal
 //       ^                  ^
-ExprPtr Parser::parseTernary(Fly z, Expr *cond) {
+ExprPtr Parser::parseTernary(Zt z, Expr *cond) {
    ExprPtr trueVal = parseExpression(z);
    Token tok = getToken(z);
    if (!tok.isColon())
@@ -1040,7 +1040,7 @@ ExprPtr Parser::parseTernary(Fly z, Expr *cond) {
    return context->createTernary(cond, trueVal.get(), falseVal.get());
 }
 
-ExprPtr Parser::parseSecondary(Fly z, Expr *expr0, unsigned precedence) {
+ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
    ExprPtr expr = expr0;
    Token tok = getToken(z);
    while (true) {
@@ -1311,7 +1311,7 @@ namespace {
 
 } // anonymous namespace
 
-ExprPtr Parser::parseExpression(Fly z, unsigned precedence) {
+ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
 
    ExprPtr expr;
 
@@ -1435,7 +1435,7 @@ ExprPtr Parser::parseExpression(Fly z, unsigned precedence) {
 //      ^         ^
 // Type var = { arg, arg } ;
 //             ^          ^
-void Parser::parseMethodArgs(Fly z, FuncCall::ExprVec &args, Token::Type terminator) {
+void Parser::parseMethodArgs(Zt z, FuncCall::ExprVec &args, Token::Type terminator) {
      
    Token tok = getToken(z);
    while (true) {
@@ -1458,7 +1458,7 @@ void Parser::parseMethodArgs(Fly z, FuncCall::ExprVec &args, Token::Type termina
 
 // type [ subtype, ... ]
 //       ^              ^
-TypeDef *Parser::parseSpecializer(Fly z, const Token &lbrack, TypeDef *typeDef,
+TypeDef *Parser::parseSpecializer(Zt z, const Token &lbrack, TypeDef *typeDef,
                                   Generic *generic
                                   ) {
    if (typeDef && !typeDef->generic)
@@ -1492,7 +1492,7 @@ TypeDef *Parser::parseSpecializer(Fly z, const Token &lbrack, TypeDef *typeDef,
 //       ^          ^
 // Class var = { arg, arg } ;
 //              ^          ^
-ExprPtr Parser::parseConstructor(Fly z, const Token &tok, TypeDef *type,
+ExprPtr Parser::parseConstructor(Zt z, const Token &tok, TypeDef *type,
                                  Token::Type terminator
                                  ) {
    // parse an arg list
@@ -1532,7 +1532,7 @@ ExprPtr Parser::parseConstructor(Fly z, const Token &tok, TypeDef *type,
    return funcCall;
 }
 
-TypeDefPtr Parser::parseTypeSpec(Fly z, const char *errorMsg, Generic *generic) {
+TypeDefPtr Parser::parseTypeSpec(Zt z, const char *errorMsg, Generic *generic) {
    Token tok = getToken(z);
 
    TypeDefPtr typeofType;
@@ -1583,7 +1583,7 @@ TypeDefPtr Parser::parseTypeSpec(Fly z, const char *errorMsg, Generic *generic) 
    return typeDef;
 }
 
-void Parser::parseModuleName(Fly z, vector<string> &moduleName) {
+void Parser::parseModuleName(Zt z, vector<string> &moduleName) {
    Token tok = getToken(z);
    while (true) {
       moduleName.push_back(tok.getData());
@@ -1601,7 +1601,7 @@ void Parser::parseModuleName(Fly z, vector<string> &moduleName) {
 
 // type funcName ( type argName, ... ) {
 //                ^                   ^
-void Parser::parseArgDefs(Fly z, vector<ArgDefPtr> &args, bool isMethod) {
+void Parser::parseArgDefs(Zt z, vector<ArgDefPtr> &args, bool isMethod) {
 
    // load the next token so we can check for the immediate closing paren of 
    // an empty argument list.
@@ -1650,7 +1650,7 @@ void Parser::parseArgDefs(Fly z, vector<ArgDefPtr> &args, bool isMethod) {
 
 // oper init(...) : init1(expr), ... {
 //                 ^                ^
-void Parser::parseInitializers(Fly z, Initializers *inits, Expr *receiver) {
+void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
    ContextPtr classCtx = context->getClassContext();
    TypeDefPtr type = TypeDefPtr::rcast(classCtx->ns);
    
@@ -1782,7 +1782,7 @@ void Parser::parseInitializers(Fly z, Initializers *inits, Expr *receiver) {
    }
 }
 
-int Parser::parseFuncDef(Fly z, TypeDef *returnType, const Token &nameTok,
+int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
                          const string &name,
                          Parser::FuncFlags funcFlags,
                          int expectedArgCount
@@ -2077,7 +2077,7 @@ int Parser::parseFuncDef(Fly z, TypeDef *returnType, const Token &nameTok,
 
 // type var = ... ;
 //           ^   ^
-ExprPtr Parser::parseInitializer(Fly z, TypeDef *type, const std::string &varName) {
+ExprPtr Parser::parseInitializer(Zt z, TypeDef *type, const std::string &varName) {
    ExprPtr initializer;
    
    // check for special initializer syntax.
@@ -2108,7 +2108,7 @@ ExprPtr Parser::parseInitializer(Fly z, TypeDef *type, const std::string &varNam
 
 // alias name = existing_def, ... ;
 //      ^                        ^
-void Parser::parseAlias(Fly z) {
+void Parser::parseAlias(Zt z) {
    while (true) {
       Token tok = getToken(z);
       if (!tok.isIdent())
@@ -2184,7 +2184,7 @@ void Parser::parseAlias(Fly z) {
 //     ^                         ^
 // type function() { }
 //     ^              ^
-bool Parser::parseDef(Fly z, TypeDef *&type) {
+bool Parser::parseDef(Zt z, TypeDef *&type) {
    Token tok2 = getToken(z);
    
    // if we get a '[', parse the specializer and get a generic type.
@@ -2276,7 +2276,7 @@ bool Parser::parseDef(Fly z, TypeDef *&type) {
 //      ^                     ^
 // const var := value ;
 //      ^            ^
-void Parser::parseConstDef(Fly z) {
+void Parser::parseConstDef(Zt z) {
    Token tok = getToken(z);
    if (!tok.isIdent())
       unexpected(tok, "identifier or type expected after 'const'");
@@ -2351,7 +2351,7 @@ void Parser::parseConstDef(Fly z) {
    context->emitVarDef(expr->type.get(), tok, expr.get(), true);
 }
 
-ContextPtr Parser::parseIfClause(Fly z) {
+ContextPtr Parser::parseIfClause(Zt z) {
    Token tok = getToken(z);
    ContextPtr terminal;
    stringstream nsName;
@@ -2371,7 +2371,7 @@ ContextPtr Parser::parseIfClause(Fly z) {
    }
 }
    
-ExprPtr Parser::parseCondExpr(Fly z) {
+ExprPtr Parser::parseCondExpr(Zt z) {
    TypeDef *boolType = context->construct->boolType.get();
    ExprPtr cond = parseExpression(z)->convert(*context, boolType);
    if (!cond)
@@ -2386,7 +2386,7 @@ ExprPtr Parser::parseCondExpr(Fly z) {
 //   ^               ^
 // if ( expr ) clause else clause
 //   ^                           ^
-ContextPtr Parser::parseIfStmt(Fly z) {
+ContextPtr Parser::parseIfStmt(Zt z) {
    // create a subcontext for variables defined in the condition.
    ContextStackFrame<Parser> 
       cstack(*this, context->createSubContext(true).get());
@@ -2446,7 +2446,7 @@ ContextPtr Parser::parseIfStmt(Fly z) {
 //      ^               ^
 // while ( expr ) { ... }
 //      ^                ^
-void Parser::parseWhileStmt(Fly z) {
+void Parser::parseWhileStmt(Zt z) {
    // create a subcontext for the break and for variables defined in the 
    // condition.
    ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
@@ -2479,7 +2479,7 @@ void Parser::parseWhileStmt(Fly z) {
 //    ^               ^
 // for ( ... ) stmt ; (';' can be replaced with EOF)
 //    ^              ^
-void Parser::parseForStmt(Fly z) {
+void Parser::parseForStmt(Zt z) {
    // create a subcontext for the break and for variables defined in the 
    // condition.
    ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
@@ -2623,7 +2623,7 @@ void Parser::parseForStmt(Fly z) {
    BSTATS_END
 }
 
-void Parser::parseReturnStmt(Fly z) {
+void Parser::parseReturnStmt(Zt z) {
    // check for a return with no expression
    Token tok = getToken(z);
    bool returnVoid = false;
@@ -2687,7 +2687,7 @@ void Parser::parseReturnStmt(Fly z) {
 
 // import module-and-defs ;
 //       ^               ^
-void Parser::parseImportStmt(Fly z, Namespace *ns) {
+void Parser::parseImportStmt(Zt z, Namespace *ns) {
    ModuleDefPtr mod;
    string canonicalName;
    builder::Builder &builder = context->construct->getCurBuilder();
@@ -2831,7 +2831,7 @@ void Parser::parseImportStmt(Fly z, Namespace *ns) {
 
 // try { ... } catch (...) { ... }
 //    ^                           ^
-ContextPtr Parser::parseTryStmt(Fly z) {
+ContextPtr Parser::parseTryStmt(Zt z) {
    Token tok = toker.getToken(z);
    if (!tok.isLCurly())
       unexpected(tok, "Curly bracket expected after try.");
@@ -2936,7 +2936,7 @@ ContextPtr Parser::parseTryStmt(Fly z) {
    }
 }
 
-ContextPtr Parser::parseThrowStmt(Fly z) {
+ContextPtr Parser::parseThrowStmt(Zt z) {
    Token tok = toker.getToken(z);
    if (tok.isSemi()) {
       // XXX need to get this working and to verify that we are in a catch
@@ -2972,7 +2972,7 @@ ContextPtr Parser::parseThrowStmt(Fly z) {
 
 // oper name ( args ) { ... }
 //     ^                     ^
-void Parser::parsePostOper(Fly z, TypeDef *returnType) {
+void Parser::parsePostOper(Zt z, TypeDef *returnType) {
    bool reversed = false;
    Token tok = getToken(z);
    if (tok.isIdent()) {
@@ -3161,7 +3161,7 @@ void Parser::parsePostOper(Fly z, TypeDef *returnType) {
 
 // [ n1, n2, ... ]
 //  ^             ^
-void Parser::parseGenericParms(Fly z, GenericParmVec &parms) {
+void Parser::parseGenericParms(Zt z, GenericParmVec &parms) {
    Token tok = getToken(z);
    while (true) {
       if (tok.isIdent())
@@ -3184,7 +3184,7 @@ void Parser::parseGenericParms(Fly z, GenericParmVec &parms) {
 void Parser::recordIStr(Generic *generic) {
    int depth = 0;
    
-   Fly z;
+   Zt z;
    while (true) {
 
       Token tok = toker.getToken(z);
@@ -3202,7 +3202,7 @@ void Parser::recordIStr(Generic *generic) {
 
 void Parser::recordBlock(Generic *generic) {
    int bracketCount = 1;
-   Fly z;
+   Zt z;
    while (bracketCount) {
       // get the next token, use the low-level token so as not to process 
       // annotations.
@@ -3220,7 +3220,7 @@ void Parser::recordBlock(Generic *generic) {
 }
 
 void Parser::recordParenthesized(Generic *generic) {
-   Fly z;
+   Zt z;
    Token tok = getToken(z);
    if (!tok.isLParen())
       unexpected(tok, "left parenthesis expected");
@@ -3242,7 +3242,7 @@ void Parser::recordParenthesized(Generic *generic) {
 //      ^                         ^
 // class name;
 //      ^     ^
-TypeDefPtr Parser::parseClassDef(Fly z) {
+TypeDefPtr Parser::parseClassDef(Zt z) {
    runCallbacks(classDef);
    
    z.nested = true;
@@ -3433,13 +3433,13 @@ Parser::Parser(Toker &toker, model::Context *context) :
 
 void Parser::parse() {
     // outer parser just parses an un-nested block
-    Fly z;
+    Zt z;
     parseBlock(z, false, noCallbacks);
 }
 
 // class name { ... }
 //             ^     ^
-void Parser::parseClassBody(Fly z) {
+void Parser::parseClassBody(Zt z) {
    runCallbacks(classEnter);
 
    // parse the class body   

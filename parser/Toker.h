@@ -18,12 +18,23 @@
 
 namespace parser {
 
-// send repl state (nested/not) into
-// the tokenizer using this fly on the wall.
-struct Fly { 
+// Zt: send repl state (nested/not) into
+// the tokenizer using this zephyr type; its
+// an old fashioned transport mechanism.
+//
+// Zt allows parser code to let the Toker
+// know when it must have more input by
+// setting nested to true for the duration
+// of any subsequent or sub-parse.
+//
+// Passed by value down through all Parser
+//  functions to provide auto reset when
+//  returning.
+//
+struct Zt { 
     bool nested;
-    Fly() : nested(false) {}
-    //    Fly(bool n) : nested(n) {}
+    Zt() : nested(false) {}
+    //    Zt(bool n) : nested(n) {}
 };
 
 
@@ -51,7 +62,7 @@ class Toker {
       Token fixIdent(const std::string &raw, const Location &loc);
 
       // reads the next token directly from the source stream
-      Token readToken(Fly z);
+      Token readToken(Zt z);
 
       // info for tracking the state of the tokenizer.
       enum { 
@@ -116,7 +127,7 @@ class Toker {
       enum { tabWidth = 8 };
       
       // get the next character from the stream.
-      bool getChar(char &ch, Fly z);
+      bool getChar(char &ch, Zt z);
 
       // put back the character      
       void ungetChar(char ch);
@@ -154,7 +165,7 @@ class Toker {
       /**
        * Returns the next token in the stream.
        */
-      Token getToken(Fly z);
+      Token getToken(Zt z);
 
       /**
        * Puts the token back onto the stream.  A subsequent getToken() will

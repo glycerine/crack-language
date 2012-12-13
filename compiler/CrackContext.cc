@@ -61,7 +61,7 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
     parser::Toker tempToker(iss, sourceName, lineNumber);
     list<parser::Token> tokens;
     parser::Token tok;
-    parser::Fly z;
+    parser::Zt z;
 
     // 0 - not in an istring
     // 1 - in an istring
@@ -96,7 +96,7 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
 }
 
 Token *CrackContext::getToken() {
-    parser::Fly z;
+    parser::Zt z;
     return new Token(toker->getToken(z));
 }
 
@@ -210,7 +210,7 @@ void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
 }
 
 Token *CrackContext::_getToken(CrackContext *inst) {
-    parser::Fly z;
+    parser::Zt z;
     return new Token(inst->toker->getToken(z));
 }
 

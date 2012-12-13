@@ -30,7 +30,7 @@ Location Toker::getLocation() {
     return lastLoc;
 }
 
-bool Toker::getChar(char &ch, Fly z) {
+bool Toker::getChar(char &ch, Zt z) {
     bool result;
     if (putbackIndex < putbackSize) {
         ch = putbackBuf[putbackIndex++];
@@ -209,7 +209,7 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
                      );
 }
 
-Token Toker::readToken(Fly z) {
+Token Toker::readToken(Zt z) {
     char ch, terminator;
     
     // information on the preceeding characters for compound symbols
@@ -966,7 +966,7 @@ Token Toker::readToken(Fly z) {
     }
 }
 
-Token Toker::getToken(Fly z) {
+Token Toker::getToken(Zt z) {
     // if any tokens have been put back, use them first
     if (tokens.size()) {
         Token temp = tokens.back();

@@ -338,7 +338,7 @@ void Type::finish() {
         std::istringstream codeStream(impl->beginCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        Fly z;
+        Zt z;
         parser.parseClassBody(z);
     }
 
@@ -362,7 +362,7 @@ void Type::finish() {
         std::istringstream codeStream(impl->endCode);
         Toker toker(codeStream, "injected code");
         Parser parser(toker, lexicalContext.get());
-        Fly z;
+        Zt z;
         parser.parseClassBody(z);
     }
 
