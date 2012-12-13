@@ -36,8 +36,6 @@ class BuilderOptions : public spug::RCBase {
         bool debugMode;
         // Keep compile time statistics
         bool statsMode;
-        // Enable builder module caching
-        bool cacheMode;
         // drop into interpreter
         bool dropintoRepl;
         // builder specific option strings
@@ -49,7 +47,6 @@ class BuilderOptions : public spug::RCBase {
                               dumpMode(false),
                               debugMode(false),
                               statsMode(false),
-                              cacheMode(false),
                               dropintoRepl(false),
                               optionMap() { }
 
