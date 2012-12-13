@@ -306,6 +306,10 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     }
 
     // special commands
+
+    const static char rmcmd[] = ".rm";
+    const static int  rmlen = strlen(rmcmd);
+
     if (0==strcmp(".q",r.getTrimmedLastReadLine()) ||
         0==strcmp(".quit",r.getTrimmedLastReadLine())) {
         // quitting time.
@@ -343,7 +347,29 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         bdr->dump();
         return true;
 
-    } else if (0==strcmp(".help",r.getTrimmedLastReadLine())) {
+    } else if (0==strncmp(rmcmd,r.getTrimmedLastReadLine(), rmlen)) {
+        // rm sym : remove symbol sym from namespace
+
+        const char* p   = r.getTrimmedLastReadLine();
+        const char* end = r.getLastReadLine() + r.getLastReadLineLen();
+        const char* sym = p + rmlen + 1;
+
+        // confirm we have an argument sym to delete
+        if (sym >= end) {
+            printf("error using .rm: no symbol-to-delete specified.\n");
+            return true;
+        }
+
+        if (!isspace(*(p + rmlen))) { return false; }
+        
+        printf(".rm got request to delete symbol '%s'\n", sym);
+
+        return true;
+
+    }
+
+
+    if (0==strcmp(".help",r.getTrimmedLastReadLine())) {
         printf("wisecrack repl help:\n"
                "\n"
                "  .help    = show this hint page\n"
@@ -355,6 +381,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  .quit    = quit repl (also .q)\n"
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
+               "  .rm sym  = remove symbol sym from namespace\n"
                "\n"
                );
               
