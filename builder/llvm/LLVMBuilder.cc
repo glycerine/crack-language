@@ -3049,9 +3049,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 }
 
 std::string LLVMBuilder::getSourcePath(const std::string &path) {
-    char *temp = strdup(path.c_str());
-    char *rp = realpath(temp, NULL);
-    free(temp);
+    char *rp = realpath(path.c_str(), NULL);
     string result;
     if (!rp) {
         result = path;
