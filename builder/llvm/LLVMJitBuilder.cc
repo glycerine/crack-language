@@ -115,7 +115,6 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
 
     }
 
-
     setupCleanup(moduleDef);
 
     // if we have a cacher, make sure that all globals are registered there.
@@ -227,7 +226,6 @@ void LLVMJitBuilder::run(Context& context) {
     SPUG_CHECK(fptr, "no address for function " << string(func->getName()));
     fptr();
 }
-
 
 BuilderPtr LLVMJitBuilder::createChildBuilder() {
     LLVMJitBuilder *result = new LLVMJitBuilder();
@@ -410,7 +408,6 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
 
 }
-
 
 void LLVMJitBuilder::dump() {
     PassManager passMan;

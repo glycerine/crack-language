@@ -34,6 +34,8 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual void run(model::Context& context);
 
+        virtual void dump();
+
         void doRunOrDump(model::Context &context);
 
         void ensureCacheMap();
@@ -106,9 +108,6 @@ class LLVMJitBuilder : public LLVMBuilder {
         );
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
         virtual llvm::ExecutionEngine *getExecEng() const;
-
-        virtual void dump();
-
 };
 
 } } // namespace
