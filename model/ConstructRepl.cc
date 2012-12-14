@@ -81,6 +81,11 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 //
 //   _ allow re-defining of functions/variables/classes at the repl
 //
+//    Update (14 Dec 2012): Works but leaks. Redefinition at the repl just
+//      clears the symbol from the namespace; it doesn't do proper 
+//      cleanup like Michael describes below, but it works for now
+//      (albiet with the accompanying leak of llvm rep objects).
+//
 //    Michael's thoughts: (7 Dec 2012)
 //
 //   I think the best way to handle redefinition is just to give the context a flag
@@ -89,8 +94,6 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 //   passed in through the FuncDef object and actually implemented in the BFuncDef
 //   object, though, and I don't think it's crucial.  For a repl I wouldn't be too
 //   concerned about leakage.
-//
-//   _ Print functionality is missing, ease of displaying output at repl.
 //
 //   _ .crackrc startup in cwd or ~/.crackd : automatically run these scripts
 //      upon startup unless suppressed with a startup flag.
@@ -307,9 +310,6 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
     // special commands
 
-    const static char rmcmd[] = ".rm";
-    const static int  rmlen = strlen(rmcmd);
-
     const char* p   = r.getTrimmedLastReadLine();
     const char* end = r.getLastReadLine() + r.getLastReadLineLen();
 
@@ -350,14 +350,12 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         bdr->dump();
         return true;
 
-    } else if (0==strncmp(rmcmd,p, rmlen)) {
+    } else if (0==strncmp(".rm ", p, 4) && strlen(p) > 4) {
         // rm sym : remove symbol sym from namespace
 
-        const char* p   = p;
-        const char* end = r.getLastReadLine() + r.getLastReadLineLen();
-        const char* sym = p + rmlen + 1;
+        const char* sym = p + 4;
 
-        if (!isspace(*(p + rmlen))) { return false; }
+        while(isspace(*sym) && sym < end) { ++sym;  }
 
         // confirm we have an argument sym to delete
         if (sym >= end) {
@@ -444,7 +442,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
                "  .rm sym  = remove symbol sym from namespace\n"
-               "  . sym    = print sym on cout. Auto-imports crack.io cout if necessary.\n"
+               "  . sym    = print sym on cout. Does 'import crack.io cout;' if necessary.\n"
                "  .        = print last symbol made (skips internals with ':' prefix)\n"
                "  .history = display command line history\n"
                "\n"
