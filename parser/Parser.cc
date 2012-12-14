@@ -771,8 +771,14 @@ ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
    if (tok1.isDefine()) {
       // make sure that the variable is not defined in this context.
       VarDefPtr def = ns->lookUp(ident.getData());
-      if (def && def->getOwner() == context->ns.get())
-         redefineError(tok1, def.get());
+      if (def && def->getOwner() == context->ns.get()) {
+          if (atRepl) {
+              // allow redefinition at repl
+              context->ns->removeDef(def.get());
+          } else {
+              redefineError(tok1, def.get());
+          }
+      }
       
       ExprPtr val = parseExpression(z);
       if (!val) {
