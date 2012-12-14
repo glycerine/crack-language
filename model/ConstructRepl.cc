@@ -444,8 +444,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
                "  .rm sym  = remove symbol sym from namespace\n"
-               "  . sym   = print sym on cout. Auto-imports crack.io cout if necessary.\n"
-               "  .       = print last symbol made (skips internals with ':' prefix)\n"
+               "  . sym    = print sym on cout. Auto-imports crack.io cout if necessary.\n"
+               "  .        = print last symbol made (skips internals with ':' prefix)\n"
                "  .history = display command line history\n"
                "\n"
                );
