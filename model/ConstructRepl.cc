@@ -376,6 +376,11 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         return true;
 
+    } else if (0==strncmp("..", p, 2) && strlen(p) > 2) {
+        const char* cmd = p + 2;
+        system(cmd);
+        return true;
+
     } else if (0==strcmp(".", p) || 
                (0==strncmp(". ", p, 2)) && strlen(p) > 2) {
         // . sym : print sym
@@ -445,6 +450,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  . sym    = print sym on cout. Does 'import crack.io cout;' if necessary.\n"
                "  .        = print last symbol made (skips internals with ':' prefix)\n"
                "  .history = display command line history\n"
+               "  ..cmd    = call system(cmd), executing cmd in a shell.\n"
                "\n"
                );
               
