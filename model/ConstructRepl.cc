@@ -406,7 +406,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         cmd += sym;
         cmd += " = $(";
         cmd += sym;
-        cmd += ")\n`";
+        cmd += ")\n`;";
         r.set_next_line(cmd.c_str());
         
         // return false because we *want* to execute the cout print now.
