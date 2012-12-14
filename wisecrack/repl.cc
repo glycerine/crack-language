@@ -29,6 +29,8 @@
 
 namespace wisecrack {
 
+    Repl* globalRepl = 0;
+
     void print_signal_mask() {
         
         sigset_t print_cur_sset;
@@ -102,6 +104,10 @@ void init_ctrl_c_handling() {
         bzero(_readbuf, _readsz);
         set_default_prompt("crk");
         reset_prompt_to_default();
+
+        // last write wins, but we only expect to use
+        // this for debugging situations.
+        globalRepl = this;
     }
 
     bool Repl::done() { return _alldone; }

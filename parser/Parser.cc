@@ -3537,8 +3537,13 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
              )
             return existing;
 
-         // redefinition in the same context is otherwise an error
-         redefineError(tok, existing.get());
+         if (atRepl) {
+            existingNS->removeDef(existing.get());
+            return 0;
+         } else {
+            // redefinition in the same context is otherwise an error
+            redefineError(tok, existing.get());
+         }
       }      
    }
    
@@ -3579,10 +3584,16 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
        )
       return 0;
 
-   // otherwise this is an illegal override
-   error(nameTok,
-         SPUG_FSTR("Definition of " << name << " hides previous overload.")
-         );
+   if (atRepl) {
+       // allow redefinition at repl
+       ownerNS->removeDef(existingDef);
+       return 0;
+   } else {
+       // otherwise this is an illegal override
+       error(nameTok,
+             SPUG_FSTR("Definition of " << name << " hides previous overload.")
+             );
+   }
 }
 
 void Parser::redefineError(const Token &tok, const VarDef *existing) {

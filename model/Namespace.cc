@@ -20,9 +20,15 @@
 
 using namespace std;
 using namespace model;
+using wisecrack::globalRepl;
 
 void Namespace::storeDef(VarDef *def) {
-    //printf("NSLOG: '%s' ::storeDef(%s)\n", canonicalName.c_str(), def->getFullName().c_str());
+
+    if (globalRepl && globalRepl->debuglevel() > 1) {
+        printf("NSLOG: '%s' ::storeDef(%s)\n", 
+               canonicalName.c_str(), 
+               def->getFullName().c_str());
+    }
 
     assert(!FuncDefPtr::cast(def) && 
            "it is illegal to store a FuncDef directly (should be wrapped "
@@ -76,6 +82,12 @@ void Namespace::addDef(VarDef *def) {
 void Namespace::removeDef(VarDef *def) {
     assert(!OverloadDefPtr::cast(def));
     VarDefMap::iterator iter = defs.find(def->name);
+    if (iter == defs.end()) {
+        fprintf(stderr,"internal error in client of Namespace::removeDef(): def '%s'"
+                " not found", def->name.c_str());
+        assert(0);
+        exit(1);
+    }
     assert(iter != defs.end());
     defs.erase(iter);
 
@@ -134,7 +146,9 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
 
-    //printf("NSLOG: addAlias(%s,%s)\n", name.c_str(), def->getFullName().c_str());
+    if (globalRepl && globalRepl->debuglevel() > 1) {
+        printf("NSLOG: addAlias(%s,%s)\n", name.c_str(), def->getFullName().c_str());
+    }
 
     // overloads should never be aliased - otherwise the new context could 
     // extend them.

@@ -30,6 +30,9 @@
 
 namespace wisecrack {
 
+    // crude global for better debugging at the repl
+    class Repl;
+    extern Repl* globalRepl;
     
     /** thrown on ctrl-c SIGINT interrupt while at the repl*/
     class ExceptionCtrlC : public spug::Exception {
