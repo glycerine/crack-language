@@ -228,8 +228,7 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
          } else {
             toker.putBack(tok);
             runCallbacks(exprBegin);
-            Zt zdef2; zdef2.nested = true;
-            expr = parseExpression(zdef2);
+            expr = parseExpression(z);
          }
       }
 
