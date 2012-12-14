@@ -313,6 +313,22 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     const char* p   = r.getTrimmedLastReadLine();
     const char* end = r.getLastReadLine() + r.getLastReadLineLen();
 
+    if (0==strcmp(".histoff",p)) {
+        // turn off logging history to .crkhist
+        r.histoff();
+        printf("command logging to file '.crkhist' now off.\n");
+        return true;
+
+    } else if (0==strcmp(".histon",p)) {
+        // turn on logging history to .crkhist
+        r.histon();
+        printf("logging subsequent commands to file '.crkhist'.\n");
+        return true;
+    }
+    
+    // otherwise, add to .crkhist file if that is on.
+    r.loghist(p);
+
     if (0==strcmp(".q",p) ||
         0==strcmp(".quit",p)) {
         // quitting time.
@@ -403,7 +419,10 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             m += fread(buf, 1, b-1, f);
             r.src << buf;
         }
-        printf("sourced %ld bytes from '%s'\n", m, sourceme);
+
+        if (r.debuglevel() > 0) {
+            printf("sourced %ld bytes from '%s'\n", m, sourceme);
+        }
 
         r.set_next_line("");
         return false; // run from r.src.
@@ -444,7 +463,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // return false because we *want* to execute the cout print now.
         return false;
     }
-
+    else
     if (0==strcmp(".history",p)) {
         if (r.history.size() == 1) return true; // first cmd.
 
@@ -460,7 +479,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         }
         return true;
     }
-    else
+
     if (0==strcmp(".help",p)) {
         printf("wisecrack repl help:\n"
                "  .help    = show this hint page\n"
@@ -478,6 +497,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  .history = display command line history\n"
                "  .!cmd    = call system(cmd), executing cmd in a shell.\n"
                "  .. file  = read and execute commands from file.\n"
+               "  .histon  = save history to .crkhist file (vs .histoff) [%s now]\n",
+               r.hist() ? "ON" :  "OFF"
                );
               
         return true;

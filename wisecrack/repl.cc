@@ -99,7 +99,9 @@ void init_ctrl_c_handling() {
         : _alldone(false),
           _lineno(0),
           _showLineN(true),
-          _debuglevel(0)
+          _debuglevel(0),
+          _crkhist(0),
+          _histon(false)
     {
         bzero(_readbuf, _readsz);
         set_default_prompt("crk");
@@ -108,6 +110,38 @@ void init_ctrl_c_handling() {
         // last write wins, but we only expect to use
         // this for debugging situations.
         globalRepl = this;
+
+    }
+    bool Repl::hist() { return _histon; }
+
+
+    void Repl::histon() {
+        // open history file
+        _crkhist = fopen(".crkhist","a");
+        if (_crkhist) {
+            _histon = true;
+        } else {
+            perror("could not open history file '.crkhist'");
+        }
+    }
+
+    void Repl::histoff() {
+        _histon = false;
+        if (_crkhist) {
+            fflush(_crkhist);
+        }
+    }
+
+    void Repl::loghist(const char* line) {
+        if (_histon && _crkhist) {
+            fwrite(line,strlen(line),1,_crkhist);
+            fwrite("\n",1,1,_crkhist);
+            fflush(_crkhist);
+        }
+    }
+
+    Repl::~Repl() {
+        if (_crkhist) fclose(_crkhist);
     }
 
     bool Repl::done() { return _alldone; }

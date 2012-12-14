@@ -49,6 +49,7 @@ namespace wisecrack {
 
         //ctor
         Repl();
+        ~Repl();
         bool done();
         void setDone();
 
@@ -135,6 +136,14 @@ namespace wisecrack {
         typedef std::vector<std::string> histlist;
         histlist history;
 
+        /** turn on (off) save history to .crkhist file */
+        void histon();
+        void histoff();
+        bool hist(); // status: true if on.
+
+        /** write to file, if hist() is true. Appends newline and flushes.. */
+        void loghist(const char* line);
+
     private:
         bool _alldone;
         long _lineno;
@@ -152,6 +161,8 @@ namespace wisecrack {
         char             _default_prompt[_promptsz];
 
         int _debuglevel;
+        FILE* _crkhist; // history file.
+        bool  _histon;  // write to history file?
     };
 
 
