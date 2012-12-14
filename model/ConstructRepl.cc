@@ -207,6 +207,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             ns_start_point = (ctx->ns.get())->markTransactionStart();
             
             // READ
+            r.reset_src_to_empty();
             r.nextlineno();
             r.reset_prompt_to_default();
             r.prompt(stdout);
@@ -223,7 +224,6 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             bdr->beginSection(*ctx,mod);
             sectionStarted = true;
             
-            r.reset_src_to_empty();
             r.src << r.getLastReadLine();
 
             std::string path = r.getPrompt();
@@ -376,10 +376,37 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         return true;
 
-    } else if (0==strncmp("..", p, 2) && strlen(p) > 2) {
+    } else if (0==strncmp(".!", p, 2)) {
         const char* cmd = p + 2;
         system(cmd);
         return true;
+
+    } else if (0==strncmp("..", p, 2)) {
+        // source a file
+        const char* sourceme = p + 2;
+        while(isspace(*sourceme) && sourceme < end) { ++sourceme;  }
+
+        // validate file
+        FILE* f = fopen(sourceme,"r");
+        if (!f) {
+            printf("error in .. source file: could not open file '%s'\n",
+                   sourceme);
+            return true;
+        }
+
+        // shovel data into r.src stream
+        const int b = 4096;
+        char buf[b];
+        size_t m = 0;
+        while(!feof(f)) {
+            bzero(buf,b);
+            m += fread(buf, 1, b-1, f);
+            r.src << buf;
+        }
+        printf("sourced %ld bytes from '%s'\n", m, sourceme);
+
+        r.set_next_line("");
+        return false; // run from r.src.
 
     } else if (0==strcmp(".", p) || 
                (0==strncmp(". ", p, 2)) && strlen(p) > 2) {
@@ -436,7 +463,6 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     else
     if (0==strcmp(".help",p)) {
         printf("wisecrack repl help:\n"
-               "\n"
                "  .help    = show this hint page\n"
                "  .dn      = dump wisecrack namespace (also .ls)\n"
                "  .dump    = dump global namespace (everything)\n"
@@ -450,8 +476,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  . sym    = print sym on cout. Does 'import crack.io cout;' if necessary.\n"
                "  .        = print last symbol made (skips internals with ':' prefix)\n"
                "  .history = display command line history\n"
-               "  ..cmd    = call system(cmd), executing cmd in a shell.\n"
-               "\n"
+               "  .!cmd    = call system(cmd), executing cmd in a shell.\n"
+               "  .. file  = read and execute commands from file.\n"
                );
               
         return true;
