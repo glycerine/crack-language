@@ -351,3 +351,25 @@ void Namespace::undo(Repl *r) {
     undoTransactionTo(t, r);
     txLog.pop_back();
 }
+
+const char* Namespace::lastTxSymbol() {
+    size_t n = orderedForTxn.size();
+    if (0==n) return NULL;
+
+    size_t i = n;
+    const char* s = 0;
+
+    // skip internal :exStruct additions;
+    // anything that starts with a : won't print
+    // well regardless via cout `$(s)` 
+    while(i > 0) {
+        s = orderedForTxn[i-1]->name.c_str();
+        if (':' == *s) {
+            --i;
+            continue;
+        }
+        return s;
+    }
+
+    return NULL;
+}

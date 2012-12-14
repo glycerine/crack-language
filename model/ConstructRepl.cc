@@ -310,27 +310,27 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     const static char rmcmd[] = ".rm";
     const static int  rmlen = strlen(rmcmd);
 
-    const static char pcmd[] = ".p";
-    const static int  plen = strlen(pcmd);
+    const char* p   = r.getTrimmedLastReadLine();
+    const char* end = r.getLastReadLine() + r.getLastReadLineLen();
 
-    if (0==strcmp(".q",r.getTrimmedLastReadLine()) ||
-        0==strcmp(".quit",r.getTrimmedLastReadLine())) {
+    if (0==strcmp(".q",p) ||
+        0==strcmp(".quit",p)) {
         // quitting time.
         r.setDone();
         return true;
 
-    } else if (0==strcmp(".dump",r.getTrimmedLastReadLine())) {
+    } else if (0==strcmp(".dump",p)) {
         // dump: do full global dump of all namespaces.
         context->dump();
         return true;
-    } else if (0==strcmp(".debug",r.getTrimmedLastReadLine())) {
+    } else if (0==strcmp(".debug",p)) {
         // up the debugging level
         int d = r.debuglevel();
         ++d;
         printf("debug level: %d\n",d);
         r.set_debuglevel(d);
         return true;
-    } else if (0==strcmp(".undebug",r.getTrimmedLastReadLine())) {
+    } else if (0==strcmp(".undebug",p)) {
         // reduce debugging
         int d = r.debuglevel();
         --d;
@@ -339,21 +339,21 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         r.set_debuglevel(d);
         return true;
     }
-    else if (0==strcmp(".dn",r.getTrimmedLastReadLine()) ||
-             0==strcmp(".ls",r.getTrimmedLastReadLine())) {
+    else if (0==strcmp(".dn",p) ||
+             0==strcmp(".ls",p)) {
         // dn: dump namespace, local only
         context->short_dump();
         return true;
 
-    } else if (0==strcmp(".dc",r.getTrimmedLastReadLine())) {
+    } else if (0==strcmp(".dc",p)) {
         // dc: dump bit-code
         bdr->dump();
         return true;
 
-    } else if (0==strncmp(rmcmd,r.getTrimmedLastReadLine(), rmlen)) {
+    } else if (0==strncmp(rmcmd,p, rmlen)) {
         // rm sym : remove symbol sym from namespace
 
-        const char* p   = r.getTrimmedLastReadLine();
+        const char* p   = p;
         const char* end = r.getLastReadLine() + r.getLastReadLineLen();
         const char* sym = p + rmlen + 1;
 
@@ -378,29 +378,22 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         return true;
 
-    } else if (0==strncmp(pcmd,r.getTrimmedLastReadLine(), plen)) {
-        // .p sym : print sym
+    } else if (0==strcmp(".", p) || 
+               (0==strncmp(". ", p, 2)) && strlen(p) > 2) {
+        // . sym : print sym
+        // .     : print last sym
 
-        const char* p   = r.getTrimmedLastReadLine();
-        const char* end = r.getLastReadLine() + r.getLastReadLineLen();
-        const char* sym = p + plen + 1;
+        const char* sym = p + 2;
 
-        if (!isspace(*(p + plen))) { return false; }
-
-        // confirm we have an argument sym to delete
-        if (sym >= end) {
-            printf("error using .p: no symbol-to-print specified.\n");
-            return true;
-        }
-        
-        // print sym
-        // printf("received request to print '%s'\n", sym);
-
-        VarDefPtr var = context->ns->lookUp(sym);
-
-        if (!var) {
-            printf("error using .p: could not locate symbol '%s' to print.\n", sym);
-            return true;
+        if (0==strcmp(".", p)) {
+            // just . by itself on a line: print the
+            // last thing added to the namespace, if we can.
+          
+            sym = context->ns->lastTxSymbol();
+            if (NULL == sym) {
+                printf("no last symbol to display.\n");
+                return true;
+            }
         }
 
         VarDefPtr vcout = context->ns->lookUp("cout");
@@ -411,7 +404,9 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             cmd += "import crack.io cout; ";
         }
         
-        cmd += "cout `$(";
+        cmd += "cout `";
+        cmd += sym;
+        cmd += " = $(";
         cmd += sym;
         cmd += ")\n`";
         r.set_next_line(cmd.c_str());
@@ -420,7 +415,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         return false;
     }
 
-    if (0==strcmp(".history",r.getTrimmedLastReadLine())) {
+    if (0==strcmp(".history",p)) {
         if (r.history.size() == 1) return true; // first cmd.
 
         wisecrack::Repl::histlist::iterator it = r.history.begin();
@@ -436,7 +431,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         return true;
     }
     else
-    if (0==strcmp(".help",r.getTrimmedLastReadLine())) {
+    if (0==strcmp(".help",p)) {
         printf("wisecrack repl help:\n"
                "\n"
                "  .help    = show this hint page\n"
@@ -449,7 +444,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
                "  .rm sym  = remove symbol sym from namespace\n"
-               "  .p sym   = print sym on cout. Auto-imports crack.io cout if necessary.\n"
+               "  . sym   = print sym on cout. Auto-imports crack.io cout if necessary.\n"
+               "  .       = print last symbol made (skips internals with ':' prefix)\n"
                "  .history = display command line history\n"
                "\n"
                );
