@@ -310,6 +310,9 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     const static char rmcmd[] = ".rm";
     const static int  rmlen = strlen(rmcmd);
 
+    const static char pcmd[] = ".p";
+    const static int  plen = strlen(pcmd);
+
     if (0==strcmp(".q",r.getTrimmedLastReadLine()) ||
         0==strcmp(".quit",r.getTrimmedLastReadLine())) {
         // quitting time.
@@ -361,8 +364,6 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             printf("error using .rm: no symbol-to-delete specified.\n");
             return true;
         }
-        
-        //        printf(".rm got request to delete symbol '%s'\n", sym);
 
         VarDefPtr var = context->ns->lookUp(sym);
 
@@ -377,9 +378,64 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         return true;
 
+    } else if (0==strncmp(pcmd,r.getTrimmedLastReadLine(), plen)) {
+        // .p sym : print sym
+
+        const char* p   = r.getTrimmedLastReadLine();
+        const char* end = r.getLastReadLine() + r.getLastReadLineLen();
+        const char* sym = p + plen + 1;
+
+        if (!isspace(*(p + plen))) { return false; }
+
+        // confirm we have an argument sym to delete
+        if (sym >= end) {
+            printf("error using .p: no symbol-to-print specified.\n");
+            return true;
+        }
+        
+        // print sym
+        // printf("received request to print '%s'\n", sym);
+
+        VarDefPtr var = context->ns->lookUp(sym);
+
+        if (!var) {
+            printf("error using .p: could not locate symbol '%s' to print.\n", sym);
+            return true;
+        }
+
+        VarDefPtr vcout = context->ns->lookUp("cout");
+
+        std::string cmd;
+        if (!vcout) {
+            //printf("warn on .p without cout: could not find cout, doing: import crack.io cout;\n");
+            cmd += "import crack.io cout; ";
+        }
+        
+        cmd += "cout `$(";
+        cmd += sym;
+        cmd += ")\n`";
+        r.set_next_line(cmd.c_str());
+        
+        // return false because we *want* to execute the cout print now.
+        return false;
     }
 
+    if (0==strcmp(".history",r.getTrimmedLastReadLine())) {
+        if (r.history.size() == 1) return true; // first cmd.
 
+        wisecrack::Repl::histlist::iterator it = r.history.begin();
+        wisecrack::Repl::histlist::iterator en = r.history.end();
+        --en; // don't print the last .history (duh).
+        long line = 1;
+        for(; it != en; ++it, ++line) {
+            //printf("%ld: %s\n", line, it->c_str());
+
+            // easier to copy and paste *without* line numbers!
+            printf("%s\n", it->c_str());
+        }
+        return true;
+    }
+    else
     if (0==strcmp(".help",r.getTrimmedLastReadLine())) {
         printf("wisecrack repl help:\n"
                "\n"
@@ -393,6 +449,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
                "  .rm sym  = remove symbol sym from namespace\n"
+               "  .p sym   = print sym on cout. Auto-imports crack.io cout if necessary.\n"
+               "  .history = display command line history\n"
                "\n"
                );
               

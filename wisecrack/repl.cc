@@ -188,6 +188,16 @@ void init_ctrl_c_handling() {
         // trimr needs _readlen set correctly.
         _readlen = strlen(_readbuf);
         trimr();
+
+        history.push_back(_readbuf);
+    }
+
+
+    void Repl::set_next_line(const char* tbr) {
+        bzero(_readbuf, _readsz);
+        strncpy(_readbuf, tbr, _readsz-1);
+        _readlen = strlen(_readbuf);
+        trimr();
     }
 
 

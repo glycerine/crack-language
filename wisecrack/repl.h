@@ -11,6 +11,8 @@
 #include <strings.h> // bzero
 #include <string.h>  // strlen
 #include <sstream>
+#include <string>
+#include <vector>
 #include "spug/Exception.h"
 
 //
@@ -83,6 +85,13 @@ namespace wisecrack {
         char* getLastReadLine();
 
         /**
+         * Delete the current line and replace it with tbr, to be returned
+         *  on the next call to getlastReadLine(). Allows the repl to
+         *  have special aliases that get re-written into actual code.
+         */
+        void set_next_line(const char* tbr);
+
+        /**
          * any left whitespace trimmed too. Probably not what you want
          *  as a default, given i-strings.
          */
@@ -122,6 +131,9 @@ namespace wisecrack {
         void set_debuglevel(int level);
         int debuglevel();
 
+        /** command line history */
+        typedef std::vector<std::string> histlist;
+        histlist history;
 
     private:
         bool _alldone;
