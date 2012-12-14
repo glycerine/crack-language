@@ -308,133 +308,22 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         }
     }
 
-    // special commands
+    // special commands?
+    const char* rcmd = r.getTrimmedLastReadLine();
+    const char* p    = r.repl_cmd(rcmd);
+    const char* end  = r.getLastReadLine() + r.getLastReadLineLen();
 
-    const char* p   = r.getTrimmedLastReadLine();
-    const char* end = r.getLastReadLine() + r.getLastReadLineLen();
+    if (!p) return false;
 
-    if (0==strcmp(".histoff",p)) {
-        // turn off logging history to .crkhist
-        r.histoff();
-        printf("command logging to file '.crkhist' now off.\n");
-        return true;
-
-    } else if (0==strcmp(".histon",p)) {
-        // turn on logging history to .crkhist
-        r.histon();
-        printf("logging subsequent commands to file '.crkhist'.\n");
-        return true;
-    }
-    
-    // otherwise, add to .crkhist file if that is on.
-    r.loghist(p);
-
-    if (0==strcmp(".q",p) ||
-        0==strcmp(".quit",p)) {
-        // quitting time.
-        r.setDone();
-        return true;
-
-    } else if (0==strcmp(".dump",p)) {
-        // dump: do full global dump of all namespaces.
-        context->dump();
-        return true;
-    } else if (0==strcmp(".debug",p)) {
-        // up the debugging level
-        int d = r.debuglevel();
-        ++d;
-        printf("debug level: %d\n",d);
-        r.set_debuglevel(d);
-        return true;
-    } else if (0==strcmp(".undebug",p)) {
-        // reduce debugging
-        int d = r.debuglevel();
-        --d;
-        if (d < 0) { d=0; }
-        printf("debug level: %d\n",d);
-        r.set_debuglevel(d);
-        return true;
-    }
-    else if (0==strcmp(".dn",p) ||
-             0==strcmp(".ls",p)) {
-        // dn: dump namespace, local only
-        context->short_dump();
-        return true;
-
-    } else if (0==strcmp(".dc",p)) {
-        // dc: dump bit-code
-        bdr->dump();
-        return true;
-
-    } else if (0==strncmp(".rm ", p, 4) && strlen(p) > 4) {
-        // rm sym : remove symbol sym from namespace
-
-        const char* sym = p + 4;
-
-        while(isspace(*sym) && sym < end) { ++sym;  }
-
-        // confirm we have an argument sym to delete
-        if (sym >= end) {
-            printf("error using .rm: no symbol-to-delete specified.\n");
-            return true;
-        }
-
-        VarDefPtr var = context->ns->lookUp(sym);
-
-        if (!var) {
-            printf("error using .rm: could not locate symbol '%s' to delete.\n", sym);
-            return true;
-        }
-
-        printf(".rm deleting symbol '%s' at 0x%lx.\n", sym, (unsigned long)var.get());
-
-        context->ns->removeDef(var.get());
-
-        return true;
-
-    } else if (0==strncmp(".!", p, 2)) {
-        const char* cmd = p + 2;
-        system(cmd);
-        return true;
-
-    } else if (0==strncmp("..", p, 2)) {
-        // source a file
-        const char* sourceme = p + 2;
-        while(isspace(*sourceme) && sourceme < end) { ++sourceme;  }
-
-        // validate file
-        FILE* f = fopen(sourceme,"r");
-        if (!f) {
-            printf("error in .. source file: could not open file '%s'\n",
-                   sourceme);
-            return true;
-        }
-
-        // shovel data into r.src stream
-        const int b = 4096;
-        char buf[b];
-        size_t m = 0;
-        while(!feof(f)) {
-            bzero(buf,b);
-            m += fread(buf, 1, b-1, f);
-            r.src << buf;
-        }
-
-        if (r.debuglevel() > 0) {
-            printf("sourced %ld bytes from '%s'\n", m, sourceme);
-        }
-
-        r.set_next_line("");
-        return false; // run from r.src.
-
-    } else if (0==strcmp(".", p) || 
-               (0==strncmp(". ", p, 2)) && strlen(p) > 2) {
+    // INVAR: we have a repl command, and p points to it.
+    if (0 == strlen(p) // "." alone
+        ||  (' ' == *p && strlen(p) > 1)) { // or with a named sym to print
         // . sym : print sym
         // .     : print last sym
 
-        const char* sym = p + 2;
+        const char* sym = p + 1;
 
-        if (0==strcmp(".", p)) {
+        if (0==strlen(p)) {
             // just . by itself on a line: print the
             // last thing added to the namespace, if we can.
           
@@ -463,8 +352,124 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // return false because we *want* to execute the cout print now.
         return false;
     }
+
+
+    if (0==strcmp("histoff",p)) {
+        // turn off logging history to .crkhist
+        r.histoff();
+        printf("command logging to file '.crkhist' now off.\n");
+        return true;
+
+    } else if (0==strcmp("histon",p)) {
+        // turn on logging history to .crkhist
+        r.histon();
+        printf("logging subsequent commands to file '.crkhist'.\n");
+        return true;
+    }
+    
+    // otherwise, add to .crkhist file if that is on.
+    r.loghist(p);
+
+    if (0==strcmp("q",p) ||
+        0==strcmp("quit",p)) {
+        // quitting time.
+        r.setDone();
+        return true;
+
+    } else if (0==strcmp("dump",p)) {
+        // dump: do full global dump of all namespaces.
+        context->dump();
+        return true;
+    } else if (0==strcmp("debug",p)) {
+        // up the debugging level
+        int d = r.debuglevel();
+        ++d;
+        printf("debug level: %d\n",d);
+        r.set_debuglevel(d);
+        return true;
+    } else if (0==strcmp("undebug",p)) {
+        // reduce debugging
+        int d = r.debuglevel();
+        --d;
+        if (d < 0) { d=0; }
+        printf("debug level: %d\n",d);
+        r.set_debuglevel(d);
+        return true;
+    }
+    else if (0==strcmp("dn",p) ||
+             0==strcmp("ls",p)) {
+        // dn: dump namespace, local only
+        context->short_dump();
+        return true;
+
+    } else if (0==strcmp("dc",p)) {
+        // dc: dump bit-code
+        bdr->dump();
+        return true;
+
+    } else if (0==strncmp("rm ", p, 3) && strlen(p) > 3) {
+        // rm sym : remove symbol sym from namespace
+
+        const char* sym = p + 3;
+
+        while(isspace(*sym) && sym < end) { ++sym;  }
+
+        // confirm we have an argument sym to delete
+        if (sym >= end) {
+            printf("error using .rm: no symbol-to-delete specified.\n");
+            return true;
+        }
+
+        VarDefPtr var = context->ns->lookUp(sym);
+
+        if (!var) {
+            printf("error using .rm: could not locate symbol '%s' to delete.\n", sym);
+            return true;
+        }
+
+        printf("rm deleting symbol '%s' at 0x%lx.\n", sym, (unsigned long)var.get());
+
+        context->ns->removeDef(var.get());
+
+        return true;
+
+    } else if (0==strncmp("!", p, 1)) {
+        const char* cmd = p + 1;
+        system(cmd);
+        return true;
+
+    } else if (0==strncmp(".", p, 1)) {
+        // source a file
+        const char* sourceme = p + 1;
+        while(isspace(*sourceme) && sourceme < end) { ++sourceme;  }
+
+        // validate file
+        FILE* f = fopen(sourceme,"r");
+        if (!f) {
+            printf("error in .. source file: could not open file '%s'\n",
+                   sourceme);
+            return true;
+        }
+
+        // shovel data into r.src stream
+        const int b = 4096;
+        char buf[b];
+        size_t m = 0;
+        while(!feof(f)) {
+            bzero(buf,b);
+            m += fread(buf, 1, b-1, f);
+            r.src << buf;
+        }
+
+        if (r.debuglevel() > 0) {
+            printf("sourced %ld bytes from '%s'\n", m, sourceme);
+        }
+
+        r.set_next_line("");
+        return false; // run from r.src.
+    }
     else
-    if (0==strcmp(".history",p)) {
+    if (0==strcmp("history",p)) {
         if (r.history.size() == 1) return true; // first cmd.
 
         wisecrack::Repl::histlist::iterator it = r.history.begin();
@@ -479,25 +484,40 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         }
         return true;
     }
+    else if (0==strncmp("prefix ", p, 7) && strlen(p) > 7) {
+        const char* pre = p + 7;
+        printf("setting repl command prefix to '%s'\n", pre);
+        r.set_repl_cmd_start(pre);
+        return true;
+    }
 
-    if (0==strcmp(".help",p)) {
-        printf("wisecrack repl help:\n"
-               "  .help    = show this hint page\n"
-               "  .dn      = dump wisecrack namespace (also .ls)\n"
-               "  .dump    = dump global namespace (everything)\n"
-               "  .dc      = display code (LLVM bitcode)\n"
-               "  .debug   = increase the debug messages\n"
-               "  .undebug = reduce debug messages (0 => off)\n"
-               "  .quit    = quit repl (also .q)\n"
+    if (0==strcmp("help",p)) {
+        const char* s = r.get_repl_cmd_start();
+        printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
+               "  %shelp    = show this hint page\n"
+               "  %sdn      = dump wisecrack namespace (also %sls)\n"
+               "  %sdump    = dump global namespace (everything)\n"
+               "  %sdc      = display code (LLVM bitcode)\n"
+               "  %sdebug   = increase the debug messages\n"
+               "  %sundebug = reduce debug messages (0 => off)\n"
+               "  %squit    = quit repl (also %sq)\n"
                "  ctrl-d   = EOF also quits\n"
                "  ctrl-c   = interrupt line and return to the repl\n"
-               "  .rm sym  = remove symbol sym from namespace\n"
-               "  . sym    = print sym on cout. Does 'import crack.io cout;' if necessary.\n"
-               "  .        = print last symbol made (skips internals with ':' prefix)\n"
-               "  .history = display command line history\n"
-               "  .!cmd    = call system(cmd), executing cmd in a shell.\n"
-               "  .. file  = read and execute commands from file.\n"
-               "  .histon  = save history to .crkhist file (vs .histoff) [%s now]\n",
+               "  %srm sym  = remove symbol sym from namespace\n"
+               "  %s sym    = print sym on cout. Does 'import crack.io cout;' if necessary.\n"
+               "  %s        = print last symbol made (skips internals with ':' prefix)\n"
+               "  %shistory = display command line history\n"
+               "  %s!cmd    = call system(cmd), executing cmd in a shell.\n"
+               "  %s. file  = read and execute commands from file.\n"
+               "  %sprefix c = set repl command prefix to c ['%s' now].\n"
+               "  %shiston  = save history to .crkhist file (vs %shistoff) [%s now]\n",
+               s,s,s,s,
+               s,s,s,s,
+               s,s,s,s,
+               s,s,s,s,
+
+               s,s,s,s,
+
                r.hist() ? "ON" :  "OFF"
                );
               

@@ -73,23 +73,23 @@ namespace wisecrack {
         siglongjmp(ctrl_c_jb, caught_ctrl_c);
     }
 
-/** setup handler on ctrl-c press */
+    /** setup handler on ctrl-c press */
 
-struct sigaction old_sigint_action;
-void init_ctrl_c_handling() {
+    struct sigaction old_sigint_action;
+    void init_ctrl_c_handling() {
 
-    struct sigaction sa;
-    bzero(&sa,sizeof(struct sigaction));
+        struct sigaction sa;
+        bzero(&sa,sizeof(struct sigaction));
 
-    sa.sa_sigaction = &repl_sa_sigaction;
-    sa.sa_flags = SA_SIGINFO;
-    if (-1 == sigaction(SIGINT, &sa, &old_sigint_action)) {
-        perror("error: wisecrack::init_ctrl_c_handling() could not setup "
-               "SIGINT signal handler. Aborting.");
-        exit(1);
+        sa.sa_sigaction = &repl_sa_sigaction;
+        sa.sa_flags = SA_SIGINFO;
+        if (-1 == sigaction(SIGINT, &sa, &old_sigint_action)) {
+            perror("error: wisecrack::init_ctrl_c_handling() could not setup "
+                   "SIGINT signal handler. Aborting.");
+            exit(1);
+        }
+        //    print_signal_mask();
     }
-    //    print_signal_mask();
-}
 
 
 
@@ -111,6 +111,7 @@ void init_ctrl_c_handling() {
         // this for debugging situations.
         globalRepl = this;
 
+        set_repl_cmd_start(".");
     }
     bool Repl::hist() { return _histon; }
 
@@ -184,28 +185,28 @@ void init_ctrl_c_handling() {
 
         switch (rc) {
 
-            case  0: {
-                // initial time, no siglongjmp yet.
-                r = fgets(_readbuf, _readsz, fin);
+        case  0: {
+            // initial time, no siglongjmp yet.
+            r = fgets(_readbuf, _readsz, fin);
 
-                siglongjmp(ctrl_c_jb, normal_finish_after_read);  
-                break;
-            }
+            siglongjmp(ctrl_c_jb, normal_finish_after_read);  
+            break;
+        }
 
-            case caught_ctrl_c: {
-                throw wisecrack::ExceptionCtrlC();                
-                break;
-            }
+        case caught_ctrl_c: {
+            throw wisecrack::ExceptionCtrlC();                
+            break;
+        }
 
-            case normal_finish_after_read: {
-                break;
-            }
+        case normal_finish_after_read: {
+            break;
+        }
 
-            default: {
-                fprintf(stderr, "Wierd and unhandled return in repl.cc  switch(sigsetjmp) , rc = %d\n", rc);
-                assert(0);                
-                break;
-            }
+        default: {
+            fprintf(stderr, "Wierd and unhandled return in repl.cc  switch(sigsetjmp) , rc = %d\n", rc);
+            assert(0);                
+            break;
+        }
 
         }
 
@@ -360,6 +361,23 @@ void init_ctrl_c_handling() {
         reset_prompt_to_default();
 
         return true;
+    }
+
+    const char* Repl::repl_cmd(const char* s) {
+        size_t n = strlen(_repl_cmd_start);
+        if (0==strncmp(s, _repl_cmd_start, n)) {
+            return s + n;
+        }
+        return NULL;
+    }
+
+    const char* Repl::get_repl_cmd_start() {
+        return _repl_cmd_start;
+    }
+        
+    void Repl::set_repl_cmd_start(const char* s) {
+        bzero(_repl_cmd_start, _rcs_sz);
+        strncpy(_repl_cmd_start, s, _rcs_sz-1);
     }
 
 

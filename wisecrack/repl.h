@@ -144,6 +144,17 @@ namespace wisecrack {
         /** write to file, if hist() is true. Appends newline and flushes.. */
         void loghist(const char* line);
 
+        const char* get_repl_cmd_start();
+        void   set_repl_cmd_start(const char* s);
+
+        /** return 0 if not start of repl command,
+         *   otherwise return pointer to the suffix
+         *   that follows the '.' or '\' or whatever
+         *   the repl start character(s) are.
+         */
+        const char* repl_cmd(const char* s);
+
+
     private:
         bool _alldone;
         long _lineno;
@@ -163,6 +174,13 @@ namespace wisecrack {
         int _debuglevel;
         FILE* _crkhist; // history file.
         bool  _histon;  // write to history file?
+
+        // recognize repl commands that start with
+        // this character (buffer is 8 in case
+        // someone wants to do utf8).
+        // This is usually '.'. But could be '\'.
+        const static int  _rcs_sz = 8;
+        char              _repl_cmd_start[_rcs_sz];
     };
 
 
