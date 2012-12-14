@@ -362,7 +362,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         if (!isspace(*(p + rmlen))) { return false; }
         
-        printf(".rm got request to delete symbol '%s'\n", sym);
+        //        printf(".rm got request to delete symbol '%s'\n", sym);
 
         VarDefPtr var = context->ns->lookUp(sym);
 
@@ -371,7 +371,9 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             return true;
         }
 
-        printf(".rm located variable 0x%lx to delete.\n", *(unsigned long*)var.get());
+        printf(".rm deleting symbol '%s' at 0x%lx.\n", sym, *(unsigned long*)var.get());
+
+        context->ns->removeDef(var.get());
 
         return true;
 
