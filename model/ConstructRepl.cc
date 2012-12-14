@@ -354,13 +354,13 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         const char* end = r.getLastReadLine() + r.getLastReadLineLen();
         const char* sym = p + rmlen + 1;
 
+        if (!isspace(*(p + rmlen))) { return false; }
+
         // confirm we have an argument sym to delete
         if (sym >= end) {
             printf("error using .rm: no symbol-to-delete specified.\n");
             return true;
         }
-
-        if (!isspace(*(p + rmlen))) { return false; }
         
         //        printf(".rm got request to delete symbol '%s'\n", sym);
 
