@@ -19,6 +19,7 @@ using wisecrack::Repl;
 
 namespace model {
 
+class TypeDef;
 class Context;
 class Deserializer;
 SPUG_RCPTR(Expr);
@@ -221,8 +222,9 @@ class Namespace : public virtual spug::RCBase {
         
         /*
          * get last symbol added to the tx table.
+         *  Set tdef if you want a pointer to the type back.
          */
-        const char* lastTxSymbol();
+        const char* lastTxSymbol(model::TypeDef **tdef = 0);
 };
 
 } // namespace model

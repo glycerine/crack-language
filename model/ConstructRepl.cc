@@ -326,11 +326,25 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         if (0==strlen(p)) {
             // just . by itself on a line: print the
             // last thing added to the namespace, if we can.
-          
-            sym = context->ns->lastTxSymbol();
+
+            TypeDef* tdef = 0;
+            sym = context->ns->lastTxSymbol(&tdef);
             if (NULL == sym) {
                 printf("no last symbol to display.\n");
                 return true;
+            }
+
+            // We can't display classes at the moment.
+            // Try to avoid crashing by detecting
+            // unhandled cases here.
+            if (tdef) {
+                std::string x = tdef->name;
+                const char* y = x.c_str();
+                size_t pxl = x.size();
+                if (0==strcmp(y + pxl - 4,"meta")) {
+                    printf("cannot display '%s' of type '%s' at the moment.\n",sym, y);
+                    return true;
+                }
             }
         }
 

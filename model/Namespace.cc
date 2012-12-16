@@ -352,7 +352,7 @@ void Namespace::undo(Repl *r) {
     txLog.pop_back();
 }
 
-const char* Namespace::lastTxSymbol() {
+const char* Namespace::lastTxSymbol(model::TypeDef **tdef) {
     size_t n = orderedForTxn.size();
     if (0==n) return NULL;
 
@@ -367,6 +367,17 @@ const char* Namespace::lastTxSymbol() {
         if (':' == *s) {
             --i;
             continue;
+        }
+        // can't print some internally generated stuff
+        model::VarDef   *d = (orderedForTxn[i-1].get());
+        model::TypeDef *td = d->type.get();
+        if (!td) {
+            --i;
+            continue;
+        }
+        // pass back type info
+        if (tdef){
+            *tdef = td;
         }
         return s;
     }
