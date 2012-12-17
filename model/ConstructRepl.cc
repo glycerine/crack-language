@@ -34,6 +34,8 @@
 #include "util/SourceDigest.h"
 #include "wisecrack/repl.h"
 #include "builder/llvm/LLVMJitBuilder.h"
+#include "builder/llvm/LLVMBuilder.h"
+#include "model/OverloadDef.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -63,6 +65,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr);
 
 // cleanup ctrl-c or syntax error aborted input.
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
+
 
 // Status: the repl is now quite usable. Multiline input works well.
 //         Cleanup after syntax error in functions or expressions is there.
@@ -124,10 +127,6 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
     ModuleDef* mod = arg_modd;
     Context*   ctx = arg_ctx;
     Builder*   bdr = arg_bdr;
-
-    // do we need to start or close a function before entering repl
-    bool closeFunc = false;
-
 
     // are we starting fresh, or dropping into a previously defined
     //  ctx, modd, bdr triple?
@@ -214,14 +213,16 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             r.read(stdin); // can throw
             if (r.getLastReadLineLen()==0) continue;
 
-            if (continueOnSpecial(r,ctx,bdr)) continue;
+            if (continueOnSpecial(r, ctx, bdr)) continue;
 
             // EVAL
 
             // beginSection() must come *after* the continueOnSpecial() 
             // call. Otherwise we begin multiple times and leave
             // dangling half-finished sections lying around. :-(
+
             bdr->beginSection(*ctx,mod);
+
             sectionStarted = true;
             
             r.src << r.getLastReadLine();
@@ -249,9 +250,10 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             // closeSection() finishes the module and runs 
             // the last function constructed in it.
+
             bdr->closeSection(*ctx,mod);
 
-            // PRINT: TODO. for now use dm or dump at repl. or -d at startup.
+            // PRINT: provided as a short-cut special command currently.
 
         } catch (const wisecrack::ExceptionCtrlC &ex) {
             printf(" [ctrl-c]\n");
@@ -279,7 +281,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             if (sectionStarted) {
                 cleanup_unfinished_input(bdr, ctx, mod);
             }
-            (ctx->ns.get())->undoTransactionTo(ns_start_point);
+            (ctx->ns.get())->undoTransactionTo(ns_start_point, &r);
         }
 
     } // end while
@@ -296,8 +298,12 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 /**
  *  continueOnSpecial(): a runRepl helper.
  *    returns true if we have a special repl command and should keep looping.
- *    Currently this implements just the two dump commands: 'dump' and 'dm'
- *    that display the global/local namespace; hence are proxies for PRINT.
+ *    See the help option at the end of this function for a full
+ *    description of special repl commands.
+ *
+ *  Note that a side effect of this call may be to completely replace
+ *    the current r.getLastReadLine() value. For example, the print command
+ *    does this.
  */
 bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
@@ -312,6 +318,9 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     const char* rcmd = r.getTrimmedLastReadLine();
     const char* p    = r.repl_cmd(rcmd);
     const char* end  = r.getLastReadLine() + r.getLastReadLineLen();
+
+    // the special command starter: typically "." or "\"
+    const char* s = r.get_repl_cmd_start();
 
     if (!p) return false;
 
@@ -421,23 +430,89 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         bdr->dump();
         return true;
 
-    } else if (0==strncmp("rm ", p, 3) && strlen(p) > 3) {
-        // rm sym : remove symbol sym from namespace
+    } else if (0==strncmp("dc ", p, 3) && strlen(p) > 3) {
+        // dc: dump llvm-code for a symbol
 
         const char* sym = p + 3;
-
         while(isspace(*sym) && sym < end) { ++sym;  }
-
-        // confirm we have an argument sym to delete
+        
+        // confirm we have an argument
         if (sym >= end) {
-            printf("error using .rm: no symbol-to-delete specified.\n");
+            printf("error using %sdc: no symbol-to-display-code for specified.\n", s);
             return true;
         }
 
         VarDefPtr var = context->ns->lookUp(sym);
 
         if (!var) {
-            printf("error using .rm: could not locate symbol '%s' to delete.\n", sym);
+            printf("error using %sdc: could not locate symbol '%s' to display code for.\n", s, sym);
+            return true;
+        }
+
+        // functions
+        model::OverloadDef *odef     = dynamic_cast<model::OverloadDef*>(var.get());
+
+        // classes
+        builder::mvll::BTypeDef *btd = dynamic_cast<builder::mvll::BTypeDef*>(var.get());
+
+        // unimplemented (as of yet) type
+        builder::mvll::BTypeDef *tp  = dynamic_cast<builder::mvll::BTypeDef*>(var->type.get());
+
+        if (odef) {
+            printf("display code for '%s' function(s):\n", sym);
+
+            model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
+            model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
+            for (; it != en; ++it) {
+
+                FuncDefPtr fdp  = *it;
+                FuncDef*   func = fdp.get();
+
+                builder::mvll::LLVMBuilder* llvm_bdr = dynamic_cast<builder::mvll::LLVMBuilder*>(bdr);
+                
+                if (func && llvm_bdr) {
+                    
+                    builder::mvll::LLVMBuilder::ModFuncMap::iterator it = llvm_bdr->moduleFuncs.find(func);
+                    
+                    if (it != llvm_bdr->moduleFuncs.end()) {
+                        
+                        // display the llvm code for just one function.
+                        llvm::Function* f = it->second;
+                        llvm::outs() << static_cast<llvm::Value&>(*f);
+                        
+                    } else {
+                        printf("%sdc error: could not find FuncDef -> llvm::Function* "
+                               "mapping for '%s' in builder.\n", s, sym);                        
+                    }
+                }
+            }
+
+        } else if (btd) {
+            printf("%sdc '%s' error: displaying classes not yet implemented.\n", s, sym);
+
+        } else {
+            printf("%sdc '%s' error: I don't know how to dump code for type '%s' yet.\n", s, sym, tp->name.c_str());
+
+        }
+
+        return true;
+
+    } else if (0==strncmp("rm ", p, 3) && strlen(p) > 3) {
+        // rm sym : remove symbol sym from namespace
+
+        const char* sym = p + 3;
+        while(isspace(*sym) && sym < end) { ++sym;  }
+
+        // confirm we have an argument sym to delete
+        if (sym >= end) {
+            printf("error using %srm: no symbol-to-delete specified.\n", s);
+            return true;
+        }
+
+        VarDefPtr var = context->ns->lookUp(sym);
+
+        if (!var) {
+            printf("error using %srm: could not locate symbol '%s' to delete.\n", s, sym);
             return true;
         }
 
@@ -460,8 +535,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // validate file
         FILE* f = fopen(sourceme,"r");
         if (!f) {
-            printf("error in .. source file: could not open file '%s'\n",
-                   sourceme);
+            printf("error in %s. source file: could not open file '%s'\n",
+                   s, sourceme);
             return true;
         }
 
@@ -506,7 +581,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     }
 
     if (0==strcmp("help",p)) {
-        const char* s = r.get_repl_cmd_start();
+
         printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
                "  %shelp    = show this hint page\n"
                "  %sdn      = dump wisecrack namespace (also %sls)\n"
@@ -547,3 +622,5 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
     }
     bdr->eraseSection(*ctx,mod);
 }
+
+

@@ -17,6 +17,7 @@
 #include "Serializer.h"
 #include "VarDef.h"
 #include <stdio.h>
+#include "model/FuncDef.h"
 
 using namespace std;
 using namespace model;
@@ -308,13 +309,18 @@ Namespace::Txmark Namespace::markTransactionStart() {
 void Namespace::undoTransactionTo(const Namespace::Txmark& t,
                                   Repl* repl) {
     
-    assert(this == txstart.ns);
+    if (this != t.ns) {
+        printf("error in undoTransactionTo: in wrong namespace\n");
+        assert(0);
+        exit(1);
+    }
 
     if (t.last_commit < 0) return;
 
     long n = (long)orderedForTxn.size();
 
     VarDefMap::iterator mapit;
+    VarDefPtr v;
     for(long i = t.last_commit + 1; i < n; ++i) {
         mapit = defs.find(orderedForTxn[i]->name);
 
@@ -330,6 +336,13 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t,
                      << canonicalName
                      << "'removing name: '" 
                      << orderedForTxn[i]->name << "'" << endl;
+            }
+
+            v = mapit->second;
+            // something like func->eraseFromParent();
+            FuncDef *func = dynamic_cast<FuncDef*>(v.get());
+            if (func) {
+                printf("namespace got a BFuncDef* -- call eraseFromParent()\n");
             }
 
             defs.erase(mapit);

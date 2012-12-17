@@ -327,6 +327,12 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     // restore the main function
     func = mainFunc;
 
+    // debug
+    if (options->dropintoRepl && context.repl && context.repl->debuglevel() > 0) { 
+        printf("dumping code just before verifyModule():");
+        dump();
+    }
+
 // XXX in the future, only verify if we're debugging
 //    if (debugInfo)
         verifyModule(*module, llvm::PrintMessageAction);
