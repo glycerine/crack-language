@@ -60,7 +60,7 @@ std::string VarDef::getFullName() const {
 }
 
 std::string VarDef::getDisplayName() const {
-    assert(owner && "no owner defined when getting display name");
+    if (!owner) return getFullName();
     std::string module = owner->getNamespaceName();
     if (!module.compare(0, 6, ".main.")) {
         // find the next namespace after the main script
