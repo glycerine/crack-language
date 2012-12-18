@@ -44,11 +44,28 @@ void Namespace::storeDef(VarDef *def) {
            "in an OverloadDef)");
     defs[def->name] = def;
     orderedForCache.push_back(def);
-    orderedForTxn.push_back(def, def->getFullName().c_str(), this);
+    OverloadDef* od = dynamic_cast<OverloadDef*>(def);
+    if (od) {
+        // how can we verify this assumption???
+        // assume we want to add the last FuncDef on the FuncList
+        OverloadDef::FuncList::iterator b = od->beginTopFuncs();
+        OverloadDef::FuncList::iterator e = od->endTopFuncs();
+        if (b != e) {
+            b=e;
+            --b;
+            if (0==(*b)->getOwner()) {
+                assert(def->getOwner());
+                (*b)->setOwner(def->getOwner());
+            }
+            orderedForTxn.push_back((*b).get(), (*b)->getDisplayName().c_str(), this);
+        }
+    } else {
+        orderedForTxn.push_back(def, def->getDisplayName().c_str(), this);
+    }
 }
 
 void Namespace::noteOverloadForTxn(VarDef* def) {
-    orderedForTxn.push_back(def, def->getFullName().c_str(), this);
+    orderedForTxn.push_back(def, def->getDisplayName().c_str(), this);
 }
 
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
@@ -96,8 +113,10 @@ bool Namespace::hasAliasFor(VarDef *def) const {
 void Namespace::addDef(VarDef *def) {
     assert(!def->getOwner());
 
-    storeDef(def);
+    // storeDef needs owner already set, so that getDisplayName()
+    //  works and differentiates overloaded functions from each other.
     def->setOwner(this);
+    storeDef(def);
 }
 
 void Namespace::removeDef(VarDef *def) {
@@ -173,8 +192,8 @@ void Namespace::addAlias(VarDef *def) {
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
         OverloadDefPtr child = overload->createAlias();
-        storeDef(child.get());
         child->setOwner(this);
+        storeDef(child.get());
     } else {
         storeDef(def);
     }

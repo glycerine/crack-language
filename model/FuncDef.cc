@@ -199,7 +199,7 @@ void FuncDef::display(ostream &out, const ArgVec &args) {
 }
 
 void FuncDef::display(ostream &out, const string &prefix) const {
-    out << prefix << returnType->getDisplayName() << " " << 
+    out << prefix << (returnType.get() ? returnType->getDisplayName() : "") << " " << 
         VarDef::getDisplayName();
     display(out, args);
 }

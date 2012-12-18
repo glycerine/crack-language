@@ -905,15 +905,17 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
         srcNs = ns.get();
     FuncDef *funcDef = FuncDefPtr::cast(varDef);
     if (funcDef) {
+        funcDef->setOwner(srcNs);
+
         OverloadDefPtr overload = 
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
         if (!overload) {
             overload = replicateOverload(varDef->name, srcNs);
         } else {
-            srcNs->noteOverloadForTxn(varDef);
+            // do we really need to do this? 
+            // srcNs->noteOverloadForTxn(varDef);
         }
         overload->addFunc(funcDef);
-        funcDef->setOwner(srcNs);
         return overload;
     } else {
         srcNs->addDef(varDef);
