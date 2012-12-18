@@ -33,7 +33,7 @@ OrderedHash Namespace::orderedForTxn;
 
 void Namespace::storeDef(VarDef *def) {
 
-    if (globalRepl && globalRepl->debuglevel() > 1) {
+    if (globalRepl && globalRepl->debuglevel() > 3) {
         printf("NSLOG: '%s' ::storeDef(%s)\n", 
                canonicalName.c_str(), 
                def->getFullName().c_str());
@@ -58,10 +58,13 @@ void Namespace::storeDef(VarDef *def) {
                 (*b)->setOwner(def->getOwner());
             }
             orderedForTxn.push_back((*b).get(), (*b)->getDisplayName().c_str(), this);
+            return;
+        } else {
+            // no FuncList yet... how do we get our arg names?
+            
         }
-    } else {
-        orderedForTxn.push_back(def, def->getDisplayName().c_str(), this);
     }
+    orderedForTxn.push_back(def, def->getDisplayName().c_str(), this);
 }
 
 void Namespace::noteOverloadForTxn(VarDef* def) {
@@ -72,7 +75,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {
 
-        if (iter->second && globalRepl && globalRepl->debuglevel() > 1) { 
+        if (iter->second && globalRepl && globalRepl->debuglevel() > 3) { 
             printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),iter->second->getFullName().c_str());
         }
 
@@ -86,7 +89,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
             if (def = parent->lookUp(varName))
                 break;
 
-        if (def && globalRepl && globalRepl->debuglevel() > 1) {
+        if (def && globalRepl && globalRepl->debuglevel() > 3) {
             printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),def->getFullName().c_str()); 
         }
         return def;        
@@ -121,10 +124,13 @@ void Namespace::addDef(VarDef *def) {
 
 void Namespace::removeDef(VarDef *def) {
     assert(!OverloadDefPtr::cast(def));
-    VarDefMap::iterator iter = defs.find(def->name);
+
+    string d = def->getDisplayName();
+    string n = def->name;
+    VarDefMap::iterator iter = defs.find(n);
     if (iter == defs.end()) {
         fprintf(stderr,"internal error in client of Namespace::removeDef(): def '%s'"
-                " not found.\n", def->name.c_str());
+                " not found.\n", n.c_str());
         assert(0);
         exit(1);
     }
@@ -136,7 +142,7 @@ void Namespace::removeDef(VarDef *def) {
          iter != ordered.end();
          ++iter
          ) {
-        if (def->name == (*iter->get()).name) {
+        if (n == (*iter->get()).name) {
             ordered.erase(iter);
             break;
         }
@@ -147,7 +153,7 @@ void Namespace::removeDef(VarDef *def) {
          iter != orderedForCache.end();
          ++iter
          ) {
-        if (def->name == (*iter->get()).name) {
+        if (n == (*iter->get()).name) {
             orderedForCache.erase(iter);
             break;
         }
@@ -203,7 +209,7 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
 
-    if (globalRepl && globalRepl->debuglevel() > 1) {
+    if (globalRepl && globalRepl->debuglevel() > 3) {
         printf("NSLOG: addAlias(%s,%s)\n", name.c_str(), def->getFullName().c_str());
     }
 
@@ -351,14 +357,16 @@ void Namespace::short_dump() {
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
 
-    if (globalRepl && globalRepl->debuglevel() > 2) {
-        if (globalRepl->debuglevel() > 3) {
-            printf("=== begin orderedForTxn, everything ===\n");
-            orderedForTxn.dump(false);
-        } else {
-            printf("=== begin orderedForTxn, dups only ===\n");
-            orderedForTxn.dump(true); // only dups (shorter)
+    if (globalRepl && globalRepl->debuglevel() > 1) {
+        long start = 0;
+        if (txLog.size()) {
+            start = txLog.front().last_commit;
         }
+
+        printf("=== begin orderedForTxn, everything from %ld ===\n", start);
+        orderedForTxn.dump(start, false);
+        //printf("=== begin orderedForTxn, dups only, from %ld  ===\n", start);
+        //            orderedForTxn.dump(start, true); // only dups (shorter)
         printf("=== end orderedForTxn ===\n");
     }
 }

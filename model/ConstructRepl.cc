@@ -539,7 +539,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         model::OverloadDef *odef     = dynamic_cast<model::OverloadDef*>(var.get());
         if (odef) {
-            // we've got a whole list to remove
+            // we've got a whole list; just remove the last one.
             model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
             model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
             for (; it != en; ++it) {

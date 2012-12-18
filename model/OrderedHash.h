@@ -17,6 +17,10 @@
  *   It is ordered in the sense that the order in which definitions
  *   are pushed-back is preserved for ease of truncation.
  *   It is hashed in that location of a VarDef of name is fast.
+ *
+ * Ironically, tr1::hash_multimap invalidates iterators upon insert.
+ *  which means we had to shift to std::multimap instead. multimap
+ *  preserves iterators after either insert or erase.
  */
 
 namespace model {
@@ -30,7 +34,7 @@ namespace model {
     public:
     
         // index by VarDef* 
-        typedef std::tr1::unordered_multimap<VarDef*, long> DefPosMap;
+        typedef std::multimap<VarDef*, long> DefPosMap;
 
         //
         // And, index by string. Here the string is an overload-distinguishing name;
@@ -38,7 +42,7 @@ namespace model {
         //  lookup (for removal) by combining overloaded names into
         //  one thing. So we will have "
         //
-        typedef std::tr1::unordered_multimap<std::string, long> StrPosMap;
+        typedef std::multimap<std::string, long> StrPosMap;
 
         typedef DefPosMap::iterator   DefPosMapIt;
         typedef DefPosMap::value_type DefPosMapValue;
@@ -211,9 +215,9 @@ namespace model {
             _vec.erase(target);
         }
 
-        void dump(bool dupsonly = false) {
+        void dump(long start = 0, bool dupsonly = false) {
             long n = _vec.size();
-            for (long i = 0; i < n; ++i) {
+            for (long i = start; i < n; ++i) {
                 _vec[i].dump(dupsonly);
             }
         }
