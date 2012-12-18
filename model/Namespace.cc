@@ -33,8 +33,6 @@ OrderedIdLog Namespace::orderedForTxn;
 
 Namespace::~Namespace() {
     printf("~Namespace dtor firing on 0x%lx\n",(long)this);
-    
-    
 }
 
 

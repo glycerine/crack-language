@@ -35,20 +35,19 @@ namespace model {
     
         // index by VarDef* 
         typedef std::multimap<VarDef*, long> DefPosMap;
-
-        //
-        // And, index by string. Here the string is an overload-distinguishing name;
-        //  as opposed to the names in Namespace::defs which confound
-        //  lookup (for removal) by combining overloaded names into
-        //  one thing. So we will have "
-        //
-        typedef std::multimap<std::string, long> StrPosMap;
-
         typedef DefPosMap::iterator   DefPosMapIt;
         typedef DefPosMap::value_type DefPosMapValue;
         typedef DefPosMapIt DefPosMapInsert;
         typedef std::pair<DefPosMapIt, DefPosMapIt> DefPosMapPair;
 
+        //
+        //  Index by string. Here the string is an overload-distinguishing 
+        //  name;
+        //  as opposed to the names in Namespace::defs which confound
+        //  lookup (for removal) by combining overloaded names into
+        //  one thing. So we will have "
+        //
+        typedef std::multimap<std::string, long> StrPosMap;
         typedef StrPosMap::iterator   StrPosMapIt;
         typedef StrPosMap::value_type StrPosMapValue;
         typedef StrPosMapIt StrPosMapInsert;
@@ -59,30 +58,57 @@ namespace model {
             model::VarDef*      vardef;
             std::string  odname; // overload distinguishing name
             Namespace*   ns;
-            long         i;      // vdnvec index
+            long         id;
             DefPosMapIt  vi;    // index into v2i;
             StrPosMapIt  si;    // index into s2i;
             int        vdup;    // duplicate count, VarDef
             int        sdup;    // duplicate count, odname
 
-            void dump(bool onlydup = false);
+            void dump(bool dupsOnly = false);
         };
 
-        // the main container of elements, owns the VarDefNames
-        typedef std::vector<VarDefName> VDNVector;
-        typedef VDNVector::iterator ohit;
+        // The main container of elements, owns the VarDefNames.
+        // It is indexed by an increasing long id, allowing quick
+        // txn rollback. Used to be a vector, but the map
+        // avoids the O(n^2) update issue.
+        typedef std::map<long, VarDefName> VdnMap;
+        typedef VdnMap::iterator VdnMapIt;
+        typedef VdnMap::value_type VdnMapValue;
+        typedef std::pair<VdnMapIt,bool> VdnMapInsert;
 
-        VDNVector _vec;
-        VDNVector& vec();
+        struct BadOrderedIdLogIndexOperatrion {};
+        VarDefName& operator[] (unsigned long i) {
+            VdnMapIt it = _mainMap.find(i);
+            if (it == _mainMap.end()) throw BadOrderedIdLogIndexOperatrion();
+            return (it->second);
+        }
 
-        // indexes _vec by VarDef
+        VdnMap _mainMap;
+        long   _lastId;
+
+        long    nextId() {
+            ++_lastId;
+            return _lastId;
+        }
+
+        VdnMap& vec();
+
+        // index by Namespace
+        typedef std::multimap<Namespace*, VdnMapIt> Ns2MainMap;
+        typedef Ns2MainMap::iterator   Ns2MainMapIt;
+        typedef Ns2MainMap::value_type Ns2MainMapValue;
+        typedef Ns2MainMapIt Ns2MainMapInsert;
+        typedef std::pair<Ns2MainMapIt, Ns2MainMapIt> Ns2MainMapPair;
+        Ns2MainMap ns2mm;
+
+        // indexes _mainMap by VarDef
         DefPosMap v2i;
         VarDefName* lookup(VarDef* v, Namespace* ns) {
             DefPosMapPair pp = v2i.equal_range(v);
             if (pp.first == v2i.end()) return 0;
             for (DefPosMapIt i = pp.first; i != pp.second; ++i) {
-                if (_vec[i->second].ns == ns) {
-                    return & _vec[i->second];
+                if (_mainMap[i->second].ns == ns) {
+                    return & _mainMap[i->second];
                 }
             }
             return 0;
@@ -92,7 +118,7 @@ namespace model {
             DefPosMapPair pp = v2i.equal_range(v);
             if (pp.first == v2i.end()) return -1;
             for (DefPosMapIt i = pp.first; i != pp.second; ++i) {
-                if (_vec[i->second].ns == ns) {
+                if (_mainMap[i->second].ns == ns) {
                     return i->second;
                 }
             }
@@ -100,14 +126,14 @@ namespace model {
         }
 
 
-        // index _vec by odname
+        // index _mainMap by odname
         StrPosMap s2i;
         VarDefName* lookup(const char* s, Namespace* ns) {
             StrPosMapPair pp = s2i.equal_range((char*)s);
             if (pp.first == s2i.end()) return 0;
             for (StrPosMapIt i = pp.first; i != pp.second; ++i) {
-                if (_vec[i->second].ns == ns) {
-                    return & _vec[i->second];
+                if (_mainMap[i->second].ns == ns) {
+                    return & _mainMap[i->second];
                 }
             }
             return 0;
@@ -117,20 +143,13 @@ namespace model {
             StrPosMapPair pp = s2i.equal_range((char*)s);
             if (pp.first == s2i.end()) return -1;
             for (StrPosMapIt i = pp.first; i != pp.second; ++i) {
-                if (_vec[i->second].ns == ns) {
+                if (_mainMap[i->second].ns == ns) {
                     return i->second;
                 }
             }
             return -1;
         }
 
-
-        long lookupI(const char* s) {
-            StrPosMapIt it = s2i.find((char*)s);
-            if (it == s2i.end()) return -1;
-            return it->second;
-        }
-    
         // lookup def by overload distiguishing name
         VarDef* lookup_def_by_odname(const char* s, Namespace* ns) {
             VarDefName* p = lookup(s, ns);
@@ -144,37 +163,40 @@ namespace model {
         //  Count the dups in vdup and sdup
         //
         bool push_back(VarDef* v, const char* s, Namespace* nspc) {
-            long n = _vec.size();
-            assert(s2i.size() == n);
-            assert(v2i.size() == n);
+            // sanity check
+            assert(s2i.size() == _mainMap.size());
+            assert(v2i.size() == _mainMap.size());
  
+            long id = nextId();
+
             bool done_early = false;
             long dup = lookupI(v, nspc); 
             if (-1 != dup) {
-                ++(_vec[dup].vdup);
+                ++(_mainMap[dup].vdup);
                 done_early = true;
             }
             dup = lookupI(s, nspc);
             if (-1 != dup) {
-                ++(_vec[dup].sdup);
+                ++(_mainMap[dup].sdup);
                 done_early = true;
             }
             if (done_early) return false;
 
             VarDefName Node;
-            Node.i  = n;
+            Node.id  = id;
             Node.ns = nspc;
             Node.vardef      = v;
             Node.odname      = s;
             Node.sdup = 0;
             Node.vdup = 0;
-            DefPosMapInsert id = v2i.insert(DefPosMapValue(v,n));
-            Node.vi = id;
-            StrPosMapInsert is = s2i.insert(StrPosMapValue(s,n));
+            DefPosMapInsert iv = v2i.insert(DefPosMapValue(v,id));
+            Node.vi = iv;
+            StrPosMapInsert is = s2i.insert(StrPosMapValue(s,id));
             Node.si = is;
-            
 
-            _vec.push_back(Node);
+            VdnMapInsert e = _mainMap.insert(VdnMapValue(id, Node));
+            assert(e.second);
+            ns2mm.insert(Ns2MainMapValue(nspc, e.first));
             return true;
         }
 
@@ -182,43 +204,63 @@ namespace model {
         void clear() {
             v2i.clear();
             s2i.clear();
-            _vec.clear();
+            ns2mm.clear();
+            _mainMap.clear();
         }
                 
         // remove all elements >= k
         void eraseFrom(long k) {
-            long n = _vec.size();
-            for (long i = k; i < n; ++i) {
-                VarDefName& v = _vec[i];
+
+            VdnMapIt en = _mainMap.end();
+            VdnMapIt st = _mainMap.find(k);
+            if (st == _mainMap.end()) {
+                throw BadOrderedIdLogIndexOperatrion();
+            }
+
+            for (VdnMapIt it = st; it != en; ++it) {
+                VarDefName& v = it->second;
                 v2i.erase(v.vi);
                 s2i.erase(v.si);
             }
-            _vec.resize(k);
+            _mainMap.erase(_mainMap.find(k), _mainMap.end());
         }
 
-        // erase one element from vector, O(n) time.
+        // erase one element from _mainMap and indices
         void erase(long k) {
-            long n = _vec.size();
-            if (k >= n || k < 0) {
-                assert(0);
-                return;
+            VdnMapIt target = _mainMap.find(k);
+            if (target == _mainMap.end()) 
+                throw BadOrderedIdLogIndexOperatrion();
+
+            // ns2mm deletions
+            Ns2MainMapPair pp = ns2mm.equal_range(target->second.ns);
+            if (pp.first != ns2mm.end()) {
+                for (Ns2MainMapIt it = pp.first; it != pp.second; ++it) {
+                    if (it->second == target) {
+                        ns2mm.erase(it);
+                        // possible optimization, double check 
+                        // correctness first: 
+                        // break;
+                    }
+                }
             }
 
-            ohit target = _vec.begin() + k;
-            ohit j = target + 1;
-            for (; j != _vec.end(); ++j) {
-                VarDefName& d = *j;
-                d.i = d.i - 1;
-            }
-            v2i.erase(target->vi);
-            s2i.erase(target->si);
-            _vec.erase(target);
+            v2i.erase(target->second.vi);
+            s2i.erase(target->second.si);
+
+            _mainMap.erase(target);
         }
 
-        void dump(long start = 0, bool dupsonly = false) {
-            long n = _vec.size();
-            for (long i = start; i < n; ++i) {
-                _vec[i].dump(dupsonly);
+        void dump(long start = 0, bool dupsOnly = false) {
+            long n = _mainMap.size();
+
+            VdnMapIt en = _mainMap.end();
+            VdnMapIt st = _mainMap.find(n);
+            if (st == _mainMap.end()) {
+                throw BadOrderedIdLogIndexOperatrion();
+            }
+
+            for (VdnMapIt it = st; it != en; ++it) {
+                it->second.dump(dupsOnly);
             }
         }
         

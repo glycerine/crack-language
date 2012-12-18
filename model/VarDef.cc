@@ -30,7 +30,9 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
     constant(false) {
 }
 
-VarDef::~VarDef() {}
+VarDef::~VarDef() {
+    printf("~VarDef dtor firing on 0x%lx\n",(long)this);
+}
 
 ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
     AssignExprPtr assign = new AssignExpr(0, this, expr);

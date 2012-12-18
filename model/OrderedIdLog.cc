@@ -4,14 +4,14 @@
 
 namespace model {
 
-    OrderedIdLog::VDNVector& OrderedIdLog::vec() { return _vec; }
+    OrderedIdLog::VdnMap& OrderedIdLog::vec() { return _mainMap; }
 
-    void OrderedIdLog::VarDefName::dump(bool onlydup) {
-        if (onlydup) {
+    void OrderedIdLog::VarDefName::dump(bool dupsOnly) {
+        if (dupsOnly) {
             if (vdup == 0 && sdup == 0) return;
         }
         printf("%ld   %s   : (vdup %d, sdup %d)   vardef: 0x%lx    ns: 0x%lx\n", 
-               i, 
+               id, 
                odname.c_str(),
                vdup,
                sdup,
