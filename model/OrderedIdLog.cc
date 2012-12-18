@@ -1,12 +1,12 @@
-#include "model/OrderedHash.h"
+#include "model/OrderedIdLog.h"
 #include "model/Namespace.h"
 #include "model/VarDef.h"
 
 namespace model {
 
-    OrderedHash::VDNVector& OrderedHash::vec() { return _vec; }
+    OrderedIdLog::VDNVector& OrderedIdLog::vec() { return _vec; }
 
-    void OrderedHash::VarDefName::dump(bool onlydup) {
+    void OrderedIdLog::VarDefName::dump(bool onlydup) {
         if (onlydup) {
             if (vdup == 0 && sdup == 0) return;
         }
@@ -41,7 +41,7 @@ int main_orderedhash_test() {
     D a(0);
     D b(1);
     D c(2);
-    model::OrderedHash v;
+    model::OrderedIdLog v;
 
     v.push_back(&a, "zero");
     v.push_back(&b, "one");
@@ -49,7 +49,7 @@ int main_orderedhash_test() {
 
     v.dump();
 
-    typedef model::OrderedHash::VarDefName vn;
+    typedef model::OrderedIdLog::VarDefName vn;
     vn* n = v.lookup("one");
     n->dump();
     vn* m = v.lookup("two");

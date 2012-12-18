@@ -1,5 +1,5 @@
-#ifndef _model_OrderedHash_h_
-#define _model_OrderedHash_h_
+#ifndef _model_OrderedIdLog_h_
+#define _model_OrderedIdLog_h_
 
 #include <map>
 #include <vector>
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 /**
- * OrderedHash: keep a vector of VarDef's that can be searched
+ * OrderedIdLog: keep a vector of VarDef's that can be searched
  *   readily by value or by name. It's tail elements can be truncated
  *   off rapidly when we rollback/abort a transaction because
  *   of syntax error at the repl.
@@ -30,7 +30,7 @@ namespace model {
 
     // a simple vector together with simple hashtables for fast lookup
 
-    class OrderedHash {
+    class OrderedIdLog {
     public:
     
         // index by VarDef* 
@@ -228,5 +228,5 @@ namespace model {
 
 int main_orderedhash_test();
         
-#endif // _model_OrderedHash_h_
+#endif // _model_OrderedIdLog_h_
 

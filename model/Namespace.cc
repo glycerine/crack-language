@@ -29,7 +29,14 @@ using namespace model;
 using wisecrack::globalRepl;
 
 // static so we get a global view of added definitions for rollback.
-OrderedHash Namespace::orderedForTxn;
+OrderedIdLog Namespace::orderedForTxn;
+
+Namespace::~Namespace() {
+    printf("~Namespace dtor firing on 0x%lx\n",(long)this);
+    
+    
+}
+
 
 void Namespace::storeDef(VarDef *def) {
 
@@ -427,7 +434,7 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
 
     long n = orderedForTxn.vec().size();
     for (long i = t.last_commit +1; i < n; ++i) {
-        OrderedHash::VarDefName& d = orderedForTxn.vec()[i];
+        OrderedIdLog::VarDefName& d = orderedForTxn.vec()[i];
 
         long chk = orderedForTxn.lookupI(d.vardef, d.ns);
         if(-1 == chk) {

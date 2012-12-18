@@ -36,7 +36,7 @@
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMBuilder.h"
 #include "model/OverloadDef.h"
-#include "model/OrderedHash.h"
+#include "model/OrderedIdLog.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>

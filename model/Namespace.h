@@ -14,7 +14,7 @@
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 #include "wisecrack/repl.h"
-#include "model/OrderedHash.h"
+#include "model/OrderedIdLog.h"
 
 using wisecrack::Repl;
 
@@ -58,7 +58,7 @@ class Namespace : public virtual spug::RCBase {
         // ordered list of all vardefs for transactions delete
         // used by repl for syntax error cleanup.
         // Make it static so we track additions across all namespaces.
-        static OrderedHash orderedForTxn;
+        static OrderedIdLog orderedForTxn;
 
         // fully qualified namespace name, e.g. "crack.io"
         std::string canonicalName;
@@ -77,6 +77,8 @@ class Namespace : public virtual spug::RCBase {
 
         }
         
+        virtual ~Namespace();
+
         /**
          * Returns the fully qualified name of the namespace
          */
