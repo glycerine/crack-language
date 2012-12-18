@@ -350,6 +350,17 @@ void Namespace::short_dump() {
          )
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
+
+    if (globalRepl && globalRepl->debuglevel() > 2) {
+        if (globalRepl->debuglevel() > 3) {
+            printf("=== begin orderedForTxn, everything ===\n");
+            orderedForTxn.dump(false);
+        } else {
+            printf("=== begin orderedForTxn, dups only ===\n");
+            orderedForTxn.dump(true); // only dups (shorter)
+        }
+        printf("=== end orderedForTxn ===\n");
+    }
 }
 
 
