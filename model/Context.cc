@@ -912,8 +912,8 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
         if (!overload) {
             overload = replicateOverload(varDef->name, srcNs);
         } else {
-            // do we really need to do this? 
-            // srcNs->noteOverloadForTxn(varDef);
+            // must call this so we can distinguish overloads in .rm and ns txn undo.
+            srcNs->noteOverloadForTxn(varDef);
         }
         overload->addFunc(funcDef);
         return overload;
