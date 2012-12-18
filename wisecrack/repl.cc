@@ -380,6 +380,9 @@ namespace wisecrack {
         strncpy(_repl_cmd_start, s, _rcs_sz-1);
     }
 
+    void Repl::set_builder(builder::Builder* b) { _bdr = b; }
+    builder::Builder* Repl::builder() { return _bdr; }
+
 
 } // end namespace wisecrack
 

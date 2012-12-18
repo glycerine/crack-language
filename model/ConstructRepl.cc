@@ -36,6 +36,7 @@
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMBuilder.h"
 #include "model/OverloadDef.h"
+#include "model/OrderedHash.h"
 
 #include <llvm/LLVMContext.h>
 #include <llvm/LinkAllPasses.h>
@@ -116,6 +117,8 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
     wisecrack::Repl r;
 
+    main_orderedhash_test();
+
     // smart pointers
     ModuleDefPtr modDef;
     ContextPtr   context;
@@ -183,6 +186,8 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         ctx = context.get();
         bdr = builder.get();
 
+        r.set_builder(bdr);
+
         // close :main - now we open a new section after receiving
         // each individual command.
         bdr->closeSection(*ctx,mod);
@@ -203,6 +208,10 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         try {
             doCleanup = false;
             sectionStarted = false;
+
+            // track cleanups, so we don't removeFromParent() twice and crash.
+            r.goneSet.clear(); 
+
             ns_start_point = (ctx->ns.get())->markTransactionStart();
             
             // READ
@@ -253,7 +262,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
             bdr->closeSection(*ctx,mod);
 
-            // PRINT: provided as a short-cut special command currently.
+            // PRINT: provided as a short-cut special command '.' currently.
 
         } catch (const wisecrack::ExceptionCtrlC &ex) {
             printf(" [ctrl-c]\n");
@@ -295,6 +304,14 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 }
 
 
+void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
+    if (ctx->repl && ctx->repl->debuglevel() > 0) {
+        printf(" [cleaning up unfinished line]\n");
+    }
+    bdr->eraseSection(*ctx,mod);
+}
+
+
 /**
  *  continueOnSpecial(): a runRepl helper.
  *    returns true if we have a special repl command and should keep looping.
@@ -331,15 +348,26 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // .     : print last sym
 
         const char* sym = p + 1;
+        std::string cmd;
 
         if (0==strlen(p)) {
             // just . by itself on a line: print the
             // last thing added to the namespace, if we can.
 
+            VarDefPtr vcout = context->ns->lookUp("cout");
+            if (!vcout) {
+                cmd += "import crack.io cout; ";
+            }
+        
             TypeDef* tdef = 0;
             sym = context->ns->lastTxSymbol(&tdef);
             if (NULL == sym) {
                 printf("no last symbol to display.\n");
+                if (!vcout) {
+                    // still bring in cout
+                    r.set_next_line(cmd.c_str());
+                    return false;
+                }
                 return true;
             }
 
@@ -357,14 +385,6 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             }
         }
 
-        VarDefPtr vcout = context->ns->lookUp("cout");
-
-        std::string cmd;
-        if (!vcout) {
-            //printf("warn on .p without cout: could not find cout, doing: import crack.io cout;\n");
-            cmd += "import crack.io cout; ";
-        }
-        
         cmd += "cout `";
         cmd += sym;
         cmd += " = $(";
@@ -491,7 +511,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             printf("%sdc '%s' error: displaying classes not yet implemented.\n", s, sym);
 
         } else {
-            printf("%sdc '%s' error: I don't know how to dump code for type '%s' yet.\n", s, sym, tp->name.c_str());
+            printf("%sdc '%s' error: I don't know how to dump code for type '%s' yet.\n",
+                   s, sym, tp ? tp->name.c_str() : "*unknown type*");
 
         }
 
@@ -518,13 +539,59 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         printf("rm deleting symbol '%s' at 0x%lx.\n", sym, (unsigned long)var.get());
 
-        context->ns->removeDef(var.get());
+        model::OverloadDef *odef     = dynamic_cast<model::OverloadDef*>(var.get());
+        if (odef) {
+            // we've got a whole list to remove
+            model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
+            model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
+            for (; it != en; ++it) {
+                    
+                FuncDefPtr fdp  = *it;
+                FuncDef*   func = fdp.get();
+
+                builder::mvll::LLVMBuilder* llvm_bdr = dynamic_cast<builder::mvll::LLVMBuilder*>(bdr);
+
+                /* // Skip the eraseFromParent() for now, unless we want to delete __section__X.
+                   // That seems like a bad idea in terms of debuggability. 
+                   // The problem is that __section__X, if it called the function we are
+                   // trying to delete, will still have a reference, and llvm will complain.
+                   // that the reference now dangles.
+                   // 
+                   // keep the code since we may want to implement lazy binding in the future.
+                   // 
+                if (func && llvm_bdr) {
+                        
+                    builder::mvll::LLVMBuilder::ModFuncMap::iterator it = llvm_bdr->moduleFuncs.find(func);
+                        
+                    if (it != llvm_bdr->moduleFuncs.end()) {
+                            
+                        llvm::Function* f = it->second;
+
+                        if (f) {
+                            printf("%srm '%s' is trying to delete:\n", s, sym);
+                            llvm::outs() << static_cast<llvm::Value&>(*f);
+                            f->eraseFromParent();
+                        }
+                    }
+                } else {
+                    printf("error in %srm '%s': "
+                           "could not eraseFromParent().\n",
+                           s, sym);
+                }
+                */
+
+                context->ns->removeDef(func);
+            }
+            
+        } else {
+            context->ns->removeDef(var.get());
+        }
 
         return true;
 
     } else if (0==strncmp("!", p, 1)) {
         const char* cmd = p + 1;
-        system(cmd);
+        int res = system(cmd);
         return true;
 
     } else if (0==strncmp(".", p, 1)) {
@@ -615,12 +682,5 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
     return false;
 }
 
-
-void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
-    if (ctx->repl && ctx->repl->debuglevel() > 0) {
-        printf(" [cleaning up unfinished line]\n");
-    }
-    bdr->eraseSection(*ctx,mod);
-}
 
 

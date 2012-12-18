@@ -145,6 +145,7 @@ class OverloadDef : public VarDef {
         /** @{ */
         FuncList::iterator beginTopFuncs() { return funcs.begin(); }
         FuncList::iterator endTopFuncs() { return funcs.end(); }
+        void erase(FuncList::iterator& r) { funcs.erase(r); }
         /** @} */
         
         bool hasInstSlot();

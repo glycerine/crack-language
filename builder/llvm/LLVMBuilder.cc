@@ -2203,17 +2203,34 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     // function, both are left dangling, unless we do this:
     if (first_section_func != func) {
 
-        if (context.repl && context.repl->debuglevel() > 0) {
-            printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
+        if (context.repl) {
+            // track this deletion, so we don't do it twice.
+            context.repl->goneSet.insert(first_section_func);
+
+            if (context.repl->debuglevel() > 0) {
+                printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
+
+                llvm::outs() << static_cast<llvm::Value&>(*first_section_func);
+            }
         }
         
         // cleanup an aborted function construction.
         first_section_func->eraseFromParent();
         first_section_func = 0;
+
+        // try an early return now, see if our Namespace::undoTransactionTo()
+        // code will take care of func. nope.
+        //        func = 0;
+        //        return;
     }
 
-    if (context.repl && context.repl->debuglevel() > 0) {
-        printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
+    if (context.repl) {
+        context.repl->goneSet.insert(func);
+
+        if (context.repl->debuglevel() > 0) {
+            printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
+            llvm::outs() << static_cast<llvm::Value&>(*func);
+        }
     }
 
     // cleanup an aborted function construction.

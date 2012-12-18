@@ -14,6 +14,7 @@
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 #include "wisecrack/repl.h"
+#include "model/OrderedHash.h"
 
 using wisecrack::Repl;
 
@@ -35,6 +36,7 @@ SPUG_RCPTR(Namespace);
  * A namespace is a symbol table.  It defines the symbols that exist in a 
  * given context.
  */
+        
 class Namespace : public virtual spug::RCBase {
 
     public:
@@ -55,7 +57,8 @@ class Namespace : public virtual spug::RCBase {
 
         // ordered list of all vardefs for transactions delete
         // used by repl for syntax error cleanup.
-        VarDefVec orderedForTxn;
+        // Make it static so we track additions across all namespaces.
+        static OrderedHash orderedForTxn;
 
         // fully qualified namespace name, e.g. "crack.io"
         std::string canonicalName;
@@ -64,6 +67,7 @@ class Namespace : public virtual spug::RCBase {
          * Stores a definition, promoting it to an overload if necessary.
          */
         virtual void storeDef(VarDef *def);
+
 
     public:
         
@@ -118,6 +122,11 @@ class Namespace : public virtual spug::RCBase {
          * be an OverloadDef. 
          */
         virtual void removeDef(VarDef *def);
+
+        /**
+         *  Remove a possibly overloaded definition. Intended for use from the repl.
+         */
+        virtual void removeDefAllowOverload(VarDef *def);
         
         /**
          * Adds a definition to the context, but does not make the definition's 
@@ -153,6 +162,13 @@ class Namespace : public virtual spug::RCBase {
         void dump(std::ostream &out, const std::string &prefix);
         void dump();
         void short_dump();
+
+        /** overloads don't call addDef() unfortunately. so
+         *   have them call this instead so we know exactly
+         *   what got added to the namespace during the current
+         *   transaction.
+         */
+        void noteOverloadForTxn(VarDef* def);
         
         /** Funcs to iterate over the set of definitions. */
         /// @{
@@ -211,7 +227,8 @@ class Namespace : public virtual spug::RCBase {
          * do the roll back, deleting var defs up to but not 
          * including last_commit. 
          */
-        void undoTransactionTo(const Txmark& txstart, Repl *r = 0);
+        void undoTransactionTo(const Txmark& txstart, 
+                               Repl *r = 0);
 
         /**
          * roll back the tail of the log, e.g. using txLog.back()
@@ -225,6 +242,12 @@ class Namespace : public virtual spug::RCBase {
          *  Set tdef if you want a pointer to the type back.
          */
         const char* lastTxSymbol(model::TypeDef **tdef = 0);
+
+ private:
+        /** helpers for undo */
+        void undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl);
+        void undoHelperRollbackOrderedForTx(const Txmark& t);
+
 };
 
 } // namespace model

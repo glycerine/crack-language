@@ -907,8 +907,11 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
     if (funcDef) {
         OverloadDefPtr overload = 
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
-        if (!overload)
+        if (!overload) {
             overload = replicateOverload(varDef->name, srcNs);
+        } else {
+            srcNs->noteOverloadForTxn(varDef);
+        }
         overload->addFunc(funcDef);
         funcDef->setOwner(srcNs);
         return overload;

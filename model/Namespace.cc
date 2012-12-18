@@ -18,10 +18,18 @@
 #include "VarDef.h"
 #include <stdio.h>
 #include "model/FuncDef.h"
+#include "builder/Builder.h"
+#include "builder/llvm/LLVMJitBuilder.h"
+#include "builder/llvm/LLVMBuilder.h"
+#include <llvm/LinkAllPasses.h>
+
 
 using namespace std;
 using namespace model;
 using wisecrack::globalRepl;
+
+// static so we get a global view of added definitions for rollback.
+OrderedHash Namespace::orderedForTxn;
 
 void Namespace::storeDef(VarDef *def) {
 
@@ -36,12 +44,21 @@ void Namespace::storeDef(VarDef *def) {
            "in an OverloadDef)");
     defs[def->name] = def;
     orderedForCache.push_back(def);
-    orderedForTxn.push_back(def);
+    orderedForTxn.push_back(def, def->getFullName().c_str());
+}
+
+void Namespace::noteOverloadForTxn(VarDef* def) {
+    orderedForTxn.push_back(def, def->getFullName().c_str());
 }
 
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {
+
+        if (iter->second && globalRepl && globalRepl->debuglevel() > 1) { 
+            printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),iter->second->getFullName().c_str());
+        }
+
         return iter->second;
     } else if (recurse) {
         VarDefPtr def;
@@ -52,6 +69,9 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
             if (def = parent->lookUp(varName))
                 break;
 
+        if (def && globalRepl && globalRepl->debuglevel() > 1) {
+            printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),def->getFullName().c_str()); 
+        }
         return def;        
     }
 
@@ -85,7 +105,7 @@ void Namespace::removeDef(VarDef *def) {
     VarDefMap::iterator iter = defs.find(def->name);
     if (iter == defs.end()) {
         fprintf(stderr,"internal error in client of Namespace::removeDef(): def '%s'"
-                " not found", def->name.c_str());
+                " not found.\n", def->name.c_str());
         assert(0);
         exit(1);
     }
@@ -114,17 +134,34 @@ void Namespace::removeDef(VarDef *def) {
         }
     }
 
-
-    for (VarDefVec::iterator iter = orderedForTxn.begin();
-         iter != orderedForTxn.end();
-         ++iter
-         ) {
-        if (def->name == (*iter->get()).name) {
-            orderedForTxn.erase(iter);
-            break;
-        }
+    long i = orderedForTxn.lookupI(def);
+    if (i>=0) {
+        orderedForTxn.erase(i);
     }
 
+}
+
+void Namespace::removeDefAllowOverload(VarDef *def) {
+
+    OverloadDefPtr odef = OverloadDefPtr::cast(def);
+
+    if (odef) {
+        printf("this is wrong...figure out how to do it right!!\n");
+        assert(0);
+        exit(1);
+
+            // we've got (possibly) a whole list to remove
+            model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
+            model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
+            for (; it != en; ++it) {
+                FuncDefPtr fdp  = *it;
+                FuncDef*   func = fdp.get();
+                removeDef(func);
+            }
+            
+    } else {
+        removeDef(def);
+    }
 }
 
 void Namespace::addAlias(VarDef *def) {
@@ -301,9 +338,36 @@ void Namespace::short_dump() {
 Namespace::Txmark Namespace::markTransactionStart() {
     Namespace::Txmark t;
     t.ns = this;
-    t.last_commit = orderedForTxn.size()-1;
+    t.last_commit = orderedForTxn.vec().size()-1;
     txLog.push_back(t);
     return t;
+}
+
+
+void Namespace::undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl) {
+
+    VarDefMap::iterator mapit = defs.find(v->name);
+
+    if (mapit != defs.end() && mapit->second.get() == v) { 
+
+        if (repl && repl->debuglevel() > 0) {
+            cerr << "undo in namespace '" 
+                 << canonicalName
+                 << "'removing name: '" 
+                 << v->name << "'" << endl;
+        }
+        
+        defs.erase(mapit);
+    }
+}
+
+void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
+
+    //    ordered.erase(ordered.begin() + t.last_commit + 1,
+    //                  ordered.end());
+    //    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
+    //                          orderedForCache.end());
+    orderedForTxn.eraseFrom(t.last_commit + 1);
 }
 
 void Namespace::undoTransactionTo(const Namespace::Txmark& t,
@@ -317,45 +381,103 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t,
 
     if (t.last_commit < 0) return;
 
-    long n = (long)orderedForTxn.size();
+    long n = (long)orderedForTxn.vec().size();
 
-    VarDefMap::iterator mapit;
     VarDefPtr v;
+    builder::Builder* bdr = repl ? repl->builder() : 0;
+
+#if 0
+
     for(long i = t.last_commit + 1; i < n; ++i) {
-        mapit = defs.find(orderedForTxn[i]->name);
 
-        // we can't assert because orderedForTxn contains
-        // duplicates, such as :exStruct
-        // No: assert(map != defs.end())
-        // 
+        // detect overloads
+        v = orderedForTxn[i];
+        model::OverloadDef *odef = 0;
 
-        if (mapit != defs.end()) { 
+        VarDefMap::iterator mapit = defs.find(v->name);
 
-            if (repl && repl->debuglevel() > 0) {
-                cerr << "undo in namespace '" 
-                     << canonicalName
-                     << "'removing name: '" 
-                     << orderedForTxn[i]->name << "'" << endl;
-            }
-
-            v = mapit->second;
-            // something like func->eraseFromParent();
-            FuncDef *func = dynamic_cast<FuncDef*>(v.get());
-            if (func) {
-                printf("namespace got a BFuncDef* -- call eraseFromParent()\n");
-            }
-
-            defs.erase(mapit);
+        if (mapit != defs.end()) {
+            odef     = dynamic_cast<model::OverloadDef*>(mapit->second.get());
         }
-    }
 
-    //    ordered.erase(ordered.begin() + t.last_commit + 1,
-    //                  ordered.end());
-    //    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
-    //                          orderedForCache.end());
-    orderedForTxn.erase(orderedForTxn.begin() + t.last_commit + 1,
-                          orderedForTxn.end());
+        if (!odef) {
+            undoHelperDeleteFromDefs(v.get(), t, repl);
+        } else {
 
+            //unreliable:            if (odef->isSingleFunction()) {
+            //undoHelperDeleteFromDefs(v.get(), t, repl);
+
+                // multiple overloads, so skip the update of defs, which 
+                // has them all under the same symbol.
+
+                // INVAR: done with defs update.
+
+                // cleanup with eraseFromParent() to
+                // prevent dangling half-completed functions that will keep us
+                // from compiling further code.
+                
+                // just delete the last still-live overload on the list
+                if (bdr) {
+                    model::OverloadDef::FuncList::iterator first = odef->beginTopFuncs();
+                    model::OverloadDef::FuncList::iterator fit = odef->beginTopFuncs();
+                    model::OverloadDef::FuncList::iterator fen = odef->endTopFuncs();
+                    model::OverloadDef::FuncList::iterator flast = fen;
+                    --flast;
+                    ++fit;
+                    for (fit = flast; fit != first; --fit) {
+                        
+                        FuncDefPtr fdp  = *fit;
+                        FuncDef*   func = fdp.get();
+                        
+                        builder::mvll::LLVMBuilder* llvm_bdr = dynamic_cast<builder::mvll::LLVMBuilder*>(bdr);
+                        
+                        if (func && llvm_bdr) {
+                            
+                            builder::mvll::LLVMBuilder::ModFuncMap::iterator j = llvm_bdr->moduleFuncs.find(func);
+                            
+                            if (j != llvm_bdr->moduleFuncs.end()) {
+                                
+                                llvm::Function* f = j->second;
+                                
+                                if (repl) {
+                                    wisecrack::Repl::gset::iterator en = repl->goneSet.end();
+                                    wisecrack::Repl::gset::iterator it = repl->goneSet.find(f);
+                                    if (it != en) {
+                                        // already removedFromParent; don't do it twice or we'll crash.
+                                        printf("undoTransactionTo(): detected this "
+                                               "function '%s' is already gone. Not cleaning up twice!\n", 
+                                               orderedForTxn[i]->name.c_str());
+                                        f = 0;
+                                        odef->erase(fit);
+                                        break; // just do one.
+                                    }
+                                }
+                                
+                                if (f) {
+                                    if (repl && repl->debuglevel() > 0) {                                
+                                        printf("trying to delete:\n");
+                                        llvm::outs() << static_cast<llvm::Value&>(*f);
+                                    }
+                                    f->eraseFromParent();
+                                    odef->erase(fit);
+                                }
+                            }
+                        } else {
+                            printf("error in Namesapce::undoTransactionTo(): "
+                                   "could not eraseFromParent() on '%s'.\n",
+                                   orderedForTxn[i]->name.c_str());
+                        }
+
+                        break; // only do the last.
+                    } // end for over overloads
+                } // end if bdr
+
+        } // end else
+    } // end for i
+#endif
+
+   // last thing
+   undoHelperRollbackOrderedForTx(t);
 }
 
 void Namespace::undo(Repl *r) {
@@ -366,7 +488,7 @@ void Namespace::undo(Repl *r) {
 }
 
 const char* Namespace::lastTxSymbol(model::TypeDef **tdef) {
-    size_t n = orderedForTxn.size();
+    size_t n = orderedForTxn.vec().size();
     if (0==n) return NULL;
 
     size_t i = n;
@@ -376,13 +498,13 @@ const char* Namespace::lastTxSymbol(model::TypeDef **tdef) {
     // anything that starts with a : won't print
     // well regardless via cout `$(s)` 
     while(i > 0) {
-        s = orderedForTxn[i-1]->name.c_str();
+        s = orderedForTxn.vec()[i-1].vardef->name.c_str();
         if (':' == *s) {
             --i;
             continue;
         }
         // can't print some internally generated stuff
-        model::VarDef   *d = (orderedForTxn[i-1].get());
+        model::VarDef   *d = (orderedForTxn.vec()[i-1].vardef);
         model::TypeDef *td = d->type.get();
         if (!td) {
             --i;

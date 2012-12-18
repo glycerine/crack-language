@@ -6,6 +6,7 @@ model/Annotation.cc
 model/ArgDef.cc
 model/Construct.cc
 model/ConstructRepl.cc
+model/OrderedHash.cc
 model/ConstSequenceExpr.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc

@@ -13,7 +13,16 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <set>
 #include "spug/Exception.h"
+
+namespace builder {
+    class Builder;
+};
+
+namespace llvm {
+    class Function;
+}
 
 //
 // wisecrack: an interpreter for crack
@@ -153,7 +162,16 @@ namespace wisecrack {
          *   the repl start character(s) are.
          */
         const char* repl_cmd(const char* s);
+        
+        /** builder to clean up with */
+        void set_builder(builder::Builder* b);
+        builder::Builder* builder();
 
+        /** set of functions already cleaned up by eraseSection();
+         *   listed here so we don't delete them twice.
+         */
+        typedef std::set<llvm::Function*> gset;
+        gset goneSet;
 
     private:
         bool _alldone;
@@ -181,6 +199,9 @@ namespace wisecrack {
         // This is usually '.'. But could be '\'.
         const static int  _rcs_sz = 8;
         char              _repl_cmd_start[_rcs_sz];
+
+        // Builder to cleanup with
+        builder::Builder* _bdr;
     };
 
 

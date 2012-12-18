@@ -3586,7 +3586,7 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
 
    if (atRepl) {
        // allow redefinition at repl
-       ownerNS->removeDef(existingDef);
+       ownerNS->removeDefAllowOverload(existingDef);
        return 0;
    } else {
        // otherwise this is an illegal override
