@@ -122,7 +122,7 @@ void Namespace::addDef(VarDef *def) {
     storeDef(def);
 }
 
-void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed) {
+void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed, bool bulkclean) {
     if (!OverloadDefAllowed) {
         assert(!OverloadDefPtr::cast(def));
     }
@@ -162,16 +162,19 @@ void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed) {
         }
     }
 
-    long i = orderedForTxn.lookupI(def, this);
-    if (i>=0) {
-        orderedForTxn.erase(i);
+    // skip slow one-off erase if bulkclean-up is in progress.
+    if (!bulkclean) {
+        long i = orderedForTxn.lookupI(def, this);
+        if (i>=0) {
+            orderedForTxn.erase(i);
+        }
     }
-
 }
 
-void Namespace::removeDefAllowOverload(VarDef *def) {
+void Namespace::removeDefAllowOverload(VarDef *def, bool bulkclean) {
 
-    OverloadDefPtr odef = OverloadDefPtr::cast(def);
+    OverloadDef* odef = dynamic_cast<OverloadDef*>(def);    
+    // crashes???   OverloadDefPtr odef = OverloadDefPtr::cast(def);
 
     if (odef) {
         model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
@@ -195,13 +198,14 @@ void Namespace::removeDefAllowOverload(VarDef *def) {
             }
 
             odef->erase(it);
+            //func->eraseFromParent();
             return;
         } else {
-            removeDef(def, true);
+            removeDef(def, true, bulkclean);
             return;
         }
     }
-    removeDef(def);
+    removeDef(def, false, bulkclean);
 }
 
 void Namespace::addAlias(VarDef *def) {
@@ -420,6 +424,33 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
     //                  ordered.end());
     //    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
     //                          orderedForCache.end());
+
+    long n = orderedForTxn.vec().size();
+    for (long i = t.last_commit +1; i < n; ++i) {
+        OrderedHash::VarDefName& d = orderedForTxn.vec()[i];
+
+        long chk = orderedForTxn.lookupI(d.vardef, d.ns);
+        if(-1 == chk) {
+            long again = orderedForTxn.lookupI(d.vardef, d.ns);
+            assert(0); // && "crazy, we just got this vardef/ns, and now it's not in the index? Must have been from erase() call.");
+        }
+        // what if d.ns has been deleted already?
+        // d.ns->removeDefAllowOverload(d.vardef, true);
+        if (d.ns == this) {
+            removeDefAllowOverload(d.vardef, true);
+        } else {
+#if 0
+            // the third one on testcase 'class A { if; ' crashes. in llvm::TypeInfo on dynamic cast. wierd.
+                d.ns->removeDefAllowOverload(d.vardef, true);
+                printf("successfully deleted %s from foreign ns 0x%lx  %s\n",
+                       d.odname.c_str(),
+                       (long)d.ns,
+                       d.ns->getNamespaceName().c_str()
+                       );
+#endif
+        }
+    }
+
     orderedForTxn.eraseFrom(t.last_commit + 1);
 }
 
