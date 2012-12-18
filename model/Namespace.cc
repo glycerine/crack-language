@@ -131,6 +131,7 @@ void Namespace::removeDef(VarDef *def) {
     if (iter == defs.end()) {
         fprintf(stderr,"internal error in client of Namespace::removeDef(): def '%s'"
                 " not found.\n", n.c_str());
+
         assert(0);
         exit(1);
     }
@@ -171,22 +172,31 @@ void Namespace::removeDefAllowOverload(VarDef *def) {
     OverloadDefPtr odef = OverloadDefPtr::cast(def);
 
     if (odef) {
-        printf("this is wrong...figure out how to do it right!!\n");
-        assert(0);
-        exit(1);
+        model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
+        model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
+        model::OverloadDef::FuncList::iterator two = it;
+        ++two;
+        
+        if (two != en) {
+            // we've got two functions, don't removeDef because that
+            // would delete them both.
 
-            // we've got (possibly) a whole list to remove
-            model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
-            model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
-            for (; it != en; ++it) {
-                FuncDefPtr fdp  = *it;
-                FuncDef*   func = fdp.get();
-                removeDef(func);
+            // just delete the last added overload.
+            it = en;
+            --it;
+            FuncDefPtr fdp  = *it;
+            FuncDef*   func = fdp.get();
+
+            long i = orderedForTxn.lookupI(func, this);
+            if (i>=0) {
+                orderedForTxn.erase(i);
             }
-            
-    } else {
-        removeDef(def);
+
+            odef->erase(it);
+            return;
+        }
     }
+    removeDef(def);
 }
 
 void Namespace::addAlias(VarDef *def) {

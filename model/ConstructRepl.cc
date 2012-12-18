@@ -537,54 +537,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
 
         printf("rm deleting symbol '%s' at 0x%lx.\n", sym, (unsigned long)var.get());
 
-        model::OverloadDef *odef     = dynamic_cast<model::OverloadDef*>(var.get());
-        if (odef) {
-            // we've got a whole list; just remove the last one.
-            model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
-            model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
-            for (; it != en; ++it) {
-                    
-                FuncDefPtr fdp  = *it;
-                FuncDef*   func = fdp.get();
-
-                builder::mvll::LLVMBuilder* llvm_bdr = dynamic_cast<builder::mvll::LLVMBuilder*>(bdr);
-
-                /* // Skip the eraseFromParent() for now, unless we want to delete __section__X.
-                   // That seems like a bad idea in terms of debuggability. 
-                   // The problem is that __section__X, if it called the function we are
-                   // trying to delete, will still have a reference, and llvm will complain.
-                   // that the reference now dangles.
-                   // 
-                   // keep the code since we may want to implement lazy binding in the future.
-                   // 
-                if (func && llvm_bdr) {
-                        
-                    builder::mvll::LLVMBuilder::ModFuncMap::iterator it = llvm_bdr->moduleFuncs.find(func);
-                        
-                    if (it != llvm_bdr->moduleFuncs.end()) {
-                            
-                        llvm::Function* f = it->second;
-
-                        if (f) {
-                            printf("%srm '%s' is trying to delete:\n", s, sym);
-                            llvm::outs() << static_cast<llvm::Value&>(*f);
-                            f->eraseFromParent();
-                        }
-                    }
-                } else {
-                    printf("error in %srm '%s': "
-                           "could not eraseFromParent().\n",
-                           s, sym);
-                }
-                */
-
-                context->ns->removeDef(func);
-            }
-            
-        } else {
-            context->ns->removeDef(var.get());
-        }
-
+        context->ns->removeDefAllowOverload(var.get());
         return true;
 
     } else if (0==strncmp("!", p, 1)) {

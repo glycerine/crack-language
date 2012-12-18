@@ -911,11 +911,13 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
         if (!overload) {
             overload = replicateOverload(varDef->name, srcNs);
-        } else {
-            // must call this so we can distinguish overloads in .rm and ns txn undo.
-            srcNs->noteOverloadForTxn(varDef);
         }
         overload->addFunc(funcDef);
+
+        varDef->setOwner(srcNs);
+        // must call this so we can distinguish overloads in .rm and ns txn undo.
+        srcNs->noteOverloadForTxn(varDef);
+
         return overload;
     } else {
         srcNs->addDef(varDef);
