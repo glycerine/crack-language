@@ -44,11 +44,11 @@ void Namespace::storeDef(VarDef *def) {
            "in an OverloadDef)");
     defs[def->name] = def;
     orderedForCache.push_back(def);
-    orderedForTxn.push_back(def, def->getFullName().c_str());
+    orderedForTxn.push_back(def, def->getFullName().c_str(), this);
 }
 
 void Namespace::noteOverloadForTxn(VarDef* def) {
-    orderedForTxn.push_back(def, def->getFullName().c_str());
+    orderedForTxn.push_back(def, def->getFullName().c_str(), this);
 }
 
 VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
@@ -134,7 +134,7 @@ void Namespace::removeDef(VarDef *def) {
         }
     }
 
-    long i = orderedForTxn.lookupI(def);
+    long i = orderedForTxn.lookupI(def, this);
     if (i>=0) {
         orderedForTxn.erase(i);
     }

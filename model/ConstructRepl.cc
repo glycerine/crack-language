@@ -117,8 +117,6 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
     wisecrack::Repl r;
 
-    main_orderedhash_test();
-
     // smart pointers
     ModuleDefPtr modDef;
     ContextPtr   context;
