@@ -122,8 +122,10 @@ void Namespace::addDef(VarDef *def) {
     storeDef(def);
 }
 
-void Namespace::removeDef(VarDef *def) {
-    assert(!OverloadDefPtr::cast(def));
+void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed) {
+    if (!OverloadDefAllowed) {
+        assert(!OverloadDefPtr::cast(def));
+    }
 
     string d = def->getDisplayName();
     string n = def->name;
@@ -193,6 +195,9 @@ void Namespace::removeDefAllowOverload(VarDef *def) {
             }
 
             odef->erase(it);
+            return;
+        } else {
+            removeDef(def, true);
             return;
         }
     }

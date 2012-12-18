@@ -121,7 +121,7 @@ class Namespace : public virtual spug::RCBase {
          * Remove a definition.  Intended for use with stubs - "def" must not 
          * be an OverloadDef. 
          */
-        virtual void removeDef(VarDef *def);
+        virtual void removeDef(VarDef *def, bool OverloadDefAllowed = false);
 
         /**
          *  Remove a possibly overloaded definition. Intended for use from the repl.
