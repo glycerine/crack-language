@@ -92,12 +92,12 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod);
 //
 //    Michael's thoughts: (7 Dec 2012)
 //
-//   I think the best way to handle redefinition is just to give the context a flag
-//   to avoid the error.  The cleanest way to deal with it is if that flag is set,
-//   do a delete on the underlying LLVM "rep" objects.  That needs to be something
-//   passed in through the FuncDef object and actually implemented in the BFuncDef
-//   object, though, and I don't think it's crucial.  For a repl I wouldn't be too
-//   concerned about leakage.
+// I think the best way to handle redefinition is just to give the context a
+// flag to avoid the error.  The cleanest way to deal with it is if that 
+// flag is set, do a delete on the underlying LLVM "rep" objects.
+// That needs to be something passed in through the FuncDef object and 
+// actually implemented in the BFuncDef object, though, and I don't think
+// it's crucial.  For a repl I wouldn't be too concerned about leakage.
 //
 //   _ .crackrc startup in cwd or ~/.crackd : automatically run these scripts
 //      upon startup unless suppressed with a startup flag.
