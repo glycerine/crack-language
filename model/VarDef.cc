@@ -22,6 +22,7 @@
 
 using namespace std;
 using namespace model;
+using wisecrack::globalRepl;
 
 VarDef::VarDef(TypeDef *type, const std::string &name) :
     type(type),
@@ -31,7 +32,8 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
 }
 
 VarDef::~VarDef() {
-    printf("~VarDef dtor firing on 0x%lx\n",(long)this);
+    if (globalRepl && globalRepl->debuglevel() > 0)
+        printf("~VarDef dtor firing on 0x%lx\n",(long)this);
 }
 
 ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {

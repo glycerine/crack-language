@@ -32,7 +32,8 @@ using wisecrack::globalRepl;
 OrderedIdLog Namespace::orderedForTxn;
 
 Namespace::~Namespace() {
-    printf("~Namespace dtor firing on 0x%lx\n",(long)this);
+    if (globalRepl && globalRepl->debuglevel() > 0)
+        printf("~Namespace dtor firing on 0x%lx\n",(long)this);
 }
 
 
