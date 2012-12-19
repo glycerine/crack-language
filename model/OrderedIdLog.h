@@ -208,21 +208,23 @@ namespace model {
             _mainMap.clear();
         }
                 
-        // remove all elements >= k
-        void eraseFrom(long k) {
+        // remove all elements > k
+        void eraseBeyond(long k) {
 
             VdnMapIt en = _mainMap.end();
             VdnMapIt st = _mainMap.find(k);
             if (st == _mainMap.end()) {
                 throw BadOrderedIdLogIndexOperatrion();
             }
+            ++st;
+            if (st == _mainMap.end()) return;
 
             for (VdnMapIt it = st; it != en; ++it) {
                 VarDefName& v = it->second;
                 v2i.erase(v.vi);
                 s2i.erase(v.si);
             }
-            _mainMap.erase(_mainMap.find(k), _mainMap.end());
+            _mainMap.erase(st, _mainMap.end());
         }
 
         // erase one element from _mainMap and indices

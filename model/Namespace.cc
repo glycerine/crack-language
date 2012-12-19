@@ -424,6 +424,7 @@ void Namespace::undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl)
     }
 }
 
+
 void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
 
     //    ordered.erase(ordered.begin() + t.last_commit + 1,
@@ -431,33 +432,23 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
     //    orderedForCache.erase(orderedForCache.begin() + t.last_commit + 1,
     //                          orderedForCache.end());
 
-    long n = orderedForTxn.vec().size();
-    for (long i = t.last_commit +1; i < n; ++i) {
-        OrderedIdLog::VarDefName& d = orderedForTxn.vec()[i];
+    OrderedIdLog::VdnMap& mainMap = orderedForTxn.vec();
+    OrderedIdLog::VdnMapIt en = mainMap.end();
+    OrderedIdLog::VdnMapIt st = mainMap.find(t.last_commit);
+    if (st == mainMap.end()) {
+        throw OrderedIdLog::BadOrderedIdLogIndexOperatrion();
+    }
+    ++st;
+    if (st == en) return;
 
-        long chk = orderedForTxn.lookupI(d.vardef, d.ns);
-        if(-1 == chk) {
-            long again = orderedForTxn.lookupI(d.vardef, d.ns);
-            assert(0); // && "crazy, we just got this vardef/ns, and now it's not in the index? Must have been from erase() call.");
-        }
-        // what if d.ns has been deleted already?
-        // d.ns->removeDefAllowOverload(d.vardef, true);
-        if (d.ns == this) {
-            removeDefAllowOverload(d.vardef, true);
-        } else {
-#if 0
-            // the third one on testcase 'class A { if; ' crashes. in llvm::TypeInfo on dynamic cast. wierd.
-                d.ns->removeDefAllowOverload(d.vardef, true);
-                printf("successfully deleted %s from foreign ns 0x%lx  %s\n",
-                       d.odname.c_str(),
-                       (long)d.ns,
-                       d.ns->getNamespaceName().c_str()
-                       );
-#endif
+    for (OrderedIdLog::VdnMapIt it = st; it != en; ++it) {
+        OrderedIdLog::VarDefName& d = it->second;
+        if (this == d.ns) {
+            d.ns->removeDefAllowOverload(d.vardef, true);
         }
     }
 
-    orderedForTxn.eraseFrom(t.last_commit + 1);
+    orderedForTxn.eraseBeyond(t.last_commit);
 }
 
 void Namespace::undoTransactionTo(const Namespace::Txmark& t,

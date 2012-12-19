@@ -152,7 +152,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
         // starting fresh context/module/builder
 
         // canonical name for module representing input from repl
-        string canName = "wisecrack_";
+        string canName = ".repl";
         
         // create the builder and context for the repl.
         builder = rootBuilder->createChildBuilder();
