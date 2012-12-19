@@ -2183,7 +2183,7 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
                             );
     first_section_func = func;
 
-    if (context.repl && context.repl->debuglevel() > 0) {
+    if (context.repl && context.repl->debugLevel() > 0) {
         printf("[[[ create section '%s'\n",func->getName().str().c_str());
     }
 
@@ -2207,7 +2207,7 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
             // track this deletion, so we don't do it twice.
             context.repl->goneSet.insert(first_section_func);
 
-            if (context.repl->debuglevel() > 0) {
+            if (context.repl->debugLevel() > 0) {
                 printf("]]] deleting from parent '%s'\n", first_section_func->getName().str().c_str());
 
                 llvm::outs() << static_cast<llvm::Value&>(*first_section_func);
@@ -2227,7 +2227,7 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
     if (context.repl) {
         context.repl->goneSet.insert(func);
 
-        if (context.repl->debuglevel() > 0) {
+        if (context.repl->debugLevel() > 0) {
             printf("]]] deleting from parent '%s'\n", func->getName().str().c_str());
             llvm::outs() << static_cast<llvm::Value&>(*func);
         }

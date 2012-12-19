@@ -32,7 +32,7 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
 }
 
 VarDef::~VarDef() {
-    if (globalRepl && globalRepl->debuglevel() > 0)
+    if (globalRepl && globalRepl->debugLevel() > 0)
         printf("~VarDef dtor firing on 0x%lx\n",(long)this);
 }
 

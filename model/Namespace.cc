@@ -32,14 +32,14 @@ using wisecrack::globalRepl;
 OrderedIdLog Namespace::orderedForTxn;
 
 Namespace::~Namespace() {
-    if (globalRepl && globalRepl->debuglevel() > 0)
+    if (globalRepl && globalRepl->debugLevel() > 0)
         printf("~Namespace dtor firing on 0x%lx\n",(long)this);
 }
 
 
 void Namespace::storeDef(VarDef *def) {
 
-    if (globalRepl && globalRepl->debuglevel() > 3) {
+    if (globalRepl && globalRepl->debugLevel() > 3) {
         printf("NSLOG: '%s' ::storeDef(%s)\n", 
                canonicalName.c_str(), 
                def->getFullName().c_str());
@@ -81,7 +81,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     VarDefMap::iterator iter = defs.find(varName);
     if (iter != defs.end()) {
 
-        if (iter->second && globalRepl && globalRepl->debuglevel() > 3) { 
+        if (iter->second && globalRepl && globalRepl->debugLevel() > 3) { 
             printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),iter->second->getFullName().c_str());
         }
 
@@ -95,7 +95,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
             if (def = parent->lookUp(varName))
                 break;
 
-        if (def && globalRepl && globalRepl->debuglevel() > 3) {
+        if (def && globalRepl && globalRepl->debugLevel() > 3) {
             printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),def->getFullName().c_str()); 
         }
         return def;        
@@ -234,7 +234,7 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
 
-    if (globalRepl && globalRepl->debuglevel() > 3) {
+    if (globalRepl && globalRepl->debugLevel() > 3) {
         printf("NSLOG: addAlias(%s,%s)\n", name.c_str(), def->getFullName().c_str());
     }
 
@@ -382,7 +382,7 @@ void Namespace::short_dump() {
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
 
-    if (globalRepl && globalRepl->debuglevel() > 1) {
+    if (globalRepl && globalRepl->debugLevel() > 1) {
         long start = 0;
         if (txLog.size()) {
             start = txLog.front().last_commit;
@@ -413,7 +413,7 @@ void Namespace::undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl)
 
     if (mapit != defs.end() && mapit->second.get() == v) { 
 
-        if (repl && repl->debuglevel() > 0) {
+        if (repl && repl->debugLevel() > 0) {
             cerr << "undo in namespace '" 
                  << canonicalName
                  << "'removing name: '" 

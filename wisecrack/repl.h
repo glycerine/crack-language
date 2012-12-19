@@ -138,8 +138,8 @@ namespace wisecrack {
         bool get_more_input();
 
         /** set (get) debug level */
-        void set_debuglevel(int level);
-        int debuglevel();
+        void set_debugLevel(int level);
+        int debugLevel();
 
         /** command line history */
         typedef std::vector<std::string> histlist;
@@ -189,7 +189,7 @@ namespace wisecrack {
         char             _prompt[_promptsz];
         char             _default_prompt[_promptsz];
 
-        int _debuglevel;
+        int _debugLevel;
         FILE* _crkhist; // history file.
         bool  _histon;  // write to history file?
 

@@ -303,7 +303,7 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
 
 
 void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
-    if (ctx->repl && ctx->repl->debuglevel() > 0) {
+    if (ctx->repl && ctx->repl->debugLevel() > 0) {
         printf(" [cleaning up unfinished line]\n");
     }
     bdr->eraseSection(*ctx,mod);
@@ -423,18 +423,18 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         return true;
     } else if (0==strcmp("debug",p)) {
         // up the debugging level
-        int d = r.debuglevel();
+        int d = r.debugLevel();
         ++d;
         printf("debug level: %d\n",d);
-        r.set_debuglevel(d);
+        r.set_debugLevel(d);
         return true;
     } else if (0==strcmp("undebug",p)) {
         // reduce debugging
-        int d = r.debuglevel();
+        int d = r.debugLevel();
         --d;
         if (d < 0) { d=0; }
         printf("debug level: %d\n",d);
-        r.set_debuglevel(d);
+        r.set_debugLevel(d);
         return true;
     }
     else if (0==strcmp("dn",p) ||
@@ -568,7 +568,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
             r.src << buf;
         }
 
-        if (r.debuglevel() > 0) {
+        if (r.debugLevel() > 0) {
             printf("sourced %ld bytes from '%s'\n", m, sourceme);
         }
 

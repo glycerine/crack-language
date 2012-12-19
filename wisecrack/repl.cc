@@ -99,7 +99,7 @@ namespace wisecrack {
         : _alldone(false),
           _lineno(0),
           _showLineN(true),
-          _debuglevel(0),
+          _debugLevel(0),
           _crkhist(0),
           _histon(false)
     {
@@ -148,8 +148,8 @@ namespace wisecrack {
     bool Repl::done() { return _alldone; }
     void Repl::setDone() { _alldone = true; }
 
-    void Repl::set_debuglevel(int level) { _debuglevel = level; }
-    int Repl::debuglevel() { return _debuglevel; }
+    void Repl::set_debugLevel(int level) { _debugLevel = level; }
+    int Repl::debugLevel() { return _debugLevel; }
 
 
     char* Repl::getPrompt() {

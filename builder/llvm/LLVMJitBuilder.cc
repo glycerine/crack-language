@@ -218,7 +218,7 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
 
 void LLVMJitBuilder::run(Context& context) {
 
-    if (context.repl && context.repl->debuglevel() > 0) {
+    if (context.repl && context.repl->debugLevel() > 0) {
         printf("*** running '%s'\n",func->getName().str().c_str());
     }
 
@@ -328,7 +328,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     func = mainFunc;
 
     // debug
-    if (options->dropintoRepl && context.repl && context.repl->debuglevel() > 2) { 
+    if (options->dropintoRepl && context.repl && context.repl->debugLevel() > 2) { 
         printf("dumping code just before verifyModule():");
         dump();
     }
