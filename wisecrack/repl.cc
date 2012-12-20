@@ -228,7 +228,7 @@ namespace wisecrack {
     }
 
 
-    void Repl::set_next_line(const char *tbr) {
+    void Repl::setNextLine(const char *tbr) {
         bzero(_readbuf, _readsz);
         strncpy(_readbuf, tbr, _readsz-1);
         _readlen = strlen(_readbuf);
@@ -252,7 +252,7 @@ namespace wisecrack {
     void Repl::run(FILE *fin, FILE *fout) {
 
         while(!done()) {
-            nextlineno();
+            nextLineNumber();
             prompt(fout);
             read(fin);
             eval();
@@ -262,11 +262,11 @@ namespace wisecrack {
         fprintf(fout,"\n");
     }
 
-    long Repl::lineno() {
+    long Repl::lineNumber() {
         return _lineno;
     }
 
-    long Repl::nextlineno() {
+    long Repl::nextLineNumber() {
         return ++_lineno;
     }
 
@@ -334,7 +334,7 @@ namespace wisecrack {
 
 
     /** restart src stringstream with an empty string */
-    void Repl::reset_src_to_empty() { 
+    void Repl::resetSrcToEmpty() { 
         src.str(std::string());
         // clear eof flags so we can read again
         src.clear();
@@ -344,7 +344,7 @@ namespace wisecrack {
     bool Repl::get_more_input() {
         set_prompt("...");
         
-        nextlineno();
+        nextLineNumber();
         prompt(stdout);
         read(stdin);
 

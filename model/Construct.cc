@@ -929,7 +929,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
                 printf("no last symbol to display.\n");
                 if (!vcout) {
                     // still bring in cout
-                    r.set_next_line(cmd.c_str());
+                    r.setNextLine(cmd.c_str());
                     return false;
                 }
                 return true;
@@ -948,7 +948,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
                     printf("cannot display '%s' of type '%s' at the moment.\n", sym, y);
                     if (cmd.size()) {
                         // allow import of cout no matter.
-                        r.set_next_line(cmd.c_str());
+                        r.setNextLine(cmd.c_str());
                         return false;
                     }
                     return true;
@@ -961,7 +961,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
         cmd += " = $(";
         cmd += sym;
         cmd += ")\n`;";
-        r.set_next_line(cmd.c_str());
+        r.setNextLine(cmd.c_str());
         
         // return false because we *want* to execute the cout print now.
         return false;
@@ -1146,7 +1146,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
             printf("sourced %ld bytes from '%s'\n", m, sourceme);
         }
 
-        r.set_next_line("");
+        r.setNextLine("");
         return false; // run from r.src.
     }
     else
@@ -1359,8 +1359,8 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             r.goneSet.clear(); 
 
             // READ
-            r.reset_src_to_empty();
-            r.nextlineno();
+            r.resetSrcToEmpty();
+            r.nextLineNumber();
             r.resetPromptToDefault();
             r.prompt(stdout);
             r.read(stdin); // can throw

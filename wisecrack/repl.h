@@ -76,12 +76,12 @@ namespace wisecrack {
         /**
          * get the current line number.
          */
-        long lineno();
+        long lineNumber();
 
         /**
          * advance the current line number by one.
          */
-        long nextlineno();
+        long nextLineNumber();
 
         /**
          * get the length of the last current line.
@@ -99,7 +99,7 @@ namespace wisecrack {
          *  on the next call to getlastReadLine(). Allows the repl to
          *  have special aliases that get re-written into actual code.
          */
-        void set_next_line(const char *tbr);
+        void setNextLine(const char *tbr);
 
         /**
          * any left whitespace trimmed too. Probably not what you want
@@ -132,7 +132,7 @@ namespace wisecrack {
         std::stringstream src;
 
         /** restart src stringstream with an empty string */
-        void reset_src_to_empty();
+        void resetSrcToEmpty();
 
         /** return true if more input obtained. */
         bool get_more_input();
