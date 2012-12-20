@@ -523,23 +523,27 @@ const char* Namespace::lastTxSymbol(model::TypeDef **tdef) {
     size_t n = orderedForTxn.vec().size();
     if (0==n) return NULL;
 
-    size_t i = n;
+    OrderedIdLog::VdnMapIt be = orderedForTxn.vec().begin();
+    OrderedIdLog::VdnMapIt en = orderedForTxn.vec().end();
+    OrderedIdLog::VdnMapIt it = en;
+    --it;
+    
     const char* s = 0;
 
     // skip internal :exStruct additions;
     // anything that starts with a : won't print
     // well regardless via cout `$(s)` 
-    while(i > 0) {
-        s = orderedForTxn.vec()[i-1].vardef->name.c_str();
+    while(it != be) {
+        s = it->second.vardef->name.c_str();
         if (':' == *s) {
-            --i;
+            --it;
             continue;
         }
         // can't print some internally generated stuff
-        model::VarDef   *d = (orderedForTxn.vec()[i-1].vardef);
+        model::VarDef   *d = it->second.vardef;
         model::TypeDef *td = d->type.get();
         if (!td) {
-            --i;
+            --it;
             continue;
         }
         // pass back type info
