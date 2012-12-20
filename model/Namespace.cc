@@ -468,36 +468,12 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
 
     if (st == en) return;
 
+    // delete from (last_commit, end)
     for (OrderedIdLog::VdnMapIt it = st; it != en; ++it) {
         OrderedIdLog::VarDefName& d = it->second;
-        if (this == d.ns) {
-            d.ns->removeDefAllowOverload(d.vardef, true);
 
-        } else {
-            bool found = false;
-            Namespace *parent = 0;
-            unsigned int i = 0;
-            while(parent = getParent(i++).get()) {
-                if (d.ns == parent) {
-                    found = true;
-
-                    // tracing
-                    if (globalRepl && globalRepl->debugLevel() > 0) { 
-                        printf("undo txn found vardef '%s' in ancestor namespace '%s'\n",
-                               d.vardef->name.c_str(),
-                               d.ns->getNamespaceName().c_str());
-                    }
-
-                    parent->removeDefAllowOverload(d.vardef, true);
-                    break;
-                }
-            }
-            if (found) break;
-        }
-
-        //        printf("undo tx saw unknown, non-ancestor namespace '%s'\n",
-        //               d.ns->getNamespaceName().c_str());
-    }
+        d.ns->removeDefAllowOverload(d.vardef, true);
+    } // end loop it over last_commit to end
 
     orderedForTxn.eraseBeyond(t.last_commit);
 }
