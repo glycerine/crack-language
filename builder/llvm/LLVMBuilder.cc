@@ -2252,24 +2252,39 @@ void LLVMBuilder::purgeUnterminatedFunctions(model::Context &context,
     // simply abort, period, if the pre-verifier pass fails.
 
     // So here we detect unfinished functions and delete them.
+
+    // First collect all danglers, then in a second pass, eraseFromParent.
+    // This two phase approach avoids problems with module iterators
+    // getting invalidated.
     
     llvm::Module &M = *module;
-    for (Module::iterator mI = M.begin(), mE = M.end(); mI != mE; ++mI) {
+    typedef std::list<llvm::Function*> PurgeList;
+    typedef PurgeList::iterator PurgeListIt;
+    PurgeList purgeList;
 
+    for (Module::iterator mI = M.begin(), mE = M.end(); mI != mE; ++mI) {
+            
+        llvm::Function* pF = &(*mI);
+        if (!pF) continue;
+        
         llvm::Function& F = *mI;
 
         for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
             if (I->empty() || !I->back().isTerminator()) {
                 std::cerr << "Basic Block in function '" << F.getName().str()
-                     << "' does not have terminator!\n"
-                     << " doing auto purge to recover.\n";
-
-                F.eraseFromParent();
+                          << "' does not have terminator!"
+                          << " doing auto purge to recover.\n";
+                
+                purgeList.push_back(pF);
                 break;
             }
         }
-    }
+    } // end for
 
+    for (PurgeListIt i = purgeList.begin(), e = purgeList.end(); i != e; ++i) {
+        (*i)->eraseFromParent();
+    }
+    
 }
 
 
