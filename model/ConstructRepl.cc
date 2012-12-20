@@ -210,8 +210,6 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             // track cleanups, so we don't removeFromParent() twice and crash.
             r.goneSet.clear(); 
 
-            ns_start_point = (ctx->ns.get())->markTransactionStart();
-            
             // READ
             r.reset_src_to_empty();
             r.nextlineno();
@@ -229,7 +227,8 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             // dangling half-finished sections lying around. :-(
 
             bdr->beginSection(*ctx,mod);
-
+            ns_start_point = (ctx->ns.get())->markTransactionStart();
+            
             sectionStarted = true;
             
             r.src << r.getLastReadLine();
@@ -370,15 +369,22 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
                 return true;
             }
 
-            // We can't display classes at the moment.
+            // We can't display classes or operators at the moment.
             // Try to avoid crashing by detecting
             // unhandled cases here.
             if (tdef) {
                 std::string x = tdef->name;
                 const char* y = x.c_str();
                 size_t pxl = x.size();
-                if (0==strcmp(y + pxl - 4,"meta")) {
+                if (0==strcmp(y + pxl - 4,"meta")
+                    || 0==strncmp(y, "function", 8)
+                    ) {
                     printf("cannot display '%s' of type '%s' at the moment.\n",sym, y);
+                    if (cmd.size()) {
+                        // allow import of cout no matter.
+                        r.set_next_line(cmd.c_str());
+                        return false;
+                    }
                     return true;
                 }
             }

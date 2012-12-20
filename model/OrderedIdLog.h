@@ -316,7 +316,7 @@ namespace model {
             }
         }
 
-        /** if inclusiveEnd < 0 it is ignore and everything is dumped from start */
+        /** if inclusiveEnd < 0 it is ignore and we dump until we have no more. */
         void dump(long start = 0, long inclusiveEnd = -1, bool dupsOnly = false) {
             if (inclusiveEnd < 0) inclusiveEnd = LONG_MAX;
 

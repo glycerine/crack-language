@@ -28,11 +28,11 @@ using namespace std;
 using namespace model;
 using wisecrack::globalRepl;
 
-// static so we get a global view of added definitions for rollback.
+// OrderedIdLog is static so we get a global view of added definitions for rollback.
 OrderedIdLog Namespace::orderedForTxn;
 
 Namespace::~Namespace() {
-    if (globalRepl && globalRepl->debugLevel() > 0)
+    if (globalRepl && globalRepl->debugLevel() > 2)
         printf("~Namespace dtor firing on 0x%lx\n",(long)this);
 
     //printf("calling orderedForTxn.eraseNamespace(0x%lx) '%s'\n", (long)this, canonicalName.c_str());
@@ -387,7 +387,7 @@ void Namespace::short_dump() {
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
 
-    if (globalRepl && globalRepl->debugLevel() > 0) {
+    if (globalRepl && globalRepl->debugLevel() > 1) {
 
         // start printing two txn back, if we have them
         long start = 0;
@@ -479,16 +479,20 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
             unsigned int i = 0;
             while(parent = getParent(i++).get()) {
                 if (d.ns == parent) {
-                    printf("undo txn found vardef '%s' in ancestor namespace '%s'\n",
-                           d.vardef->name.c_str(),
-                           d.ns->getNamespaceName().c_str());
+                    found = true;
+
+                    // tracing
+                    if (globalRepl && globalRepl->debugLevel() > 0) { 
+                        printf("undo txn found vardef '%s' in ancestor namespace '%s'\n",
+                               d.vardef->name.c_str(),
+                               d.ns->getNamespaceName().c_str());
+                    }
 
                     parent->removeDefAllowOverload(d.vardef, true);
-                    found = true;
                     break;
                 }
             }
-            if (found) continue;
+            if (found) break;
         }
 
         //        printf("undo tx saw unknown, non-ancestor namespace '%s'\n",
