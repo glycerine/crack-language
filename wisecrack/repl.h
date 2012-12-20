@@ -43,7 +43,7 @@ namespace wisecrack {
 
     // crude global for better debugging at the repl
     class Repl;
-    extern Repl* globalRepl;
+    extern Repl *globalRepl;
     
     /** thrown on ctrl-c SIGINT interrupt while at the repl*/
     class ExceptionCtrlC : public spug::Exception {
@@ -63,15 +63,15 @@ namespace wisecrack {
         void setDone();
 
 
-        void prompt(FILE* fout);
-        char* getPrompt();
+        void prompt(FILE *fout);
+        char *getPrompt();
 
         /** read one line, ctrl-c interrupt will throw */
-        void read(FILE* fin);
+        void read(FILE *fin);
 
         void eval();
-        void print(FILE* fout);
-        void run(FILE* fin, FILE* fout);
+        void print(FILE *fout);
+        void run(FILE *fin, FILE *fout);
 
         /**
          * get the current line number.
@@ -92,20 +92,20 @@ namespace wisecrack {
          * Returns the curent line, which is always right trimmed of (trailing) whitespace.
          *  Probably the desired default.
          */
-        char* getLastReadLine();
+        char *getLastReadLine();
 
         /**
          * Delete the current line and replace it with tbr, to be returned
          *  on the next call to getlastReadLine(). Allows the repl to
          *  have special aliases that get re-written into actual code.
          */
-        void set_next_line(const char* tbr);
+        void set_next_line(const char *tbr);
 
         /**
          * any left whitespace trimmed too. Probably not what you want
          *  as a default, given i-strings.
          */
-        char* getTrimmedLastReadLine();
+        char *getTrimmedLastReadLine();
 
         /**
          * should we display lines numbers at
@@ -116,12 +116,12 @@ namespace wisecrack {
         /**
          * set the default prompt
          */
-        void set_default_prompt(const char* p);
+        void set_default_prompt(const char *p);
         
         /**
          * set a new prompt (useful for continuation lines)
          */
-        void set_prompt(const char* p);
+        void set_prompt(const char *p);
 
         /**
          * reset to using the default prompt
@@ -151,21 +151,21 @@ namespace wisecrack {
         bool hist(); // status: true if on.
 
         /** write to file, if hist() is true. Appends newline and flushes.. */
-        void loghist(const char* line);
+        void loghist(const char *line);
 
-        const char* get_repl_cmd_start();
-        void   set_repl_cmd_start(const char* s);
+        const char *get_repl_cmd_start();
+        void   set_repl_cmd_start(const char *s);
 
         /** return 0 if not start of repl command,
          *   otherwise return pointer to the suffix
          *   that follows the '.' or '\' or whatever
          *   the repl start character(s) are.
          */
-        const char* repl_cmd(const char* s);
+        const char *repl_cmd(const char *s);
         
         /** builder to clean up with */
-        void set_builder(builder::Builder* b);
-        builder::Builder* builder();
+        void set_builder(builder::Builder *b);
+        builder::Builder *builder();
 
         /** set of functions already cleaned up by eraseSection();
          *   listed here so we don't delete them twice.
@@ -190,7 +190,7 @@ namespace wisecrack {
         char             _default_prompt[_promptsz];
 
         int _debugLevel;
-        FILE* _crkhist; // history file.
+        FILE *_crkhist; // history file.
         bool  _histon;  // write to history file?
 
         // recognize repl commands that start with
@@ -201,7 +201,7 @@ namespace wisecrack {
         char              _repl_cmd_start[_rcs_sz];
 
         // Builder to cleanup with
-        builder::Builder* _bdr;
+        builder::Builder *_bdr;
     };
 
 
@@ -209,7 +209,7 @@ namespace wisecrack {
 
 
 // test driver
-int test_wisecrack_main(int argc, char* argv[]);
+int test_wisecrack_main(int argc, char *argv[]);
 
 #endif // REPL_H
 

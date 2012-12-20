@@ -29,7 +29,7 @@
 
 namespace wisecrack {
 
-    Repl* globalRepl = 0;
+    Repl *globalRepl = 0;
 
     void print_signal_mask() {
         
@@ -66,7 +66,7 @@ namespace wisecrack {
     // (gdb) handle SIGINT nostop print pass 
 
     /** signal handler for ctrl-c */
-    void repl_sa_sigaction(int signum, siginfo_t* si, void* vs) {
+    void repl_sa_sigaction(int signum, siginfo_t *si, void *vs) {
         
         //printf(" [ctrl-c]\n");
 
@@ -133,7 +133,7 @@ namespace wisecrack {
         }
     }
 
-    void Repl::loghist(const char* line) {
+    void Repl::loghist(const char *line) {
         if (_histon && _crkhist) {
             fwrite(line, strlen(line), 1, _crkhist);
             fwrite("\n", 1, 1, _crkhist);
@@ -152,7 +152,7 @@ namespace wisecrack {
     int Repl::debugLevel() { return _debugLevel; }
 
 
-    char* Repl::getPrompt() {
+    char *Repl::getPrompt() {
         static char _b[256];
         if (_showLineN) {
             sprintf(_b,"(%ld:%s)", _lineno, _prompt);
@@ -162,7 +162,7 @@ namespace wisecrack {
         return _b;
     }
 
-    void Repl::prompt(FILE* fout) {
+    void Repl::prompt(FILE *fout) {
         fprintf(fout,"%s ", getPrompt());
         fflush(fout);
     }
@@ -172,12 +172,12 @@ namespace wisecrack {
      *  read(fin) takes a line of input from fin, and if ctrl-c SIGINT is detected,
      *     then it throws an ExceptionCtrlC.
      */
-    void Repl::read(FILE* fin) {
+    void Repl::read(FILE *fin) {
         
         _readlen = 0;
         bzero(_readbuf, _readsz);
 
-        volatile char* r = 0;
+        volatile char *r = 0;
         volatile int rc = 0;
 
         init_ctrl_c_handling();
@@ -228,7 +228,7 @@ namespace wisecrack {
     }
 
 
-    void Repl::set_next_line(const char* tbr) {
+    void Repl::set_next_line(const char *tbr) {
         bzero(_readbuf, _readsz);
         strncpy(_readbuf, tbr, _readsz-1);
         _readlen = strlen(_readbuf);
@@ -240,7 +240,7 @@ namespace wisecrack {
 
     }
 
-    void Repl::print(FILE* fout) {
+    void Repl::print(FILE *fout) {
         if (done()) return;
         fprintf(fout,
                 "*print* called, _readlen(%d), _readbuf: '%s'\n",
@@ -249,7 +249,7 @@ namespace wisecrack {
     }
 
 
-    void Repl::run(FILE* fin, FILE* fout) {
+    void Repl::run(FILE *fin, FILE *fout) {
 
         while(!done()) {
             nextlineno();
@@ -270,11 +270,11 @@ namespace wisecrack {
         return ++_lineno;
     }
 
-    char* Repl::getLastReadLine() {
+    char *Repl::getLastReadLine() {
         return _readbuf;
     }
 
-    char* Repl::getTrimmedLastReadLine() {
+    char *Repl::getTrimmedLastReadLine() {
         char *p = &_readbuf[0];
         while (p < &_readbuf[_readlen-1] && isspace(*p)) {
             ++p;
@@ -291,7 +291,7 @@ namespace wisecrack {
     void Repl::trimr() {
         if (_readlen <=0) return;
 
-        char* newp = &_readbuf[_readlen-1];
+        char *newp = &_readbuf[_readlen-1];
         while(newp > &_readbuf[0] && isspace(*newp)) {
             (*newp) ='\0';
             --newp;
@@ -312,7 +312,7 @@ namespace wisecrack {
     /**
      * set the default prompt
      */
-    void Repl::set_default_prompt(const char* p) {
+    void Repl::set_default_prompt(const char *p) {
         bzero(_default_prompt, _promptsz);
         strncpy(_default_prompt, p, _promptsz-1);
     }
@@ -320,7 +320,7 @@ namespace wisecrack {
     /**
      * set a new prompt (useful for continuation ... lines)
      */
-    void Repl::set_prompt(const char* p) {
+    void Repl::set_prompt(const char *p) {
         bzero(_prompt, _promptsz);
         strncpy(_prompt, p, _promptsz-1);        
     }
@@ -363,7 +363,7 @@ namespace wisecrack {
         return true;
     }
 
-    const char* Repl::repl_cmd(const char* s) {
+    const char *Repl::repl_cmd(const char *s) {
         size_t n = strlen(_repl_cmd_start);
         if (0==strncmp(s, _repl_cmd_start, n)) {
             return s + n;
@@ -371,24 +371,24 @@ namespace wisecrack {
         return NULL;
     }
 
-    const char* Repl::get_repl_cmd_start() {
+    const char *Repl::get_repl_cmd_start() {
         return _repl_cmd_start;
     }
         
-    void Repl::set_repl_cmd_start(const char* s) {
+    void Repl::set_repl_cmd_start(const char *s) {
         bzero(_repl_cmd_start, _rcs_sz);
         strncpy(_repl_cmd_start, s, _rcs_sz-1);
     }
 
-    void Repl::set_builder(builder::Builder* b) { _bdr = b; }
-    builder::Builder* Repl::builder() { return _bdr; }
+    void Repl::set_builder(builder::Builder *b) { _bdr = b; }
+    builder::Builder *Repl::builder() { return _bdr; }
 
 
 } // end namespace wisecrack
 
 
 // test driver
-int test_wisecrack_main(int argc, char* argv[]) {
+int test_wisecrack_main(int argc, char *argv[]) {
 
     wisecrack::Repl r;
     r.run(stdin, stdout);
@@ -397,7 +397,7 @@ int test_wisecrack_main(int argc, char* argv[]) {
 
 
 #ifdef WISECRACK_STANDALONE
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     return test_wisecrack_main(argc, argv);
 }
 #endif

@@ -94,7 +94,7 @@ class Parser {
       bool atRepl;
 
       // repl to ask for more input
-      wisecrack::Repl* repl;
+      wisecrack::Repl *repl;
 
       /**
        * This class essentially lets us manage the context stack with the
@@ -503,7 +503,7 @@ class Parser {
        *   certain checks like declarations without definitions
        *   don't generate errors.
        */
-      void setAtRepl(wisecrack::Repl& r);
+      void setAtRepl(wisecrack::Repl &r);
 
 };
 

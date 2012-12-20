@@ -3647,7 +3647,7 @@ bool Parser::runCallbacks(Event event) {
    return gotCallbacks;
 }
 
-void Parser::setAtRepl(wisecrack::Repl& r) {
+void Parser::setAtRepl(wisecrack::Repl &r) {
     atRepl = true;
     repl = &r;
     toker.setRepl(r);

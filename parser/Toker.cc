@@ -1029,6 +1029,6 @@ Token Toker::getToken(TokerMsg tokerMsg) {
     }
 }
 
-void Toker::setRepl(wisecrack::Repl& r) {
+void Toker::setRepl(wisecrack::Repl &r) {
     repl = &r;
 }

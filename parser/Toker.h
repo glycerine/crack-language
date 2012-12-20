@@ -150,7 +150,7 @@ class Toker {
       }
 
       // repl for more input (optional)
-      wisecrack::Repl* repl;
+      wisecrack::Repl *repl;
 
    public:
 
@@ -158,7 +158,7 @@ class Toker {
       Toker(std::istream &src, const char *sourceName, int lineNumber = 1);
 
       /** set a repl to ask for more input if necessary */
-      void setRepl(wisecrack::Repl& r); 
+      void setRepl(wisecrack::Repl &r); 
 
       /**
        * Returns the next token in the stream.

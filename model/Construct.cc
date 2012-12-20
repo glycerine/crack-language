@@ -738,6 +738,7 @@ bool Construct::loadBootstrapModules() {
     return true;
 }
 
+// linker can't find modNameFromFile if this is an anonymous namespace
 namespace model {
     
     // Returns a "brief path" for the filename.  A brief path consists of an 
