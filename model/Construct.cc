@@ -1176,7 +1176,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 
         printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
                "  %shelp    = show this hint page\n"
-               "  %sdn      = dump wisecrack namespace (also %sls)\n"
+               "  %sdn      = dump repl namespace (also %sls)\n"
                "  %sdump    = dump global namespace (everything)\n"
                "  %sdc      = display code (LLVM bitcode)\n"
                "  %sdebug   = increase the debug messages\n"
