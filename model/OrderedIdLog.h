@@ -33,6 +33,11 @@ namespace model {
     class OrderedIdLog {
     public:
     
+        OrderedIdLog()
+            : _lastId(0) {
+            
+        }
+
         // index by VarDef* 
         typedef std::multimap<VarDef*, long> DefPosMap;
         typedef DefPosMap::iterator   DefPosMapIt;
@@ -89,6 +94,10 @@ namespace model {
 
         long    nextId() {
             ++_lastId;
+            return _lastId;
+        }
+
+        long    lastId() {
             return _lastId;
         }
 
@@ -208,24 +217,37 @@ namespace model {
             ns2mm.clear();
             _mainMap.clear();
         }
+
+        VdnMapIt lookupKOrBeyond(long k, bool& exact) {
+            VdnMapIt en = _mainMap.end();
+            VdnMapIt st = _mainMap.find(k);
+            if (st != en) {
+                exact = true;
+                return st;
+            }
+
+            exact = false;
+            return _mainMap.upper_bound(k);
+        }
                 
         // remove all elements > k
         void eraseBeyond(long k) {
 
             VdnMapIt en = _mainMap.end();
-            VdnMapIt st = _mainMap.find(k);
-            if (st == _mainMap.end()) {
-                throw BadOrderedIdLogIndexOperation();
+            bool exactly_k = false;
+            VdnMapIt st = lookupKOrBeyond(k, exactly_k);
+            if (st == en) return;
+
+            if (exactly_k) {
+                // move beyond k so k can be last_committed.
+                ++st;
             }
-            ++st;
+
             if (st == _mainMap.end()) return;
 
             for (VdnMapIt it = st; it != en; ++it) {
-                VarDefName& v = it->second;
-                v2i.erase(v.vi);
-                s2i.erase(v.si);
+                erase(it);
             }
-            _mainMap.erase(st, _mainMap.end());
         }
 
         // erase one element from _mainMap and indices
@@ -243,14 +265,15 @@ namespace model {
             erase(target);
         }
 
-        void erase(VdnMapIt &target) {
+        void erase(const VdnMapIt &target) {
             if (target == _mainMap.end()) 
                 throw BadOrderedIdLogIndexOperation();
 
             // ns2mm deletions
             Ns2MainMapPair pp = ns2mm.equal_range(target->second.ns);
             if (pp.first != ns2mm.end()) {
-                for (Ns2MainMapIt it = pp.first; it != pp.second; ++it) {
+                for (Ns2MainMapIt it = pp.first; it != pp.second 
+                         && it != ns2mm.end(); ++it) {
                     if (it->second == target) {
                         ns2mm.erase(it);
                         // possible optimization, double check 
@@ -270,7 +293,8 @@ namespace model {
 
             Ns2MainMapPair pp = ns2mm.equal_range(ns);
             if (pp.first != ns2mm.end()) {
-                for (Ns2MainMapIt it = pp.first; it != pp.second; ++it) {
+                for (Ns2MainMapIt it = pp.first; it != pp.second
+                         && it != ns2mm.end(); ++it) {
                     VdnMapIt target = it->second;
 
                     v2i.erase(target->second.vi);
@@ -286,10 +310,9 @@ namespace model {
             long n = _mainMap.size();
 
             VdnMapIt en = _mainMap.end();
-            VdnMapIt st = _mainMap.find(n);
-            if (st == _mainMap.end()) {
-                throw BadOrderedIdLogIndexOperation();
-            }
+            bool exactly_start = false;
+            VdnMapIt st = lookupKOrBeyond(start, exactly_start);
+            if (st == en) return;
 
             for (VdnMapIt it = st; it != en; ++it) {
                 it->second.dump(dupsOnly);

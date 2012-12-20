@@ -140,6 +140,8 @@ void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed, bool bulkclean) 
     string n = def->name;
     VarDefMap::iterator iter = defs.find(n);
     if (iter == defs.end()) {
+        return;
+
         fprintf(stderr,"internal error in client of Namespace::removeDef(): def '%s'"
                 " not found.\n", n.c_str());
 
@@ -385,7 +387,7 @@ void Namespace::short_dump() {
         varIter->second->dump(out, childPfx);
     out << prefix << "}\n";
 
-    if (globalRepl && globalRepl->debugLevel() > 1) {
+    if (globalRepl && globalRepl->debugLevel() > 0) {
         long start = 0;
         if (txLog.size()) {
             start = txLog.front().last_commit;

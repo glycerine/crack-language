@@ -37,25 +37,26 @@ VarDef::~VarDef() {
         printf("~VarDef dtor firing on 0x%lx\n",(long)this);
 
     if (owner) {
-        printf("in ~VarDef(): calling orderedForTxn.erase(0x%lx) '%s' in ns '%s'\n", 
+        // 
+        printf("in ~VarDef(): calling orderedForTxn.erase(0x%lx, ns)\n", 
                (long)this, 
-               name.c_str(), 
-               owner->getNamespaceName().c_str()
+               name.c_str()
+               //               owner->getNamespaceName().c_str()
                );
         try {
             owner->orderedForTxn.erase(this, owner);
 
         } catch(const OrderedIdLog::BadOrderedIdLogIndexOperation& ex) {
-            printf("~VarDef(): wierd... could not locate '%s' in ns '%s'\n",
-                   name.c_str(),
-                   owner->getNamespaceName().c_str()
+            printf("~VarDef(): wierd... could not locate '%s'\n",
+                   name.c_str()
+                   //owner->getNamespaceName().c_str()
                    );
         }
 
     } else {
-        printf("no owner for Vardef??\n");
-        assert(0 && "no owner for this varDef??\n");
-
+        // there are typedefs that are so basic (e.g. VTableTypes) 
+        // that they don't have an owning namespace.
+        // Don't have a cow here.
     }
 }
 

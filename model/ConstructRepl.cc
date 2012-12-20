@@ -275,15 +275,16 @@ int Construct::runRepl(Context* arg_ctx, ModuleDef* arg_modd, Builder* arg_bdr) 
             printf("press ctrl-d to exit\n");
             doCleanup = true;
 
-        } catch (...) {
+            /*        } catch (...) {
             if (!uncaughtExceptionFunc)
                 cerr << "Uncaught exception, no uncaught exception handler!" <<
                     endl;
             else if (!uncaughtExceptionFunc())
                 cerr << "Unknown exception caught." << endl;
             doCleanup = true;
+            */
         }
-        
+
         if (doCleanup) {
             if (sectionStarted) {
                 cleanup_unfinished_input(bdr, ctx, mod);
@@ -421,6 +422,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context* context, Builder* bdr) {
         // dump: do full global dump of all namespaces.
         context->dump();
         return true;
+
     } else if (0==strcmp("debug",p)) {
         // up the debugging level
         int d = r.debugLevel();
