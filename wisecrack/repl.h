@@ -126,7 +126,7 @@ namespace wisecrack {
         /**
          * reset to using the default prompt
          */
-        void reset_prompt_to_default();
+        void resetPromptToDefault();
 
         /** src, a stream version, is what other components expect */
         std::stringstream src;
@@ -153,18 +153,18 @@ namespace wisecrack {
         /** write to file, if hist() is true. Appends newline and flushes.. */
         void loghist(const char *line);
 
-        const char *get_repl_cmd_start();
-        void   set_repl_cmd_start(const char *s);
+        const char *getReplCmdStart();
+        void   setReplCmdStart(const char *s);
 
         /** return 0 if not start of repl command,
          *   otherwise return pointer to the suffix
          *   that follows the '.' or '\' or whatever
          *   the repl start character(s) are.
          */
-        const char *repl_cmd(const char *s);
+        const char *replCmd(const char *s);
         
         /** builder to clean up with */
-        void set_builder(builder::Builder *b);
+        void setBuilder(builder::Builder *b);
         builder::Builder *builder();
 
         /** set of functions already cleaned up by eraseSection();

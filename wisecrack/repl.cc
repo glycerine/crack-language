@@ -31,23 +31,23 @@ namespace wisecrack {
 
     Repl *globalRepl = 0;
 
-    void print_signal_mask() {
+    void printSignalMask() {
         
-        sigset_t print_cur_sset;
-        sigset_t print_old_sset;
+        sigset_t printCurSset;
+        sigset_t printOldSset;
         
-        bzero(&print_cur_sset, sizeof(sigset_t));
-        bzero(&print_old_sset, sizeof(sigset_t));
-        sigemptyset(&print_cur_sset);
-        sigemptyset(&print_old_sset);
+        bzero(&printCurSset, sizeof(sigset_t));
+        bzero(&printOldSset, sizeof(sigset_t));
+        sigemptyset(&printCurSset);
+        sigemptyset(&printOldSset);
         
         int how = SIG_SETMASK;
-        if (-1 == sigprocmask(how, NULL, &print_old_sset)) {
+        if (-1 == sigprocmask(how, NULL, &printOldSset)) {
             perror("sigprocmask returned -1");
             exit(1);
         }
         
-        if (sigismember(&print_old_sset, SIGINT)) {
+        if (sigismember(&printOldSset, SIGINT)) {
             printf("SIGINT is blocked\n");
         } else {
             printf("SIGINT is not blocked\n");
@@ -56,11 +56,11 @@ namespace wisecrack {
     }
 
 
-    jmp_buf   ctrl_c_jb;
+    jmp_buf   ctrlCJmpBuf;
     sigset_t  sigset;
 
-    const static int caught_ctrl_c = -1;
-    const static int normal_finish_after_read = -2;
+    const static int caughtCtrlC = -1;
+    const static int normalFinishAfterRead = -2;
 
     // gdb setup for testing ctrl-c:
     // (gdb) handle SIGINT nostop print pass 
@@ -70,13 +70,13 @@ namespace wisecrack {
         
         //printf(" [ctrl-c]\n");
 
-        siglongjmp(ctrl_c_jb, caught_ctrl_c);
+        siglongjmp(ctrlCJmpBuf, caughtCtrlC);
     }
 
     /** setup handler on ctrl-c press */
 
     struct sigaction old_sigint_action;
-    void init_ctrl_c_handling() {
+    void initCtrlCHandling() {
 
         struct sigaction sa;
         bzero(&sa, sizeof(struct sigaction));
@@ -84,11 +84,11 @@ namespace wisecrack {
         sa.sa_sigaction = &repl_sa_sigaction;
         sa.sa_flags = SA_SIGINFO;
         if (-1 == sigaction(SIGINT, &sa, &old_sigint_action)) {
-            perror("error: wisecrack::init_ctrl_c_handling() could not setup "
+            perror("error: wisecrack::initCtrlCHandling() could not setup "
                    "SIGINT signal handler. Aborting.");
             exit(1);
         }
-        //    print_signal_mask();
+        //    printSignalMask();
     }
 
 
@@ -105,13 +105,13 @@ namespace wisecrack {
     {
         bzero(_readbuf, _readsz);
         set_default_prompt("crk");
-        reset_prompt_to_default();
+        resetPromptToDefault();
 
         // last write wins, but we only expect to use
         // this for debugging situations.
         globalRepl = this;
 
-        set_repl_cmd_start(".");
+        setReplCmdStart(".");
     }
     bool Repl::hist() { return _histon; }
 
@@ -180,8 +180,8 @@ namespace wisecrack {
         volatile char *r = 0;
         volatile int rc = 0;
 
-        init_ctrl_c_handling();
-        rc = sigsetjmp(ctrl_c_jb, 1);
+        initCtrlCHandling();
+        rc = sigsetjmp(ctrlCJmpBuf, 1);
 
         switch (rc) {
 
@@ -189,16 +189,16 @@ namespace wisecrack {
             // initial time, no siglongjmp yet.
             r = fgets(_readbuf, _readsz, fin);
 
-            siglongjmp(ctrl_c_jb, normal_finish_after_read);  
+            siglongjmp(ctrlCJmpBuf, normalFinishAfterRead);  
             break;
         }
 
-        case caught_ctrl_c: {
+        case caughtCtrlC: {
             throw wisecrack::ExceptionCtrlC();                
             break;
         }
 
-        case normal_finish_after_read: {
+        case normalFinishAfterRead: {
             break;
         }
 
@@ -328,7 +328,7 @@ namespace wisecrack {
     /**
      * reset to using the default prompt
      */
-    void Repl::reset_prompt_to_default() {
+    void Repl::resetPromptToDefault() {
         set_prompt(_default_prompt);
     }
 
@@ -358,12 +358,12 @@ namespace wisecrack {
         src << "\n";
         src << getLastReadLine();
 
-        reset_prompt_to_default();
+        resetPromptToDefault();
 
         return true;
     }
 
-    const char *Repl::repl_cmd(const char *s) {
+    const char *Repl::replCmd(const char *s) {
         size_t n = strlen(_repl_cmd_start);
         if (0==strncmp(s, _repl_cmd_start, n)) {
             return s + n;
@@ -371,16 +371,16 @@ namespace wisecrack {
         return NULL;
     }
 
-    const char *Repl::get_repl_cmd_start() {
+    const char *Repl::getReplCmdStart() {
         return _repl_cmd_start;
     }
         
-    void Repl::set_repl_cmd_start(const char *s) {
+    void Repl::setReplCmdStart(const char *s) {
         bzero(_repl_cmd_start, _rcs_sz);
         strncpy(_repl_cmd_start, s, _rcs_sz-1);
     }
 
-    void Repl::set_builder(builder::Builder *b) { _bdr = b; }
+    void Repl::setBuilder(builder::Builder *b) { _bdr = b; }
     builder::Builder *Repl::builder() { return _bdr; }
 
 
@@ -388,7 +388,7 @@ namespace wisecrack {
 
 
 // test driver
-int test_wisecrack_main(int argc, char *argv[]) {
+int testWisecrackMain(int argc, char *argv[]) {
 
     wisecrack::Repl r;
     r.run(stdin, stdout);
@@ -398,7 +398,7 @@ int test_wisecrack_main(int argc, char *argv[]) {
 
 #ifdef WISECRACK_STANDALONE
 int main(int argc, char *argv[]) {
-    return test_wisecrack_main(argc, argv);
+    return testWisecrackMain(argc, argv);
 }
 #endif
 

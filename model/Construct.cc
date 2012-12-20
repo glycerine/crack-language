@@ -883,7 +883,7 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
  *    the current r.getLastReadLine() value. For example, the print command
  *    does this kind of substitution (the print command is
  *    '.' by itself on a line, or if it has been changed from the default
- *    using repl.set_repl_cmd_start(), then whatever repl.get_repl_cmd_start()
+ *    using repl.setReplCmdStart(), then whatever repl.getReplCmdStart()
  *    returns).
  */
 bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
@@ -897,11 +897,11 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 
     // special commands?
     const char *rcmd = r.getTrimmedLastReadLine();
-    const char *p    = r.repl_cmd(rcmd);
+    const char *p    = r.replCmd(rcmd);
     const char *end  = r.getLastReadLine() + r.getLastReadLineLen();
 
     // the special command starter: typically "." or "\"
-    const char *s = r.get_repl_cmd_start();
+    const char *s = r.getReplCmdStart();
 
     if (!p) return false;
 
@@ -1168,7 +1168,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
     else if (0==strncmp("prefix ", p, 7) && strlen(p) > 7) {
         const char *pre = p + 7;
         printf("setting repl command prefix to '%s'\n", pre);
-        r.set_repl_cmd_start(pre);
+        r.setReplCmdStart(pre);
         return true;
     }
 
@@ -1332,7 +1332,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
         ctx = context.get();
         bdr = builder.get();
 
-        r.set_builder(bdr);
+        r.setBuilder(bdr);
 
         // close :main - now we open a new section after receiving
         // each individual command.
@@ -1361,7 +1361,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             // READ
             r.reset_src_to_empty();
             r.nextlineno();
-            r.reset_prompt_to_default();
+            r.resetPromptToDefault();
             r.prompt(stdout);
             r.read(stdin); // can throw
             if (r.getLastReadLineLen()==0) continue;
