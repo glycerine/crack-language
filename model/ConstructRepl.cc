@@ -306,7 +306,9 @@ void cleanup_unfinished_input(Builder* bdr, Context* ctx, ModuleDef* mod) {
     if (ctx->repl && ctx->repl->debugLevel() > 0) {
         printf(" [cleaning up unfinished line]\n");
     }
-    bdr->eraseSection(*ctx,mod);
+    bdr->eraseSection(*ctx, mod);
+
+    bdr->purgeUnterminatedFunctions(*ctx, mod);
 }
 
 

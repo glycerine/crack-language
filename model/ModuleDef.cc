@@ -176,4 +176,3 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->deserializeDefs(deser);
     return mod;
 }
-

@@ -131,6 +131,7 @@ class ModuleDef : public VarDef, public Namespace {
         static ModuleDefPtr deserialize(Deserializer &deserializer,
                                         const std::string &canonicalName
                                         );
+
 };
 
 } // namespace model

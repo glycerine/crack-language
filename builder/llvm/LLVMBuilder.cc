@@ -2239,6 +2239,43 @@ void LLVMBuilder::eraseSection(Context &context, ModuleDef *modDef) {
 }
 
 
+void LLVMBuilder::purgeUnterminatedFunctions(model::Context &context,
+                                                model::ModuleDef *modDef
+                                                ) {
+    
+    // do the same thing that verifyModule(), specifically 
+    // llvm-3.1.src/lib/VMCore/Verifier.cpp:91 runOnFunction()
+    // does to check for lack of termination -- so we detect it before 
+    // the pre-Verifier does!
+    //
+    // It is very mportant to do this check and cleanup because llvm will
+    // simply abort, period, if the pre-verifier pass fails.
+
+    // So here we detect unfinished functions and delete them.
+    
+    llvm::Module &M = *module;
+    for (Module::iterator mI = M.begin(), mE = M.end(); mI != mE; ++mI) {
+
+        llvm::Function& F = *mI;
+
+        for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
+            if (I->empty() || !I->back().isTerminator()) {
+                //          dbgs() << "Basic Block in function '" << F.getName() 
+                //                 << "' does not have terminator!\n";
+                //          WriteAsOperand(dbgs(), I, true);
+                //          dbgs() << "\n";
+                //          Broken = true;
+                
+                F.eraseFromParent();
+                break;
+            }
+        }
+    }
+
+}
+
+
+
 void LLVMBuilder::closeSection(Context &context, ModuleDef *modDef) {
     closeModule(context, modDef);
 

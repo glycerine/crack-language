@@ -579,6 +579,13 @@ class Builder : public spug::RCBase {
 
         virtual void dump() = 0;
 
+        /**
+         * After a syntax error at the repl, check for dangling functions
+         *  and delete them
+         */        
+        virtual void purgeUnterminatedFunctions(model::Context &context,
+                                                model::ModuleDef *modDef
+                                                ) = 0;
 
 };
 

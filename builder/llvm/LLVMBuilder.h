@@ -487,6 +487,10 @@ class LLVMBuilder : public Builder {
                                   model::ModuleDef *modDef
                                   );
 
+        virtual void purgeUnterminatedFunctions(model::Context &context,
+                                                model::ModuleDef *modDef
+                                                );
+
         virtual void dump() {}
 
         virtual model::CleanupFramePtr

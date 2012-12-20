@@ -475,6 +475,11 @@ class MockBuilder : public builder::Builder {
                                   ) {
         }
 
+        virtual void purgeUnterminatedFunctions(model::Context &context,
+                                                model::ModuleDef *modDef
+                                                ) {
+        }
+
         virtual void dump() {}
 };
 
