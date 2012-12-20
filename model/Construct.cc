@@ -1254,6 +1254,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 // the context should always have a reference to its builder.
 // XXX TODO: try refactoring to use the ctx->builder instead of bdr.
 //
+//   _. when development is done: change printf to streams, remove
+//   globalRepl hack, possibly remove debugLevel monitoring code.
 
 /**
  * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
@@ -1422,19 +1424,13 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             cerr << ex << endl;
             doCleanup = true;
 
-        } catch (char const *msg) {
-            cerr << msg << endl;
-            printf("press ctrl-d to exit\n");
-            doCleanup = true;
-
-            /*        } catch (...) {
+        } catch (...) {
             if (!uncaughtExceptionFunc)
                 cerr << "Uncaught exception, no uncaught exception handler!" <<
                     endl;
             else if (!uncaughtExceptionFunc())
                 cerr << "Unknown exception caught." << endl;
             doCleanup = true;
-            */
         }
 
         if (doCleanup) {
