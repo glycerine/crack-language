@@ -79,7 +79,7 @@ namespace wisecrack {
     void init_ctrl_c_handling() {
 
         struct sigaction sa;
-        bzero(&sa,sizeof(struct sigaction));
+        bzero(&sa, sizeof(struct sigaction));
 
         sa.sa_sigaction = &repl_sa_sigaction;
         sa.sa_flags = SA_SIGINFO;
@@ -135,8 +135,8 @@ namespace wisecrack {
 
     void Repl::loghist(const char* line) {
         if (_histon && _crkhist) {
-            fwrite(line,strlen(line),1,_crkhist);
-            fwrite("\n",1,1,_crkhist);
+            fwrite(line, strlen(line), 1, _crkhist);
+            fwrite("\n", 1, 1, _crkhist);
             fflush(_crkhist);
         }
     }
@@ -155,15 +155,15 @@ namespace wisecrack {
     char* Repl::getPrompt() {
         static char _b[256];
         if (_showLineN) {
-            sprintf(_b,"(%ld:%s)",_lineno, _prompt);
+            sprintf(_b,"(%ld:%s)", _lineno, _prompt);
         } else {
-            sprintf(_b,"(%s)",_prompt);
+            sprintf(_b,"(%s)", _prompt);
         }
         return _b;
     }
 
     void Repl::prompt(FILE* fout) {
-        fprintf(fout,"%s ",getPrompt());
+        fprintf(fout,"%s ", getPrompt());
         fflush(fout);
     }
 
@@ -314,7 +314,7 @@ namespace wisecrack {
      */
     void Repl::set_default_prompt(const char* p) {
         bzero(_default_prompt, _promptsz);
-        strncpy(_default_prompt,p,_promptsz-1);
+        strncpy(_default_prompt, p, _promptsz-1);
     }
     
     /**
@@ -322,7 +322,7 @@ namespace wisecrack {
      */
     void Repl::set_prompt(const char* p) {
         bzero(_prompt, _promptsz);
-        strncpy(_prompt,p,_promptsz-1);        
+        strncpy(_prompt, p, _promptsz-1);        
     }
     
     /**
@@ -391,14 +391,14 @@ namespace wisecrack {
 int test_wisecrack_main(int argc, char* argv[]) {
 
     wisecrack::Repl r;
-    r.run(stdin,stdout);
+    r.run(stdin, stdout);
     return 0;
 }
 
 
 #ifdef WISECRACK_STANDALONE
 int main(int argc, char* argv[]) {
-    return test_wisecrack_main(argc,argv);
+    return test_wisecrack_main(argc, argv);
 }
 #endif
 

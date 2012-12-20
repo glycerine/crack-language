@@ -2184,7 +2184,7 @@ void LLVMBuilder::beginSection(Context &context, ModuleDef *modDef) {
     firstSectionFunc = func;
 
     if (context.repl && context.repl->debugLevel() > 0) {
-        printf("[[[ create section '%s'\n",func->getName().str().c_str());
+        printf("[[[ create section '%s'\n", func->getName().str().c_str());
     }
 
     createFuncStartBlocks("__section__");

@@ -200,9 +200,9 @@ namespace model {
             Node.odname      = s;
             Node.sdup = 0;
             Node.vdup = 0;
-            DefPosMapInsert iv = v2i.insert(DefPosMapValue(v,id));
+            DefPosMapInsert iv = v2i.insert(DefPosMapValue(v, id));
             Node.vi = iv;
-            StrPosMapInsert is = s2i.insert(StrPosMapValue(s,id));
+            StrPosMapInsert is = s2i.insert(StrPosMapValue(s, id));
             Node.si = is;
 
             VdnMapInsert e = _mainMap.insert(VdnMapValue(id, Node));

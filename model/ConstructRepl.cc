@@ -96,7 +96,7 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
 bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 
     // check for ctrl-d and nothing else
-    if (!strcmp("\n",r.getLastReadLine())) {
+    if (!strcmp("\n", r.getLastReadLine())) {
         if (r.done()) {
             return true;
         }
@@ -152,7 +152,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
                 if (!strcmp(y + pxl - 4,"meta")
                     || 0==strncmp(y, "function", 8)
                     ) {
-                    printf("cannot display '%s' of type '%s' at the moment.\n",sym, y);
+                    printf("cannot display '%s' of type '%s' at the moment.\n", sym, y);
                     if (cmd.size()) {
                         // allow import of cout no matter.
                         r.set_next_line(cmd.c_str());
@@ -175,13 +175,13 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
     }
 
 
-    if (!strcmp("histoff",p)) {
+    if (!strcmp("histoff", p)) {
         // turn off logging history to .crkhist
         r.histoff();
         printf("command logging to file '.crkhist' now off.\n");
         return true;
 
-    } else if (!strcmp("histon",p)) {
+    } else if (!strcmp("histon", p)) {
         // turn on logging history to .crkhist
         r.histon();
         printf("logging subsequent commands to file '.crkhist'.\n");
@@ -191,40 +191,40 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
     // otherwise, add to .crkhist file if that is on.
     r.loghist(p);
 
-    if (!strcmp("q",p) ||
-        !strcmp("quit",p)) {
+    if (!strcmp("q", p) ||
+        !strcmp("quit", p)) {
         // quitting time.
         r.setDone();
         return true;
 
-    } else if (!strcmp("dump",p)) {
+    } else if (!strcmp("dump", p)) {
         // dump: do full global dump of all namespaces.
         context->dump();
         return true;
 
-    } else if (!strcmp("debug",p)) {
+    } else if (!strcmp("debug", p)) {
         // up the debugging level
         int d = r.debugLevel();
         ++d;
-        printf("debug level: %d\n",d);
+        printf("debug level: %d\n", d);
         r.set_debugLevel(d);
         return true;
-    } else if (!strcmp("undebug",p)) {
+    } else if (!strcmp("undebug", p)) {
         // reduce debugging
         int d = r.debugLevel();
         --d;
         if (d < 0) { d=0; }
-        printf("debug level: %d\n",d);
+        printf("debug level: %d\n", d);
         r.set_debugLevel(d);
         return true;
     }
-    else if (!strcmp("dn",p) ||
-             !strcmp("ls",p)) {
+    else if (!strcmp("dn", p) ||
+             !strcmp("ls", p)) {
         // dn: dump namespace, local only
         context->short_dump();
         return true;
 
-    } else if (!strcmp("dc",p)) {
+    } else if (!strcmp("dc", p)) {
         // dc: dump bit-code
         bdr->dump();
         return true;
@@ -344,7 +344,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
         char buf[b];
         size_t m = 0;
         while(!feof(f)) {
-            bzero(buf,b);
+            bzero(buf, b);
             m += fread(buf, 1, b-1, f);
             r.src << buf;
         }
@@ -357,7 +357,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
         return false; // run from r.src.
     }
     else
-    if (!strcmp("history",p)) {
+    if (!strcmp("history", p)) {
         if (r.history.size() == 1) return true; // first cmd.
 
         wisecrack::Repl::histlist::iterator it = r.history.begin();
@@ -379,7 +379,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
         return true;
     }
 
-    if (!strcmp("help",p)) {
+    if (!strcmp("help", p)) {
 
         printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
                "  %shelp    = show this hint page\n"
@@ -509,7 +509,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
         
         Context *prior = rootContext.get();
         
-        local_compile_ns = new GlobalNamespace(prior->ns.get(),canName);
+        local_compile_ns = new GlobalNamespace(prior->ns.get(), canName);
         
         context = new Context(*builder,
                               Context::module, 
@@ -537,7 +537,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
 
         // close :main - now we open a new section after receiving
         // each individual command.
-        bdr->closeSection(*ctx,mod);
+        bdr->closeSection(*ctx, mod);
 
     } // end else start fresh context/module/builder
 
@@ -575,7 +575,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             // call. Otherwise we begin multiple times and leave
             // dangling half-finished sections lying around. :-(
 
-            bdr->beginSection(*ctx,mod);
+            bdr->beginSection(*ctx, mod);
             ns_start_point = (ctx->ns.get())->markTransactionStart();
             
             sectionStarted = true;
@@ -606,7 +606,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             // closeSection() finishes the module and runs 
             // the last function constructed in it.
 
-            bdr->closeSection(*ctx,mod);
+            bdr->closeSection(*ctx, mod);
 
             // PRINT: provided as a short-cut special command '.' currently.
 

@@ -85,7 +85,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
     if (iter != defs.end()) {
 
         if (iter->second && globalRepl && globalRepl->debugLevel() > 3) { 
-            printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),iter->second->getFullName().c_str());
+            printf("NSLOG: '%s' ::lookUp(%s)\n", canonicalName.c_str(), iter->second->getFullName().c_str());
         }
 
         return iter->second;
@@ -99,7 +99,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
                 break;
 
         if (def && globalRepl && globalRepl->debugLevel() > 3) {
-            printf("NSLOG: '%s' ::lookUp(%s)\n",canonicalName.c_str(),def->getFullName().c_str()); 
+            printf("NSLOG: '%s' ::lookUp(%s)\n", canonicalName.c_str(), def->getFullName().c_str()); 
         }
         return def;        
     }
