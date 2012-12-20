@@ -1249,6 +1249,11 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 //
 //   _ .crackrc startup in cwd or ~/.crackd : automatically run these scripts
 //      upon startup unless suppressed with a startup flag.
+//
+//   _. comment on runRepl(): you shouldn't need to pass in a builder this -
+// the context should always have a reference to its builder.
+// XXX TODO: try refactoring to use the ctx->builder instead of bdr.
+//
 
 /**
  * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
@@ -1263,7 +1268,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 
 int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) {
 
-    wisecrack::Repl r;
+    wisecrack::Repl repl;
 
     // smart pointers
     ModuleDefPtr modDef;
@@ -1293,7 +1298,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
         // without issuing another closeModule (as closeSection() would)
         // which would run the script a second time.
 
-        ctx->repl = &r;
+        ctx->repl = &repl;
 
     } else {
 
@@ -1315,7 +1320,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
                               prior,
                               local_compile_ns.get(),
                               0,
-                              &r);
+                              &repl);
         context->toplevel = true;
         
         bool cached = false;
@@ -1332,7 +1337,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
         ctx = context.get();
         bdr = builder.get();
 
-        r.setBuilder(bdr);
+        repl.setBuilder(bdr);
 
         // close :main - now we open a new section after receiving
         // each individual command.
@@ -1349,24 +1354,24 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
     //
     // main Read-Eval-Print loop
     //
-    while(!r.done()) {
+    while(!repl.done()) {
 
         try {
             doCleanup = false;
             sectionStarted = false;
 
             // track cleanups, so we don't removeFromParent() twice and crash.
-            r.goneSet.clear(); 
+            repl.goneSet.clear(); 
 
             // READ
-            r.resetSrcToEmpty();
-            r.nextLineNumber();
-            r.resetPromptToDefault();
-            r.prompt(stdout);
-            r.read(stdin); // can throw
-            if (r.getLastReadLineLen()==0) continue;
+            repl.resetSrcToEmpty();
+            repl.nextLineNumber();
+            repl.resetPromptToDefault();
+            repl.prompt(stdout);
+            repl.read(stdin); // can throw
+            if (repl.getLastReadLineLen()==0) continue;
 
-            if (continueOnSpecial(r, ctx, bdr)) continue;
+            if (continueOnSpecial(repl, ctx, bdr)) continue;
 
             // EVAL
 
@@ -1379,13 +1384,13 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             
             sectionStarted = true;
             
-            r.src << r.getLastReadLine();
+            repl.src << repl.getLastReadLine();
 
-            std::string path = r.getPrompt();
+            std::string path = repl.getPrompt();
 
-            Toker toker(r.src, path.c_str());
+            Toker toker(repl.src, path.c_str());
             Parser parser(toker, ctx);
-            parser.setAtRepl(r);
+            parser.setAtRepl(repl);
             parser.parse();
 
             // stats collection
@@ -1436,7 +1441,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             if (sectionStarted) {
                 cleanupUnfinishedInput(bdr, ctx, mod);
             }
-            (ctx->ns.get())->undoTransactionTo(ns_start_point, &r);
+            (ctx->ns.get())->undoTransactionTo(ns_start_point, &repl);
         }
 
     } // end while
