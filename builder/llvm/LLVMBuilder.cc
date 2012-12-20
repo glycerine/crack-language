@@ -2260,12 +2260,10 @@ void LLVMBuilder::purgeUnterminatedFunctions(model::Context &context,
 
         for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
             if (I->empty() || !I->back().isTerminator()) {
-                //          dbgs() << "Basic Block in function '" << F.getName() 
-                //                 << "' does not have terminator!\n";
-                //          WriteAsOperand(dbgs(), I, true);
-                //          dbgs() << "\n";
-                //          Broken = true;
-                
+                std::cerr << "Basic Block in function '" << F.getName().str()
+                     << "' does not have terminator!\n"
+                     << " doing auto purge to recover.\n";
+
                 F.eraseFromParent();
                 break;
             }
