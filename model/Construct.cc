@@ -29,6 +29,13 @@
 #include "compiler/init.h"
 #include "util/CacheFiles.h"
 #include "util/SourceDigest.h"
+#include "wisecrack/repl.h"
+#include "builder/llvm/LLVMJitBuilder.h"
+#include "builder/llvm/LLVMBuilder.h"
+#include "model/OverloadDef.h"
+#include "model/OrderedIdLog.h"
+
+#include <llvm/LinkAllPasses.h> // enable .dc cast and display code for symbol
 
 using namespace std;
 using namespace model;
