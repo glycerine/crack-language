@@ -2243,15 +2243,18 @@ void LLVMBuilder::purgeUnterminatedFunctions(model::Context &context,
                                                 model::ModuleDef *modDef
                                                 ) {
     
-    // do the same thing that verifyModule(), specifically 
+    // do the same thing that verifyModule() does, specifically 
     // llvm-3.1.src/lib/VMCore/Verifier.cpp:91 runOnFunction()
-    // does to check for lack of termination -- so we detect it before 
+    // checks for lack of termination -- so we detect problems before 
     // the pre-Verifier does!
     //
     // It is very mportant to do this check and cleanup because llvm will
     // simply abort, period, if the pre-verifier pass fails.
 
-    // So here we detect unfinished functions and delete them.
+    // So here we anticipate trouble, and pre-emptively detect and 
+    // delete unfinished functions. Basic test case: 'class A { if ;'
+    // will generate a syntax error and leave A:meta.cast() and 
+    // A:meta.cast2() dangling if we don't do this.
 
     // First collect all danglers, then in a second pass, eraseFromParent.
     // This two phase approach avoids problems with module iterators
@@ -2271,15 +2274,15 @@ void LLVMBuilder::purgeUnterminatedFunctions(model::Context &context,
 
         for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
             if (I->empty() || !I->back().isTerminator()) {
-                std::cerr << "Basic Block in function '" << F.getName().str()
-                          << "' does not have terminator!"
-                          << " doing auto purge to recover.\n";
+                // std::cerr << "Basic Block in function '" << 
+                // F.getName().str() << "' does not have terminator!"
+                // << " doing auto purge to recover.\n";
                 
                 purgeList.push_back(pF);
                 break;
             }
         }
-    } // end for
+    }
 
     for (PurgeListIt i = purgeList.begin(), e = purgeList.end(); i != e; ++i) {
         (*i)->eraseFromParent();
