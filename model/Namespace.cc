@@ -34,6 +34,9 @@ OrderedIdLog Namespace::orderedForTxn;
 Namespace::~Namespace() {
     if (globalRepl && globalRepl->debugLevel() > 0)
         printf("~Namespace dtor firing on 0x%lx\n",(long)this);
+
+    printf("calling orderedForTxn.eraseNamespace(0x%lx) '%s'\n", (long)this, canonicalName.c_str());
+    orderedForTxn.eraseNamespace(this);
 }
 
 
@@ -436,16 +439,51 @@ void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
     OrderedIdLog::VdnMapIt en = mainMap.end();
     OrderedIdLog::VdnMapIt st = mainMap.find(t.last_commit);
     if (st == mainMap.end()) {
-        throw OrderedIdLog::BadOrderedIdLogIndexOperatrion();
+        // deleted already, need to get previous still valid key...
+        OrderedIdLog::VdnMapPair pp = mainMap.equal_range(t.last_commit);
+
+        if (pp.first == mainMap.end()) {
+            // all newer transactions gone, last_commit was greater
+            // than anything left.
+            return; // done
+        }
+        
+        // don't need to increment, this is where we want to
+        // start deleting.
+        st = pp.first;
+
+    } else {
+        // move past the last commit
+        ++st;
     }
-    ++st;
+
     if (st == en) return;
 
     for (OrderedIdLog::VdnMapIt it = st; it != en; ++it) {
         OrderedIdLog::VarDefName& d = it->second;
         if (this == d.ns) {
             d.ns->removeDefAllowOverload(d.vardef, true);
+
+        } else {
+            bool found = false;
+            Namespace *parent = 0;
+            unsigned int i = 0;
+            while(parent = getParent(i++).get()) {
+                if (d.ns == parent) {
+                    printf("undo txn found vardef '%s' in ancestor namespace '%s'\n",
+                           d.vardef->name.c_str(),
+                           d.ns->getNamespaceName().c_str());
+
+                    parent->removeDefAllowOverload(d.vardef, true);
+                    found = true;
+                    break;
+                }
+            }
+            if (found) continue;
         }
+
+        //        printf("undo tx saw unknown, non-ancestor namespace '%s'\n",
+        //               d.ns->getNamespaceName().c_str());
     }
 
     orderedForTxn.eraseBeyond(t.last_commit);

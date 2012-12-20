@@ -55,11 +55,6 @@ class Namespace : public virtual spug::RCBase {
         // caching currently
         VarDefVec orderedForCache;
 
-        // ordered list of all vardefs for transactions delete
-        // used by repl for syntax error cleanup.
-        // Make it static so we track additions across all namespaces.
-        static OrderedIdLog orderedForTxn;
-
         // fully qualified namespace name, e.g. "crack.io"
         std::string canonicalName;
 
@@ -214,6 +209,13 @@ class Namespace : public virtual spug::RCBase {
          * namespace.
          */
         void deserializeDefs(Deserializer &deser);
+
+        /* 
+         * OrderedIdLog: ordered list of all vardefs for transactions delete
+         * used by repl for syntax error cleanup.
+         * Make it static so we track additions across all namespaces.
+         */
+        static OrderedIdLog orderedForTxn;
 
         /**
          * note where we are in the ordered defs, so we

@@ -19,6 +19,7 @@
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "TypeDef.h"
+#include "Namespace.h"
 
 using namespace std;
 using namespace model;
@@ -34,6 +35,28 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
 VarDef::~VarDef() {
     if (globalRepl && globalRepl->debugLevel() > 0)
         printf("~VarDef dtor firing on 0x%lx\n",(long)this);
+
+    if (owner) {
+        printf("in ~VarDef(): calling orderedForTxn.erase(0x%lx) '%s' in ns '%s'\n", 
+               (long)this, 
+               name.c_str(), 
+               owner->getNamespaceName().c_str()
+               );
+        try {
+            owner->orderedForTxn.erase(this, owner);
+
+        } catch(const OrderedIdLog::BadOrderedIdLogIndexOperation& ex) {
+            printf("~VarDef(): wierd... could not locate '%s' in ns '%s'\n",
+                   name.c_str(),
+                   owner->getNamespaceName().c_str()
+                   );
+        }
+
+    } else {
+        printf("no owner for Vardef??\n");
+        assert(0 && "no owner for this varDef??\n");
+
+    }
 }
 
 ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {

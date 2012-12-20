@@ -74,12 +74,13 @@ namespace model {
         typedef std::map<long, VarDefName> VdnMap;
         typedef VdnMap::iterator VdnMapIt;
         typedef VdnMap::value_type VdnMapValue;
-        typedef std::pair<VdnMapIt,bool> VdnMapInsert;
+        typedef std::pair<VdnMapIt, bool> VdnMapInsert;
+        typedef std::pair<VdnMapIt, VdnMapIt> VdnMapPair;
 
-        struct BadOrderedIdLogIndexOperatrion {};
+        struct BadOrderedIdLogIndexOperation {};
         VarDefName& operator[] (unsigned long i) {
             VdnMapIt it = _mainMap.find(i);
-            if (it == _mainMap.end()) throw BadOrderedIdLogIndexOperatrion();
+            if (it == _mainMap.end()) throw BadOrderedIdLogIndexOperation();
             return (it->second);
         }
 
@@ -214,7 +215,7 @@ namespace model {
             VdnMapIt en = _mainMap.end();
             VdnMapIt st = _mainMap.find(k);
             if (st == _mainMap.end()) {
-                throw BadOrderedIdLogIndexOperatrion();
+                throw BadOrderedIdLogIndexOperation();
             }
             ++st;
             if (st == _mainMap.end()) return;
@@ -230,8 +231,21 @@ namespace model {
         // erase one element from _mainMap and indices
         void erase(long k) {
             VdnMapIt target = _mainMap.find(k);
+            erase(target);
+        }
+
+        void erase(VarDef* v, Namespace* ns) {
+            long i = lookupI(v, ns);
+            if (-1 == i)
+                throw BadOrderedIdLogIndexOperation();
+
+            VdnMapIt target = _mainMap.find(i);
+            erase(target);
+        }
+
+        void erase(VdnMapIt &target) {
             if (target == _mainMap.end()) 
-                throw BadOrderedIdLogIndexOperatrion();
+                throw BadOrderedIdLogIndexOperation();
 
             // ns2mm deletions
             Ns2MainMapPair pp = ns2mm.equal_range(target->second.ns);
@@ -252,13 +266,29 @@ namespace model {
             _mainMap.erase(target);
         }
 
+        void eraseNamespace(Namespace* ns) {
+
+            Ns2MainMapPair pp = ns2mm.equal_range(ns);
+            if (pp.first != ns2mm.end()) {
+                for (Ns2MainMapIt it = pp.first; it != pp.second; ++it) {
+                    VdnMapIt target = it->second;
+
+                    v2i.erase(target->second.vi);
+                    s2i.erase(target->second.si);
+                    _mainMap.erase(target);
+                    
+                    ns2mm.erase(it);
+                }
+            }
+        }
+
         void dump(long start = 0, bool dupsOnly = false) {
             long n = _mainMap.size();
 
             VdnMapIt en = _mainMap.end();
             VdnMapIt st = _mainMap.find(n);
             if (st == _mainMap.end()) {
-                throw BadOrderedIdLogIndexOperatrion();
+                throw BadOrderedIdLogIndexOperation();
             }
 
             for (VdnMapIt it = st; it != en; ++it) {
@@ -266,7 +296,7 @@ namespace model {
             }
         }
         
-    }; // end class Orderedhash
+    }; // end class OrderedLogId
         
 } // end namespace model
 
