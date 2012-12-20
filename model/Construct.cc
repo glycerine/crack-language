@@ -1220,8 +1220,8 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
 //       possibly with a temp namespace that is merge upon correctness, or
 //       discarded upon error.
 //
-// But if you're strongly motivated to do correct cleanup, I wonder if we could
-// make use of a temporary repl ModuleDef object and then transfer its
+// But if you're strongly motivated to do correct cleanup, I wonder if we 
+// could make use of a temporary repl ModuleDef object and then transfer its
 // definitions to a longer lived one?  Then we could drive the rollback
 // functionality from ModuleDef -> BModuleDef -> LLVM.  -- mmuller
 //
