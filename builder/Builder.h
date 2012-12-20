@@ -581,12 +581,11 @@ class Builder : public spug::RCBase {
 
         /**
          * After a syntax error at the repl, check for dangling functions
-         *  and delete them
+         *  and delete them.
          */        
         virtual void purgeUnterminatedFunctions(model::Context &context,
                                                 model::ModuleDef *modDef
                                                 ) = 0;
-
 };
 
 } // namespace builder
