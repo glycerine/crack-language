@@ -373,9 +373,9 @@ void Namespace::deserializeDefs(Deserializer &deser) {
 
 
 /**
- * short_dump - parent namespaces omitted.
+ * shortDump - parent namespaces omitted.
  */
-void Namespace::short_dump() {
+void Namespace::shortDump() {
     ostream& out = std::cerr;
     const std::string prefix ="";
     out << canonicalName << " (0x" << this << ") {\n";
@@ -437,7 +437,7 @@ void Namespace::undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl)
 }
 
 
-void Namespace::undoHelperRollbackOrderedForTx(const Txmark& t) {
+void Namespace::undoHelperRollbackOrderedForTxn(const Txmark& t) {
 
     //    ordered.erase(ordered.begin() + t.last_commit + 1,
     //                  ordered.end());
@@ -513,7 +513,7 @@ void Namespace::undoTransactionTo(const Namespace::Txmark& t,
 
     if (t.last_commit < 0) return;
 
-   undoHelperRollbackOrderedForTx(t);
+   undoHelperRollbackOrderedForTxn(t);
 }
 
 void Namespace::undo(Repl *r) {

@@ -1014,7 +1014,7 @@ bool continueOnSpecial(wisecrack::Repl& r, Context *context, Builder *bdr) {
     else if (!strcmp("dn", p) ||
              !strcmp("ls", p)) {
         // dn: dump namespace, local only
-        context->short_dump();
+        context->shortDump();
         return true;
 
     } else if (!strcmp("dc", p)) {

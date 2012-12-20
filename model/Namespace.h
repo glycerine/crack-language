@@ -160,7 +160,7 @@ class Namespace : public virtual spug::RCBase {
 
         void dump(std::ostream &out, const std::string &prefix);
         void dump();
-        void short_dump();
+        void shortDump();
 
         /** overloads don't call addDef() unfortunately. so
          *   have them call this instead so we know exactly
@@ -254,7 +254,7 @@ class Namespace : public virtual spug::RCBase {
  private:
         /** helpers for undo */
         void undoHelperDeleteFromDefs(VarDef* v, const Txmark& t, Repl* repl);
-        void undoHelperRollbackOrderedForTx(const Txmark& t);
+        void undoHelperRollbackOrderedForTxn(const Txmark& t);
 
 };
 

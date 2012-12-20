@@ -1111,6 +1111,6 @@ void Context::dump() {
     dump(cerr, "");
 }
 
-void Context::short_dump() {
-    ns->short_dump();
+void Context::shortDump() {
+    ns->shortDump();
 }
