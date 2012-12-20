@@ -33,31 +33,24 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
 }
 
 VarDef::~VarDef() {
-    if (globalRepl && globalRepl->debugLevel() > 0)
-        printf("~VarDef dtor firing on 0x%lx\n",(long)this);
+    // to allow the repl to know what to cleanup upon syntax-error,
+    // we track when VarDefs go away.
 
-    if (owner) {
-        // 
-        printf("in ~VarDef(): calling orderedForTxn.erase(0x%lx, ns)\n", 
-               (long)this, 
-               name.c_str()
-               //               owner->getNamespaceName().c_str()
-               );
-        try {
-            owner->orderedForTxn.erase(this, owner);
+    //    if (globalRepl && globalRepl->debugLevel() > 0) 
+    //        printf("~VarDef dtor firing on 0x%lx\n",(long)this);
 
-        } catch(const OrderedIdLog::BadOrderedIdLogIndexOperation& ex) {
-            printf("~VarDef(): wierd... could not locate '%s'\n",
-                   name.c_str()
-                   //owner->getNamespaceName().c_str()
-                   );
-        }
+    // Note on owner requirement:
+    // there are typedefs that are so basic (e.g. VTableTypes) 
+    // that they don't have an owner namespace.
+    // Don't have a cow. The repl doesn't care about cleaning
+    // these up anyway.
+    
+    if (owner) owner->orderedForTxn.erase(this, owner);
 
-    } else {
-        // there are typedefs that are so basic (e.g. VTableTypes) 
-        // that they don't have an owning namespace.
-        // Don't have a cow here.
-    }
+    // do not here: assert that erase succeeded. 
+    // erase will fail on the VarDefs for arguments to functions, for example.
+    // or other structs/code that we already deleted.
+
 }
 
 ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {

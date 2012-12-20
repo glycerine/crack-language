@@ -35,7 +35,7 @@ Namespace::~Namespace() {
     if (globalRepl && globalRepl->debugLevel() > 0)
         printf("~Namespace dtor firing on 0x%lx\n",(long)this);
 
-    printf("calling orderedForTxn.eraseNamespace(0x%lx) '%s'\n", (long)this, canonicalName.c_str());
+    //printf("calling orderedForTxn.eraseNamespace(0x%lx) '%s'\n", (long)this, canonicalName.c_str());
     orderedForTxn.eraseNamespace(this);
 }
 
@@ -391,23 +391,18 @@ void Namespace::short_dump() {
 
         // start printing two txn back, if we have them
         long start = 0;
-        long mid = 0;
         long inclusiveEnd = orderedForTxn.lastId();
         if (txLog.size()) {
             TxLogIt it = txLog.end();
             --it;
-            mid = it->last_commit;
             if (txLog.size() > 1) {
                 --it;
             }
             start = it->last_commit;
         }
 
-        printf("=== begin orderedForTxn, from %ld  through  %ld ===\n", start, mid);
-        orderedForTxn.dump(start, mid, false);
-
-        printf("=== begin orderedForTxn, from %ld  through  %ld ===\n", mid+1, inclusiveEnd);
-        orderedForTxn.dump(mid+1, inclusiveEnd, false);
+        printf("=== begin orderedForTxn, from %ld  through  %ld ===\n", start, inclusiveEnd);
+        orderedForTxn.dump(start, inclusiveEnd, false);
 
         printf("=== end orderedForTxn ===\n");
     }
@@ -418,7 +413,7 @@ void Namespace::short_dump() {
 Namespace::Txmark Namespace::markTransactionStart() {
     Namespace::Txmark t;
     t.ns = this;
-    t.last_commit = orderedForTxn.vec().size()-1;
+    t.last_commit = orderedForTxn.lastId();
     txLog.push_back(t);
     return t;
 }

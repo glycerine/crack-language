@@ -219,7 +219,16 @@ namespace model {
             _mainMap.clear();
         }
 
+        /**
+         * requesting -1 gets you the first, no matter at what
+         *   id it is actually at.
+         */
         VdnMapIt lookupKOrBeyond(long k, bool& exact) {
+            if (k < 0) {
+                exact = false;
+                return _mainMap.begin();
+            }
+
             VdnMapIt en = _mainMap.end();
             VdnMapIt st = _mainMap.find(k);
             if (st != en) {
@@ -252,23 +261,22 @@ namespace model {
         }
 
         // erase one element from _mainMap and indices
-        void erase(long k) {
+        bool erase(long k) {
             VdnMapIt target = _mainMap.find(k);
-            erase(target);
+            return erase(target);
         }
 
-        void erase(VarDef* v, Namespace* ns) {
+        /** return true if erased, false if could not locate */
+        bool erase(VarDef* v, Namespace* ns) {
             long i = lookupI(v, ns);
-            if (-1 == i)
-                throw BadOrderedIdLogIndexOperation();
+            if (-1 == i) return false;
 
             VdnMapIt target = _mainMap.find(i);
-            erase(target);
+            return erase(target);
         }
 
-        void erase(const VdnMapIt &target) {
-            if (target == _mainMap.end()) 
-                throw BadOrderedIdLogIndexOperation();
+        bool erase(const VdnMapIt &target) {
+            if (target == _mainMap.end()) return false;
 
             // ns2mm deletions
             Ns2MainMapPair pp = ns2mm.equal_range(target->second.ns);
@@ -288,6 +296,7 @@ namespace model {
             s2i.erase(target->second.si);
 
             _mainMap.erase(target);
+            return true;
         }
 
         void eraseNamespace(Namespace* ns) {
