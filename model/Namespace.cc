@@ -388,15 +388,27 @@ void Namespace::short_dump() {
     out << prefix << "}\n";
 
     if (globalRepl && globalRepl->debugLevel() > 0) {
+
+        // start printing two txn back, if we have them
         long start = 0;
+        long mid = 0;
+        long inclusiveEnd = orderedForTxn.lastId();
         if (txLog.size()) {
-            start = txLog.front().last_commit;
+            TxLogIt it = txLog.end();
+            --it;
+            mid = it->last_commit;
+            if (txLog.size() > 1) {
+                --it;
+            }
+            start = it->last_commit;
         }
 
-        printf("=== begin orderedForTxn, everything from %ld ===\n", start);
-        orderedForTxn.dump(start, false);
-        //printf("=== begin orderedForTxn, dups only, from %ld  ===\n", start);
-        //            orderedForTxn.dump(start, true); // only dups (shorter)
+        printf("=== begin orderedForTxn, from %ld  through  %ld ===\n", start, mid);
+        orderedForTxn.dump(start, mid, false);
+
+        printf("=== begin orderedForTxn, from %ld  through  %ld ===\n", mid+1, inclusiveEnd);
+        orderedForTxn.dump(mid+1, inclusiveEnd, false);
+
         printf("=== end orderedForTxn ===\n");
     }
 }

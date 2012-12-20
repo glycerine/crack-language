@@ -241,7 +241,9 @@ class Namespace : public virtual spug::RCBase {
          */
         void undo(Repl *r = 0);
         
-        std::vector<Txmark> txLog; // stack of transactions
+        typedef std::vector<Txmark> TxLog;
+        typedef TxLog::iterator TxLogIt;
+        TxLog txLog; // stack of transactions
         
         /*
          * get last symbol added to the tx table.

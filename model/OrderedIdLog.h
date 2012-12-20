@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <limits.h>
 
 /**
  * OrderedIdLog: keep a vector of VarDef's that can be searched
@@ -306,15 +307,16 @@ namespace model {
             }
         }
 
-        void dump(long start = 0, bool dupsOnly = false) {
-            long n = _mainMap.size();
+        /** if inclusiveEnd < 0 it is ignore and everything is dumped from start */
+        void dump(long start = 0, long inclusiveEnd = -1, bool dupsOnly = false) {
+            if (inclusiveEnd < 0) inclusiveEnd = LONG_MAX;
 
             VdnMapIt en = _mainMap.end();
-            bool exactly_start = false;
+            bool exactly_start = false; // don't care about this here
             VdnMapIt st = lookupKOrBeyond(start, exactly_start);
             if (st == en) return;
 
-            for (VdnMapIt it = st; it != en; ++it) {
+            for (VdnMapIt it = st; it != en && it->second.id <= inclusiveEnd; ++it) {
                 it->second.dump(dupsOnly);
             }
         }
