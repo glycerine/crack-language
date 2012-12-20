@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'r':
-                crack.options->dropintoRepl = true;
+                crack.options->dropIntoRepl = true;
                 break;
             case doubleBuilder:
                 useDoubleBuilder = true;
@@ -282,7 +282,7 @@ int main(int argc, char **argv) {
 
     // are there any more arguments?
     if (optind == argc) {
-        crack.options->dropintoRepl = true;
+        crack.options->dropIntoRepl = true;
         rc = crack.runRepl();
 
     } else if (!strcmp(argv[optind], "-")) {

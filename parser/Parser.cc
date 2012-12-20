@@ -88,18 +88,18 @@ void Parser::addFuncDef(FuncDef *funcDef) {
 }
 
 
-Token Parser::getToken(Zt z) {
+Token Parser::getToken(TokerMsg tokerMsg) {
    
-    Token tok = toker.getToken(z);
+    Token tok = toker.getToken(tokerMsg);
     context->setLocation(tok.getLocation());
     
    // short-circuit the parser for an annotation, which can occur anywhere.
    while (tok.isAnn() || tok.getType() == Token::popErrCtx) {
       if (tok.isAnn())
-         parseAnnotation(z);
+         parseAnnotation(tokerMsg);
       else
          context->popErrorContext();
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       context->setLocation(tok.getLocation());
    }
 
@@ -125,8 +125,8 @@ void Parser::unexpected(const Token &tok, const char *userMsg) {
 }
 
 
-void Parser::expectToken(Zt z, Token::Type type, const char *error) {
-    Token tok = getToken(z);
+void Parser::expectToken(TokerMsg tokerMsg, Token::Type type, const char *error) {
+    Token tok = getToken(tokerMsg);
     if (tok.getType() != type)
         unexpected(tok, error);
 }
@@ -185,19 +185,19 @@ FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
    return func;
 }   
 
-void Parser::parseClause(Zt z, bool defsAllowed) {
-   Token tok = getToken(z);
+void Parser::parseClause(TokerMsg tokerMsg, bool defsAllowed) {
+   Token tok = getToken(tokerMsg);
    state = st_notBase;
    ExprPtr expr;
    VarDefPtr def;
    TypeDefPtr primaryType;
 
    if (tok.isTypeof()) {
-      primaryType = parseTypeof(z);
+      primaryType = parseTypeof(tokerMsg);
    } else if (tok.isAlias()) {
       if (!defsAllowed)
          error(tok, "Aliasing is not allowed in this context.");
-      parseAlias(z);
+      parseAlias(tokerMsg);
    } else if (tok.isIdent()) {
       
       // if the identifier is a type, deal with it later.  Otherwise deal with 
@@ -211,13 +211,13 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
             // non-existing one.
             // unknown identifier. if the next token(s) is ':=' (the "define" 
             // operator) then this is an assignment
-            Token tok2 = getToken(z);
+            Token tok2 = getToken(tokerMsg);
             if (tok2.isDefine()) {
                if (!defsAllowed)
                   error(tok, "definition is not allowed in this context.");
-               Zt zdef;
-               zdef.nested = true;
-               expr = parseExpression(zdef);
+               TokerMsg tokerMsgDef;
+               tokerMsgDef.nested = true;
+               expr = parseExpression(tokerMsgDef);
                context->emitVarDef(expr->type.get(), tok, expr.get());
                
                // trick the expression processing into not happening
@@ -228,7 +228,7 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
          } else {
             toker.putBack(tok);
             runCallbacks(exprBegin);
-            expr = parseExpression(z);
+            expr = parseExpression(tokerMsg);
          }
       }
 
@@ -236,12 +236,12 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
    } else if (tok.isConst()) {
       if (!defsAllowed)
          error(tok, "definition is not allowed in this context");
-      parseConstDef(z);
+      parseConstDef(tokerMsg);
       return;
    } else {
       toker.putBack(tok);
       runCallbacks(exprBegin);
-      expr = parseExpression(z);
+      expr = parseExpression(tokerMsg);
    }
 
    // if we got a type, try to parse a definition.
@@ -250,8 +250,8 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
       context->checkAccessible(typeDef);
       identLoc = tok.getLocation();
 
-      Zt zdef; zdef.nested = true;
-      if (parseDef(zdef, typeDef)) {
+      TokerMsg tokerMsgDef; tokerMsgDef.nested = true;
+      if (parseDef(tokerMsgDef, typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
          // bypass expression emission and semicolon parsing (parseDef() 
@@ -262,12 +262,12 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
          
          // see if this is a define of a variable that happens to bear the 
          // same name as a class.
-         Token tok2 = getToken(z);
+         Token tok2 = getToken(tokerMsg);
          if (def && tok2.isDefine()) {
             if (def->getOwner() == context->ns.get())
                redefineError(tok2, def.get());
             
-            expr = parseExpression(z);
+            expr = parseExpression(tokerMsg);
             context->emitVarDef(expr->type.get(), tok, expr.get());
             
             // don't do expression processing
@@ -279,7 +279,7 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
             // try treating the class as a primary.
             toker.putBack(tok2);
             expr = context->createVarRef(typeDef);
-            expr = parseSecondary(z, expr.get());
+            expr = parseSecondary(tokerMsg, expr.get());
          }
       }
    }
@@ -292,14 +292,14 @@ void Parser::parseClause(Zt z, bool defsAllowed) {
    }
 
    // consume a semicolon, put back a block terminator
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (tok.isEnd() || tok.isRCurly())
       toker.putBack(tok);
    else if (!tok.isSemi())
       unexpected(tok, "expected semicolon or a block terminator");
 }
 
-void Parser::parseAnnotation(Zt z) {
+void Parser::parseAnnotation(TokerMsg tokerMsg) {
    AnnotationPtr ann;
    {
       // create a new context whose construct is tha annotation construct.
@@ -308,12 +308,12 @@ void Parser::parseAnnotation(Zt z) {
       ContextStackFrame<Parser> cstack(*this, ctx.get());
       context->construct = context->getCompileTimeConstruct();
    
-      Token tok = toker.getToken(z);
+      Token tok = toker.getToken(tokerMsg);
       context->setLocation(tok.getLocation());
    
       // if we get an import keyword, parse the import statement.   
       if (tok.isImport()) {
-          parseImportStmt(z, parentContext->compileNS.get());
+          parseImportStmt(tokerMsg, parentContext->compileNS.get());
           return;
       }
       
@@ -330,9 +330,9 @@ void Parser::parseAnnotation(Zt z) {
    ann->invoke(this, &toker, context.get());
 }
 
-ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
+ContextPtr Parser::parseStatement(TokerMsg tokerMsg, bool defsAllowed) {
    // peek at the next token
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    state = st_notBase;
 
    // check for statements
@@ -342,10 +342,10 @@ ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
       return 0;
    } else if (tok.isIf()) {
       runCallbacks(controlStmt);
-      return parseIfStmt(z);
+      return parseIfStmt(tokerMsg);
    } else if (tok.isWhile()) {
       runCallbacks(controlStmt);
-      parseWhileStmt(z);
+      parseWhileStmt(tokerMsg);
 
       // while statements are never terminal, there's always the possibility 
       // that we could never execute the body.
@@ -356,16 +356,16 @@ ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
       runCallbacks(controlStmt);
       if (context->scope == Context::module)
          error(tok, "Return statement not allowed in module scope");
-      parseReturnStmt(z);
+      parseReturnStmt(tokerMsg);
       return context->getToplevel()->getParent();
    } else if (tok.isImport()) {
       runCallbacks(controlStmt);
-      parseImportStmt(z, context->ns.get());
+      parseImportStmt(tokerMsg, context->ns.get());
       return 0;
    } else if (tok.isClass()) {
       if (!defsAllowed)
          error(tok, "class definitions are not allowed in this context");
-      parseClassDef(z);
+      parseClassDef(tokerMsg);
       return 0;      
    } else if (tok.isBreak()) {
       runCallbacks(controlStmt);
@@ -380,7 +380,7 @@ ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
       context->builder.emitBreak(*context, branch);
       BSTATS_END
 
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isSemi())
          toker.putBack(tok);
       assert(branch->context);
@@ -397,34 +397,34 @@ ContextPtr Parser::parseStatement(Zt z, bool defsAllowed) {
       context->builder.emitContinue(*context, branch);
       BSTATS_END
 
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isSemi())
          toker.putBack(tok);
       assert(branch->context);
       return branch->context;
    } else if (tok.isFor()) {
-      parseForStmt(z);
+      parseForStmt(tokerMsg);
       
       // for statements are like while - never terminal
       return 0;
    } else if (tok.isThrow()) {
-      return parseThrowStmt(z);
+      return parseThrowStmt(tokerMsg);
    } else if (tok.isTry()) {
-      return parseTryStmt(z);
+      return parseTryStmt(tokerMsg);
    }
 
    toker.putBack(tok);
    state = st_base;
-   parseClause(z, defsAllowed);
+   parseClause(tokerMsg, defsAllowed);
 
    return 0;
 }
 
-ContextPtr Parser::parseBlock(Zt z, bool nested, Parser::Event closeEvent) {
+ContextPtr Parser::parseBlock(TokerMsg tokerMsg, bool nested, Parser::Event closeEvent) {
    Token tok;
    ContextPtr terminal;
 
-   z.nested = nested;
+   tokerMsg.nested = nested;
 
    // keeps track of whether we've emitted a warning about stuff after a 
    // terminal statement.
@@ -434,7 +434,7 @@ ContextPtr Parser::parseBlock(Zt z, bool nested, Parser::Event closeEvent) {
       state = st_base;
 
       // peek at the next token
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
 
       // check for a different block terminator depending on whether we are
       // nested or not.
@@ -458,7 +458,7 @@ ContextPtr Parser::parseBlock(Zt z, bool nested, Parser::Event closeEvent) {
          if (callbacks[closeEvent].size()) {
             toker.putBack(tok);
             runCallbacks(closeEvent);
-            Token tempTok = toker.getToken(z);
+            Token tempTok = toker.getToken(tokerMsg);
             if (!tempTok.isRCurly()) {
                // if the token is not what it was before, one of the callbacks 
                // has changed the token stream and we need to go back to the 
@@ -494,7 +494,7 @@ ContextPtr Parser::parseBlock(Zt z, bool nested, Parser::Event closeEvent) {
          gotStuffAfterTerminalStatement = true;
       }
 
-      terminal = parseStatement(z, true);
+      terminal = parseStatement(tokerMsg, true);
       if (terminal)
          if (terminal != context)
             context->terminal = true;
@@ -588,8 +588,8 @@ ExprPtr Parser::createAssign(Expr *container, const Token &ident,
 }
 
 // obj.oper <symbol>
-string Parser::parseOperSpec(Zt z) {
-   Token tok = getToken(z);
+string Parser::parseOperSpec(TokerMsg tokerMsg) {
+   Token tok = getToken(tokerMsg);
    const string &ident = tok.isIdent() ? tok.getData() : "";
    if (tok.isMinus() || tok.isTilde() || tok.isBang() ||
        tok.isEQ() || tok.isNE() || tok.isLT() || tok.isLE() || 
@@ -602,7 +602,7 @@ string Parser::parseOperSpec(Zt z) {
    } else if (tok.isIncr() || tok.isDecr()) {
       
       // make sure the next token is an "x"
-      Token tok2 = getToken(z);
+      Token tok2 = getToken(tokerMsg);
       if (!tok2.isIdent() || tok2.getData() != "x")
          unexpected(tok2, 
                     SPUG_FSTR("expected an 'x' after oper " << 
@@ -612,7 +612,7 @@ string Parser::parseOperSpec(Zt z) {
 
       return "oper " + tok.getData() + "x";
    } else if (ident == "x") {
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isIncr() || tok.isDecr())
          return "oper x" + tok.getData();
       else
@@ -621,12 +621,12 @@ string Parser::parseOperSpec(Zt z) {
                     );
                     
    } else if (tok.isLBracket()) {
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isRBracket())
          error(tok, "Expected right bracket in 'oper ['");
       
       // see if this is "[]="
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isAssign()) {
          return "oper []=";
       } else {
@@ -634,10 +634,10 @@ string Parser::parseOperSpec(Zt z) {
          return "oper []";
       }
    } else if (ident == "to") {
-      TypeDefPtr type = parseTypeSpec(z);
+      TypeDefPtr type = parseTypeSpec(tokerMsg);
       return "oper to " + type->getFullName();
    } else if (ident == "r") {
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isBinOp())
          return "oper r" + tok.getData();
       else
@@ -647,7 +647,7 @@ string Parser::parseOperSpec(Zt z) {
    }
 }
 
-FuncCallPtr Parser::parseFuncCall(Zt z, 
+FuncCallPtr Parser::parseFuncCall(TokerMsg tokerMsg, 
                                   const Token &ident, const string &funcName,
                                   Namespace *ns, 
                                   Expr *container
@@ -657,7 +657,7 @@ FuncCallPtr Parser::parseFuncCall(Zt z,
 
    // parse the arg list
    FuncCall::ExprVec args;
-   parseMethodArgs(z, args);
+   parseMethodArgs(tokerMsg, args);
    
    // look up the variable
    
@@ -760,10 +760,10 @@ FuncCallPtr Parser::parseFuncCall(Zt z,
    return funcCall;
 }
 
-ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
+ExprPtr Parser::parsePostIdent(TokerMsg tokerMsg, Expr *container, const Token &ident) {
    Namespace *ns = container ? container->type.get() : context->ns.get();
 
-   Token tok1 = getToken(z);
+   Token tok1 = getToken(tokerMsg);
    if (ident.isOper() && tok1.isAssign())
       error(tok1, "Expected operator identifier after 'oper' keyword");
 
@@ -780,9 +780,9 @@ ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
           }
       }
       
-      ExprPtr val = parseExpression(z);
+      ExprPtr val = parseExpression(tokerMsg);
       if (!val) {
-         tok1 = getToken(z);
+         tok1 = getToken(tokerMsg);
          error(tok1, "expression expected");
       }
       
@@ -808,9 +808,9 @@ ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
          error(tok1, "You cannot assign to a constant, class or function.");
 
       // parse an expression
-      ExprPtr val = parseExpression(z);
+      ExprPtr val = parseExpression(tokerMsg);
       if (!val) {
-         tok1 = getToken(z);
+         tok1 = getToken(tokerMsg);
          error(tok1, "expression expected");
       }
       
@@ -872,15 +872,15 @@ ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
    string funcName;
    if (ident.isOper()) {
       toker.putBack(tok1);
-      funcName = parseOperSpec(z);
-      tok1 = getToken(z);
+      funcName = parseOperSpec(tokerMsg);
+      tok1 = getToken(tokerMsg);
    } else {
       funcName = ident.getData();
    }
    
    if (tok1.isLParen()) {
        // function/method invocation
-       return parseFuncCall(z, ident, funcName, ns, container);
+       return parseFuncCall(tokerMsg, ident, funcName, ns, container);
    } else {
       if (ident.isOper())
          unexpected(tok1,
@@ -898,7 +898,7 @@ ExprPtr Parser::parsePostIdent(Zt z, Expr *container, const Token &ident) {
 
 // ` ... `
 //  ^     ^
-ExprPtr Parser::parseIString(Zt z, Expr *expr) {
+ExprPtr Parser::parseIString(TokerMsg tokerMsg, Expr *expr) {
    
    // wrap the formatter expression in a register setter so it will get stored 
    // for reuse.
@@ -921,7 +921,7 @@ ExprPtr Parser::parseIString(Zt z, Expr *expr) {
 
    // parse all of the subtokens
    Token tok;
-   while (!(tok = getToken(z)).isIstrEnd()) {
+   while (!(tok = getToken(tokerMsg)).isIstrEnd()) {
       ExprPtr arg;
       if (tok.isString()) {
           if (tok.getData().size() == 0) continue;
@@ -931,8 +931,8 @@ ExprPtr Parser::parseIString(Zt z, Expr *expr) {
          arg = createVarRef(0, tok);
          toker.continueIString();
       } else if (tok.isLParen()) {
-         arg = parseExpression(z);
-         tok = getToken(z);
+         arg = parseExpression(tokerMsg);
+         tok = getToken(tokerMsg);
          if (!tok.isRParen())
             unexpected(tok, "expected a right paren");
          toker.continueIString();
@@ -988,17 +988,17 @@ ExprPtr Parser::parseIString(Zt z, Expr *expr) {
 
 // [ expr, expr, ... ]
 //  ^                 ^
-ExprPtr Parser::parseConstSequence(Zt z, TypeDef *containerType) {
+ExprPtr Parser::parseConstSequence(TokerMsg tokerMsg, TypeDef *containerType) {
    vector<ExprPtr> elems;
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    while (!tok.isRBracket()) {
       // parse the next element
       toker.putBack(tok);
-      elems.push_back(parseExpression(z));
+      elems.push_back(parseExpression(tokerMsg));
 
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isComma())
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
       else if (!tok.isRBracket())
          unexpected(tok, "Expected comma or right bracket after element");
    }
@@ -1009,16 +1009,16 @@ ExprPtr Parser::parseConstSequence(Zt z, TypeDef *containerType) {
 
 // typeof ( expr )
 //       ^        ^
-TypeDefPtr Parser::parseTypeof(Zt z) {
-   Token tok = getToken(z);
+TypeDefPtr Parser::parseTypeof(TokerMsg tokerMsg) {
+   Token tok = getToken(tokerMsg);
    if (!tok.isLParen())
       unexpected(tok, 
                  "Expected parenthesized expression after 'typeof' keyword."
                  );
 
-   TypeDefPtr result = parseExpression(z)->type;
+   TypeDefPtr result = parseExpression(tokerMsg)->type;
 
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (!tok.isRParen())
       unexpected(tok,
                  "Expected closing paren after 'typeof' expression."
@@ -1037,21 +1037,21 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
 
 // cond ? trueVal : falseVal
 //       ^                  ^
-ExprPtr Parser::parseTernary(Zt z, Expr *cond) {
-   ExprPtr trueVal = parseExpression(z);
-   Token tok = getToken(z);
+ExprPtr Parser::parseTernary(TokerMsg tokerMsg, Expr *cond) {
+   ExprPtr trueVal = parseExpression(tokerMsg);
+   Token tok = getToken(tokerMsg);
    if (!tok.isColon())
       unexpected(tok, "expected colon.");
-   ExprPtr falseVal = parseExpression(z);
+   ExprPtr falseVal = parseExpression(tokerMsg);
    return context->createTernary(cond, trueVal.get(), falseVal.get());
 }
 
-ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
+ExprPtr Parser::parseSecondary(TokerMsg tokerMsg, Expr *expr0, unsigned precedence) {
    ExprPtr expr = expr0;
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    while (true) {
       if (tok.isDot()) {
-	 tok = getToken(z);
+	 tok = getToken(tokerMsg);
 	 
 	 // if the next token is "class", this is the class operator.
 	 if (tok.isClass()) {
@@ -1069,7 +1069,7 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
             BSTATS_END
             funcCall->receiver = expr;
             expr = funcCall;
-            tok = getToken(z);
+            tok = getToken(tokerMsg);
             continue;
          
 	 } else if (!tok.isIdent() && !tok.isOper()) {
@@ -1077,7 +1077,7 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
             error(tok, "identifier expected");
 	 }
 
-     expr = parsePostIdent(z, expr.get(), tok);
+     expr = parsePostIdent(tokerMsg, expr.get(), tok);
       } else if (tok.isLBracket()) {
          // the array indexing operators
          
@@ -1085,13 +1085,13 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
          TypeDef *generic = convertTypeRef(expr.get());
          // XXX try setting expr to generic
          if (generic) {
-             TypeDef *type = parseSpecializer(z, tok, generic);
+             TypeDef *type = parseSpecializer(tokerMsg, tok, generic);
             
             // check for a constructor
-            tok = getToken(z);
+            tok = getToken(tokerMsg);
             if (tok.isLParen()) {
-               expr = parseConstructor(z, tok, type, Token::rparen);
-               tok = getToken(z);
+               expr = parseConstructor(tokerMsg, tok, type, Token::rparen);
+               tok = getToken(tokerMsg);
             } else {
                // otherwise just create a reference to the type.
                expr = context->createVarRef(type);
@@ -1100,14 +1100,14 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
          }
          
          FuncCall::ExprVec args;
-         parseMethodArgs(z, args, Token::rbracket);
+         parseMethodArgs(tokerMsg, args, Token::rbracket);
 
          // check for an assignment operator
-         Token tok2 = getToken(z);
+         Token tok2 = getToken(tokerMsg);
          FuncCallPtr funcCall;
          if (tok2.isAssign()) {
             // this is "a[i] = v"
-            args.push_back(parseExpression(z));
+            args.push_back(parseExpression(tokerMsg));
             FuncDefPtr funcDef =
                context->lookUp("oper []=", args, expr->type.get());
             if (!funcDef)
@@ -1149,11 +1149,11 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
          // is the expression a type
          TypeDef *type = convertTypeRef(expr.get());
          if (type) {
-            expr = parseConstructor(z, tok, type, Token::rparen);
+            expr = parseConstructor(tokerMsg, tok, type, Token::rparen);
          } else {            
             // assume it's a functor
             FuncCall::ExprVec args;
-            parseMethodArgs(z, args);
+            parseMethodArgs(tokerMsg, args);
             
             FuncDefPtr funcDef =
                context->lookUp("oper call", args, expr->type.get());
@@ -1201,7 +1201,7 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
             break;
 
          // parse the right-hand-side expression
-         ExprPtr rhs = parseExpression(z, newPrec);
+         ExprPtr rhs = parseExpression(tokerMsg, newPrec);
          
          FuncCall::ExprVec exprs(2);
          exprs[0] = expr;
@@ -1225,11 +1225,11 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
          expr = funcCall;
          expr = expr->foldConstants();
       } else if (tok.isIstrBegin()) {
-         expr = parseIString(z, expr.get());
+         expr = parseIString(tokerMsg, expr.get());
       } else if (tok.isQuest()) {
          if (precedence >= logOrPrec)
             break;
-         expr = parseTernary(z, expr.get());
+         expr = parseTernary(tokerMsg, expr.get());
       } else if (tok.isBang()) {
          // this is special wacky collection syntax Type![1, 2, 3]
          TypeDef *type = convertTypeRef(expr.get());
@@ -1239,20 +1239,20 @@ ExprPtr Parser::parseSecondary(Zt z, Expr *expr0, unsigned precedence) {
                   );
          
          // check for a square bracket
-         tok = toker.getToken(z);
+         tok = toker.getToken(tokerMsg);
          if (!tok.isLBracket())
             error(tok,
                   "Sequence initializer ('[ ... ]') expected after "
                    "'type!'"
                   );
-         expr = parseConstSequence(z, type);
+         expr = parseConstSequence(tokerMsg, type);
       } else {
 	 // next token is not part of the expression
 	 break;
       }
 
       // get the next token
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
 
    }
    toker.putBack(tok);
@@ -1317,30 +1317,30 @@ namespace {
 
 } // anonymous namespace
 
-ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
+ExprPtr Parser::parseExpression(TokerMsg tokerMsg, unsigned precedence) {
 
    ExprPtr expr;
 
    // check for null
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (tok.isNull()) {
       expr = new NullConst(context->construct->voidptrType.get());
    
    // check for a nested parenthesized expression
    } else if (tok.isLParen()) {
-      expr = parseExpression(z);
-      tok = getToken(z);
+      expr = parseExpression(tokerMsg);
+      tok = getToken(tokerMsg);
       if (!tok.isRParen())
          unexpected(tok, "expected a right paren");
 
    // check for a "typeof"
    } else if (tok.isTypeof()) {
-      expr = context->createVarRef(parseTypeof(z).get());
+      expr = context->createVarRef(parseTypeof(tokerMsg).get());
 
    // check for a method
    } else if (tok.isIdent()) {
       identLoc = tok.getLocation();
-      expr = parsePostIdent(z, 0, tok);
+      expr = parsePostIdent(tokerMsg, 0, tok);
    
    // for a string constant
    } else if (tok.isString()) {
@@ -1349,7 +1349,7 @@ ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
       ostringstream result;
       while (tok.isString()) {
          result << tok.getData();
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
       }
       toker.putBack(tok);
       expr = context->getStrConst(result.str());
@@ -1378,7 +1378,7 @@ ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
       expr = parseConstInt(*context, tok.getData(), 2);
    } else if (tok.isPlus()) {
        // eat + if expression is a numeric constant and fail if it's not
-       tok = getToken(z);
+       tok = getToken(tokerMsg);
        if (tok.isInteger())
            expr = parseConstInt(*context, tok.getData(), 10);
        else if(tok.isFloat()) {
@@ -1403,7 +1403,7 @@ ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
       string symbol = tok.getData();
 
       // parse the expression
-      ExprPtr operand = parseExpression(z, getPrecedence(symbol + "x"));
+      ExprPtr operand = parseExpression(tokerMsg, getPrecedence(symbol + "x"));
 
       // try to look it up for the expression, then for the context.
       symbol = "oper " + symbol;
@@ -1434,16 +1434,16 @@ ExprPtr Parser::parseExpression(Zt z, unsigned precedence) {
       unexpected(tok, "expected an expression");
    }
 
-   return parseSecondary(z, expr.get(), precedence);
+   return parseSecondary(tokerMsg, expr.get(), precedence);
 }
 
 // func( arg, arg)
 //      ^         ^
 // Type var = { arg, arg } ;
 //             ^          ^
-void Parser::parseMethodArgs(Zt z, FuncCall::ExprVec &args, Token::Type terminator) {
+void Parser::parseMethodArgs(TokerMsg tokerMsg, FuncCall::ExprVec &args, Token::Type terminator) {
      
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    while (true) {
       if (tok.getType() == terminator)
          return;
@@ -1452,19 +1452,19 @@ void Parser::parseMethodArgs(Zt z, FuncCall::ExprVec &args, Token::Type terminat
 
       // get the next argument value
       toker.putBack(tok);
-      ExprPtr arg = parseExpression(z);
+      ExprPtr arg = parseExpression(tokerMsg);
       args.push_back(arg);
 
       // comma signals another argument
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isComma())
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
    }
 }
 
 // type [ subtype, ... ]
 //       ^              ^
-TypeDef *Parser::parseSpecializer(Zt z, const Token &lbrack, TypeDef *typeDef,
+TypeDef *Parser::parseSpecializer(TokerMsg tokerMsg, const Token &lbrack, TypeDef *typeDef,
                                   Generic *generic
                                   ) {
    if (typeDef && !typeDef->generic)
@@ -1477,10 +1477,10 @@ TypeDef *Parser::parseSpecializer(Zt z, const Token &lbrack, TypeDef *typeDef,
    TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
    Token tok;
    while (true) {      
-      TypeDefPtr subType = parseTypeSpec(z, 0, generic);
+      TypeDefPtr subType = parseTypeSpec(tokerMsg, 0, generic);
       types->push_back(subType);
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (generic) generic->addToken(tok);
       if (tok.isRBracket())
          break;
@@ -1498,12 +1498,12 @@ TypeDef *Parser::parseSpecializer(Zt z, const Token &lbrack, TypeDef *typeDef,
 //       ^          ^
 // Class var = { arg, arg } ;
 //              ^          ^
-ExprPtr Parser::parseConstructor(Zt z, const Token &tok, TypeDef *type,
+ExprPtr Parser::parseConstructor(TokerMsg tokerMsg, const Token &tok, TypeDef *type,
                                  Token::Type terminator
                                  ) {
    // parse an arg list
    FuncCall::ExprVec args;
-   parseMethodArgs(z, args, terminator);
+   parseMethodArgs(tokerMsg, args, terminator);
    
    // look up the new operator for the class
    FuncDefPtr func = context->lookUp("oper new", args, type);
@@ -1538,8 +1538,8 @@ ExprPtr Parser::parseConstructor(Zt z, const Token &tok, TypeDef *type,
    return funcCall;
 }
 
-TypeDefPtr Parser::parseTypeSpec(Zt z, const char *errorMsg, Generic *generic) {
-   Token tok = getToken(z);
+TypeDefPtr Parser::parseTypeSpec(TokerMsg tokerMsg, const char *errorMsg, Generic *generic) {
+   Token tok = getToken(tokerMsg);
 
    TypeDefPtr typeofType;
    if (tok.isTypeof()) {
@@ -1549,7 +1549,7 @@ TypeDefPtr Parser::parseTypeSpec(Zt z, const char *errorMsg, Generic *generic) {
          recordParenthesized(generic);
          return context->construct->voidType;
       } else {
-         typeofType = parseTypeof(z);
+         typeofType = parseTypeof(tokerMsg);
       }
    } else if (!tok.isIdent()) {
       unexpected(tok, "type identifier expected");
@@ -1571,10 +1571,10 @@ TypeDefPtr Parser::parseTypeSpec(Zt z, const char *errorMsg, Generic *generic) {
    }
    
    // see if there's a bracket operator   
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (tok.isLBracket()) {
       if (generic) generic->addToken(tok);
-      typeDef = parseSpecializer(z, tok, typeDef, generic);
+      typeDef = parseSpecializer(tokerMsg, tok, typeDef, generic);
    } else {
       toker.putBack(tok);
    }
@@ -1589,17 +1589,17 @@ TypeDefPtr Parser::parseTypeSpec(Zt z, const char *errorMsg, Generic *generic) {
    return typeDef;
 }
 
-void Parser::parseModuleName(Zt z, vector<string> &moduleName) {
-   Token tok = getToken(z);
+void Parser::parseModuleName(TokerMsg tokerMsg, vector<string> &moduleName) {
+   Token tok = getToken(tokerMsg);
    while (true) {
       moduleName.push_back(tok.getData());
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isDot()) {
          toker.putBack(tok);
          return;
       }
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isIdent())
          unexpected(tok, "identifier expected");
    }
@@ -1607,19 +1607,19 @@ void Parser::parseModuleName(Zt z, vector<string> &moduleName) {
 
 // type funcName ( type argName, ... ) {
 //                ^                   ^
-void Parser::parseArgDefs(Zt z, vector<ArgDefPtr> &args, bool isMethod) {
+void Parser::parseArgDefs(TokerMsg tokerMsg, vector<ArgDefPtr> &args, bool isMethod) {
 
    // load the next token so we can check for the immediate closing paren of 
    // an empty argument list.
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
       
    while (!tok.isRParen()) {
 
       // parse the next argument type
       toker.putBack(tok);
-      TypeDefPtr argType = parseTypeSpec(z);
+      TypeDefPtr argType = parseTypeSpec(tokerMsg);
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isIdent())
          error(tok, "identifier (argument name) expected.");
       
@@ -1646,9 +1646,9 @@ void Parser::parseArgDefs(Zt z, vector<ArgDefPtr> &args, bool isMethod) {
          argDef->constant = true;
       
       // check for a comma
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isComma())
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
       else if (!tok.isRParen())
          unexpected(tok, "expected ',' or ')' after argument definition");
    }
@@ -1656,13 +1656,13 @@ void Parser::parseArgDefs(Zt z, vector<ArgDefPtr> &args, bool isMethod) {
 
 // oper init(...) : init1(expr), ... {
 //                 ^                ^
-void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
+void Parser::parseInitializers(TokerMsg tokerMsg, Initializers *inits, Expr *receiver) {
    ContextPtr classCtx = context->getClassContext();
    TypeDefPtr type = TypeDefPtr::rcast(classCtx->ns);
    
    while (true) {
       // get an identifier
-      Token tok = getToken(z);
+      Token tok = getToken(tokerMsg);
       if (!tok.isIdent())
          unexpected(tok, "identifier expected in initializer list.");
       
@@ -1672,7 +1672,7 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
          // not a variable def, parse a type def.
          toker.putBack(tok);
          TypeDefPtr base =
-            parseTypeSpec(z, " is neither a base class nor an instance variable");
+            parseTypeSpec(tokerMsg, " is neither a base class nor an instance variable");
             
          // try to find it in our base classes
          if (!type->isParent(base.get()))
@@ -1684,9 +1684,9 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
                   );
 
          // parse the arg list
-         expectToken(z, Token::lparen, "expected an ergument list.");
+         expectToken(tokerMsg, Token::lparen, "expected an ergument list.");
          FuncCall::ExprVec args;
-         parseMethodArgs(z, args);
+         parseMethodArgs(tokerMsg, args);
          
          // look up the appropriate constructor
          FuncDefPtr operInit = context->lookUp("oper init", args, base.get());
@@ -1736,11 +1736,11 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
          ExprPtr initializer;
    
          // get the next token
-         Token tok2 = getToken(z);
+         Token tok2 = getToken(tokerMsg);
          if (tok2.isLParen()) {
             // it's a left paren - treat this as a constructor.
             FuncCall::ExprVec args;
-            parseMethodArgs(z, args);
+            parseMethodArgs(tokerMsg, args);
             
             // look up the appropriate constructor
             FuncDefPtr operNew = 
@@ -1763,7 +1763,7 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
             
          } else if (tok2.isAssign()) {
             // it's the assignement operator, parse an expression
-            initializer = parseInitializer(z, varDef->type.get(), varDef->name);
+            initializer = parseInitializer(tokerMsg, varDef->type.get(), varDef->name);
          } else {
             unexpected(tok2,
                        "expected constructor arg list or assignment operator"
@@ -1780,7 +1780,7 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
       }
       
       // check for a comma
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isComma()) {
          toker.putBack(tok);
          break;
@@ -1788,7 +1788,7 @@ void Parser::parseInitializers(Zt z, Initializers *inits, Expr *receiver) {
    }
 }
 
-int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
+int Parser::parseFuncDef(TokerMsg tokerMsg, TypeDef *returnType, const Token &nameTok,
                          const string &name,
                          Parser::FuncFlags funcFlags,
                          int expectedArgCount
@@ -1836,8 +1836,8 @@ int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
 
    // parse the arguments
    ArgVec argDefs;
-   z.nested = true;
-   parseArgDefs(z, argDefs, isMethod);
+   tokerMsg.nested = true;
+   parseArgDefs(tokerMsg, argDefs, isMethod);
    
    // if we are expecting an argument definition, check for it.
    if (expectedArgCount > -1 && argDefs.size() != expectedArgCount)
@@ -1882,7 +1882,7 @@ int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
       (isVirtual ? FuncDef::virtualized : FuncDef::noFlags) |
       (funcFlags == reverseOp ? FuncDef::reverse : FuncDef::noFlags);
    
-   Token tok3 = getToken(z);
+   Token tok3 = getToken(tokerMsg);
    InitializersPtr inits;
    if (tok3.isSemi()) {
       // forward declaration or stub - see if we've got a stub 
@@ -1979,8 +1979,8 @@ int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
    } else if (funcFlags == hasMemberInits) {
       inits = new Initializers();
       if (tok3.isColon()) {
-         parseInitializers(z, inits.get(), receiver.get());
-         tok3 = getToken(z);
+         parseInitializers(tokerMsg, inits.get(), receiver.get());
+         tok3 = getToken(tokerMsg);
       }
    }
 
@@ -2042,7 +2042,7 @@ int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
       classTypeDef->addDestructorCleanups(*context);
    }
 
-   ContextPtr terminal = parseBlock(z, true, funcLeave);
+   ContextPtr terminal = parseBlock(tokerMsg, true, funcLeave);
    
    // if the block doesn't always terminate, either give an error or 
    // return void if the function return type is void
@@ -2083,20 +2083,20 @@ int Parser::parseFuncDef(Zt z, TypeDef *returnType, const Token &nameTok,
 
 // type var = ... ;
 //           ^   ^
-ExprPtr Parser::parseInitializer(Zt z, TypeDef *type, const std::string &varName) {
+ExprPtr Parser::parseInitializer(TokerMsg tokerMsg, TypeDef *type, const std::string &varName) {
    ExprPtr initializer;
    
    // check for special initializer syntax.
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (tok.isLCurly()) {
       // got constructor args, parse an arg list terminated by a right 
       // curly.
-      initializer = parseConstructor(z, tok, type, Token::rcurly);
+      initializer = parseConstructor(tokerMsg, tok, type, Token::rcurly);
    } else if (tok.isLBracket()) {
-      initializer = parseConstSequence(z, type);
+      initializer = parseConstSequence(tokerMsg, type);
    } else {
       toker.putBack(tok);
-      initializer = parseExpression(z);
+      initializer = parseExpression(tokerMsg);
    }
 
    // make sure the initializer matches the declared type.
@@ -2114,9 +2114,9 @@ ExprPtr Parser::parseInitializer(Zt z, TypeDef *type, const std::string &varName
 
 // alias name = existing_def, ... ;
 //      ^                        ^
-void Parser::parseAlias(Zt z) {
+void Parser::parseAlias(TokerMsg tokerMsg) {
    while (true) {
-      Token tok = getToken(z);
+      Token tok = getToken(tokerMsg);
       if (!tok.isIdent())
          unexpected(tok, "Identifier expected after 'alias'.");
       
@@ -2125,7 +2125,7 @@ void Parser::parseAlias(Zt z) {
       // make sure the alias doesn't hide anything
       checkForExistingDef(tok, aliasName);
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isAssign())
          unexpected(tok, "Expected assignment operator in alias definition.");
 
@@ -2133,10 +2133,10 @@ void Parser::parseAlias(Zt z) {
       ContextPtr defContext = context->getDefContext();
         
       VarDefPtr existing;
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isTypeof()) {
          // parse the typeof
-         existing = parseTypeof(z);
+         existing = parseTypeof(tokerMsg);
       } else if (tok.isIdent()) {
          // try looking up the reference
          existing = context->lookUp(tok.getData());
@@ -2149,9 +2149,9 @@ void Parser::parseAlias(Zt z) {
          // if it's a generic see if we've got a specializer.
          TypeDef *type;
          if ((type = TypeDefPtr::rcast(existing)) && type->generic) {
-            tok = getToken(z);
+            tok = getToken(tokerMsg);
             if (tok.isLBracket())
-               existing = parseSpecializer(z, tok, type);
+               existing = parseSpecializer(tokerMsg, tok, type);
             else
                toker.putBack(tok);
          }
@@ -2176,7 +2176,7 @@ void Parser::parseAlias(Zt z) {
           )
          mod->exports[aliasName] = true;
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isSemi()) {
          toker.putBack(tok);
          return;
@@ -2190,13 +2190,13 @@ void Parser::parseAlias(Zt z) {
 //     ^                         ^
 // type function() { }
 //     ^              ^
-bool Parser::parseDef(Zt z, TypeDef *&type) {
-   Token tok2 = getToken(z);
+bool Parser::parseDef(TokerMsg tokerMsg, TypeDef *&type) {
+   Token tok2 = getToken(tokerMsg);
    
    // if we get a '[', parse the specializer and get a generic type.
    if (tok2.isLBracket()) {
-      type = parseSpecializer(z, tok2, type);
-      tok2 = getToken(z);
+      type = parseSpecializer(tokerMsg, tok2, type);
+      tok2 = getToken(tokerMsg);
    } else if(type->generic) {
       error(identLoc, SPUG_FSTR("Generic type " << type->name <<
                                  " must be specialized to be used."
@@ -2209,7 +2209,7 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
          string varName = tok2.getData();
    
          // this could be a variable or a function
-         Token tok3 = getToken(z);
+         Token tok3 = getToken(tokerMsg);
          if (tok3.isSemi() || tok3.isComma()) {
             // it's a variable.
             runCallbacks(variableDef);
@@ -2229,7 +2229,7 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
             if (tok3.isSemi())
                return true;
             else {
-               tok2 = getToken(z);
+               tok2 = getToken(tokerMsg);
                continue;
             }
          } else if (tok3.isAssign()) {
@@ -2239,14 +2239,14 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
             // make sure we're not hiding anything else
             checkForExistingDef(tok2, tok2.getData());
             
-            initializer = parseInitializer(z, type, varName);
+            initializer = parseInitializer(tokerMsg, type, varName);
             context->emitVarDef(type, tok2, initializer.get());
    
             // if this is a comma, we need to go back and parse 
             // another definition for the type.
-            Token tok4 = getToken(z);
+            Token tok4 = getToken(tokerMsg);
             if (tok4.isComma()) {
-               tok2 = getToken(z);
+               tok2 = getToken(tokerMsg);
                continue;
             } else if (tok4.isSemi()) {
                return true;
@@ -2258,7 +2258,7 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
             }
          } else if (tok3.isLParen()) {
             // function definition
-            parseFuncDef(z, type, tok2, tok2.getData(), normal, -1);
+            parseFuncDef(tokerMsg, type, tok2, tok2.getData(), normal, -1);
             return true;
          } else {
             unexpected(tok3,
@@ -2268,7 +2268,7 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
          }
       } else if (tok2.isOper()) {
          // deal with an operator
-         parsePostOper(z, type);
+         parsePostOper(tokerMsg, type);
          return true;
       }
 
@@ -2282,8 +2282,8 @@ bool Parser::parseDef(Zt z, TypeDef *&type) {
 //      ^                     ^
 // const var := value ;
 //      ^            ^
-void Parser::parseConstDef(Zt z) {
-   Token tok = getToken(z);
+void Parser::parseConstDef(TokerMsg tokerMsg) {
+   Token tok = getToken(tokerMsg);
    if (!tok.isIdent())
       unexpected(tok, "identifier or type expected after 'const'");
    
@@ -2292,13 +2292,13 @@ void Parser::parseConstDef(Zt z) {
       // assume that this is the "const type var = value, ...;" syntax.  The 
       // altSyntaxPossible flag indicates whether it is still possible that 
       // this could be the alternate "const var := value" syntax.
-      Token varName = getToken(z);
+      Token varName = getToken(tokerMsg);
       bool altSyntaxPossible = true;
       
       // check for a type specializer
       if (varName.isLBracket()) {
-         type = parseSpecializer(z, varName, type.get());
-         varName = getToken(z);
+         type = parseSpecializer(tokerMsg, varName, type.get());
+         varName = getToken(tokerMsg);
          altSyntaxPossible = false;
       }
 
@@ -2316,18 +2316,18 @@ void Parser::parseConstDef(Zt z) {
          // if we got an identifier, we're now locked into the typed syntax.
          altSyntaxPossible = false;
          
-         Token tok2 = getToken(z);
+         Token tok2 = getToken(tokerMsg);
          if (!tok2.isAssign())
             unexpected(tok2, 
                      "Expected assignment operator in constant definition"
                      );
          
          // parse the initializer
-         ExprPtr expr = parseInitializer(z, type.get(), varName.getData());
+         ExprPtr expr = parseInitializer(tokerMsg, type.get(), varName.getData());
          context->emitVarDef(type.get(), varName, expr.get(), true);
          
          // see if there are more constants in this definition.
-         tok2 = getToken(z);
+         tok2 = getToken(tokerMsg);
          if (tok2.isSemi()) {
             toker.putBack(tok2);
             return;
@@ -2336,7 +2336,7 @@ void Parser::parseConstDef(Zt z) {
          }
          
          // get the next variable identifier
-         varName = getToken(z);
+         varName = getToken(tokerMsg);
       }
       
       // if we exit the loop, it's because we've disovered that this is 
@@ -2346,19 +2346,19 @@ void Parser::parseConstDef(Zt z) {
          redefineError(varName, type.get());
    } else {
       // it's just an identifier
-      Token tok2 = getToken(z);
+      Token tok2 = getToken(tokerMsg);
       if (!tok2.isDefine())
          unexpected(tok2, "':=' operator expected in const definition");
    }
       
    // parse the initializer
-   ExprPtr expr = parseExpression(z);
+   ExprPtr expr = parseExpression(tokerMsg);
    
    context->emitVarDef(expr->type.get(), tok, expr.get(), true);
 }
 
-ContextPtr Parser::parseIfClause(Zt z) {
-   Token tok = getToken(z);
+ContextPtr Parser::parseIfClause(TokerMsg tokerMsg) {
+   Token tok = getToken(tokerMsg);
    ContextPtr terminal;
    stringstream nsName;
    nsName << ++nestID;
@@ -2370,18 +2370,18 @@ ContextPtr Parser::parseIfClause(Zt z) {
                                        &nsNameStr).get()
              );
    if (tok.isLCurly()) {
-      return parseBlock(z, true, noCallbacks);
+      return parseBlock(tokerMsg, true, noCallbacks);
    } else {
       toker.putBack(tok);
-      return parseStatement(z, false);
+      return parseStatement(tokerMsg, false);
    }
 }
    
-ExprPtr Parser::parseCondExpr(Zt z) {
+ExprPtr Parser::parseCondExpr(TokerMsg tokerMsg) {
    TypeDef *boolType = context->construct->boolType.get();
-   ExprPtr cond = parseExpression(z)->convert(*context, boolType);
+   ExprPtr cond = parseExpression(tokerMsg)->convert(*context, boolType);
    if (!cond)
-      error(getToken(z),  "Condition is not boolean.");
+      error(getToken(tokerMsg),  "Condition is not boolean.");
    
    return cond;
 }
@@ -2392,18 +2392,18 @@ ExprPtr Parser::parseCondExpr(Zt z) {
 //   ^               ^
 // if ( expr ) clause else clause
 //   ^                           ^
-ContextPtr Parser::parseIfStmt(Zt z) {
+ContextPtr Parser::parseIfStmt(TokerMsg tokerMsg) {
    // create a subcontext for variables defined in the condition.
    ContextStackFrame<Parser> 
       cstack(*this, context->createSubContext(true).get());
 
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after if");
    
-   ExprPtr cond = parseCondExpr(z);
+   ExprPtr cond = parseCondExpr(tokerMsg);
    
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (!tok.isRParen())
       unexpected(tok, "expected closing paren");
    
@@ -2411,17 +2411,17 @@ ContextPtr Parser::parseIfStmt(Zt z) {
    BranchpointPtr pos = context->builder.emitIf(*context, cond.get());
    BSTATS_END
 
-   ContextPtr terminalIf = parseIfClause(z);
+   ContextPtr terminalIf = parseIfClause(tokerMsg);
    ContextPtr terminalElse;
 
    // check for the "else"
    state = st_optElse;
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (tok.isElse()) {
       BSTATS_GO(s1)
       pos = context->builder.emitElse(*context, pos.get(), terminalIf);
       BSTATS_END
-      terminalElse = parseIfClause(z);
+      terminalElse = parseIfClause(tokerMsg);
       BSTATS_GO(s2)
       context->builder.emitEndIf(*context, pos.get(), terminalElse);
       BSTATS_END
@@ -2452,19 +2452,19 @@ ContextPtr Parser::parseIfStmt(Zt z) {
 //      ^               ^
 // while ( expr ) { ... }
 //      ^                ^
-void Parser::parseWhileStmt(Zt z) {
+void Parser::parseWhileStmt(TokerMsg tokerMsg) {
    // create a subcontext for the break and for variables defined in the 
    // condition.
    ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
 
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after while");
 
    // parse the condition   
-   ExprPtr cond = parseCondExpr(z);
+   ExprPtr cond = parseCondExpr(tokerMsg);
 
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (!tok.isRParen())
       unexpected(tok, "expected right paren after conditional expression");
    
@@ -2474,7 +2474,7 @@ void Parser::parseWhileStmt(Zt z) {
    BSTATS_END
    context->setBreak(pos.get());
    context->setContinue(pos.get());
-   ContextPtr terminal = parseIfClause(z);
+   ContextPtr terminal = parseIfClause(tokerMsg);
    BSTATS_GO(s2)
    context->builder.emitEndWhile(*context, pos.get(), terminal);
    BSTATS_END
@@ -2485,12 +2485,12 @@ void Parser::parseWhileStmt(Zt z) {
 //    ^               ^
 // for ( ... ) stmt ; (';' can be replaced with EOF)
 //    ^              ^
-void Parser::parseForStmt(Zt z) {
+void Parser::parseForStmt(TokerMsg tokerMsg) {
    // create a subcontext for the break and for variables defined in the 
    // condition.
    ContextStackFrame<Parser> cstack(*this, context->createSubContext().get());
 
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (!tok.isLParen())
       unexpected(tok, "expected left paren after for");
 
@@ -2499,16 +2499,16 @@ void Parser::parseForStmt(Zt z) {
    bool iterForm = false;
    
    // check for 'ident in', 'ident :in', 'ident on' or 'ident :on'
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    if (tok.isIdent()) {
       bool definesVar, varIsIter;
-      Token tok2 = getToken(z);
+      Token tok2 = getToken(tokerMsg);
       if (tok2.isIn()) {
          definesVar = false;
          varIsIter = false;
          iterForm = true;
       } else if (tok2.isColon()) {
-         Token tok3 = getToken(z);
+         Token tok3 = getToken(tokerMsg);
          definesVar = true;
          if (tok3.isIn()) {
             varIsIter = false;
@@ -2530,7 +2530,7 @@ void Parser::parseForStmt(Zt z) {
          // and expand the iteration expressions.
 
          // parse the list expression
-         ExprPtr expr = parseExpression(z);
+         ExprPtr expr = parseExpression(tokerMsg);
 
          // let the context expand an iteration expression            
          context->setLocation(identLoc);
@@ -2542,7 +2542,7 @@ void Parser::parseForStmt(Zt z) {
                                   );
 
          // check for a closing paren
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
          if (!tok.isRParen())
             unexpected(tok, "expected closing parenthesis");
       } else {
@@ -2555,14 +2555,14 @@ void Parser::parseForStmt(Zt z) {
       toker.putBack(tok);
    
       // parse the initialization clause (if any)
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isSemi()) {
          toker.putBack(tok);
-         parseClause(z, /*defsAllowed*/ true);
+         parseClause(tokerMsg, /*defsAllowed*/ true);
       }
    
       // check for a conditional expression
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isSemi()) {
          // no conditional, create one from a constant
          TypeDef *boolType = context->construct->boolType.get();
@@ -2573,21 +2573,21 @@ void Parser::parseForStmt(Zt z) {
          BSTATS_END
       } else {
          toker.putBack(tok);
-         cond = parseCondExpr(z);
+         cond = parseCondExpr(tokerMsg);
    
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
          if (!tok.isSemi())
             unexpected(tok, "expected semicolon after condition");
          
       }
    
       // check for an after-body expression
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isRParen()) {
          toker.putBack(tok);
    
-         afterBody = parseExpression(z);
-         tok = getToken(z);
+         afterBody = parseExpression(tokerMsg);
+         tok = getToken(tokerMsg);
          if (!tok.isRParen())
             unexpected(tok, "expected closing parenthesis");
       }
@@ -2609,7 +2609,7 @@ void Parser::parseForStmt(Zt z) {
    }
    
    // parse the loop body
-   ContextPtr terminal = parseIfClause(z);
+   ContextPtr terminal = parseIfClause(tokerMsg);
    
    // emit the after-body expression if there was one.
    if (afterBody) {
@@ -2629,9 +2629,9 @@ void Parser::parseForStmt(Zt z) {
    BSTATS_END
 }
 
-void Parser::parseReturnStmt(Zt z) {
+void Parser::parseReturnStmt(TokerMsg tokerMsg) {
    // check for a return with no expression
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    bool returnVoid = false;
    if (tok.isSemi()) {
       returnVoid = true;
@@ -2654,7 +2654,7 @@ void Parser::parseReturnStmt(Zt z) {
 
    // parse the return expression, make sure that it matches the return type.
    toker.putBack(tok);
-   ExprPtr orgExpr = parseExpression(z);
+   ExprPtr orgExpr = parseExpression(tokerMsg);
    ExprPtr expr = orgExpr->convert(*context, context->returnType.get());
    if (!expr)
       error(tok,
@@ -2684,7 +2684,7 @@ void Parser::parseReturnStmt(Zt z) {
    context->builder.emitReturn(*context, expr.get());
    BSTATS_END
 
-   tok = getToken(z);   
+   tok = getToken(tokerMsg);   
    if (tok.isEnd() || tok.isRCurly())
       toker.putBack(tok);
    else if (!tok.isSemi())
@@ -2693,16 +2693,16 @@ void Parser::parseReturnStmt(Zt z) {
 
 // import module-and-defs ;
 //       ^               ^
-void Parser::parseImportStmt(Zt z, Namespace *ns) {
+void Parser::parseImportStmt(TokerMsg tokerMsg, Namespace *ns) {
    ModuleDefPtr mod;
    string canonicalName;
    builder::Builder &builder = context->construct->getCurBuilder();
 
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (tok.isIdent()) {
       toker.putBack(tok);
       vector<string> moduleName;
-      parseModuleName(z, moduleName);
+      parseModuleName(tokerMsg, moduleName);
             
       mod = context->construct->getModule(moduleName.begin(), 
                                           moduleName.end(),
@@ -2736,15 +2736,15 @@ void Parser::parseImportStmt(Zt z, Namespace *ns) {
    vector<ImportedDef> syms;
    vector<Token> symToks; // for parse error context
    while (true) {
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isIdent()) {                   
          syms.push_back(ImportedDef(tok.getData()));
          symToks.push_back(tok);
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
          
          // see if this is "local_name = source_name" notation
          if (tok.isAssign()) {
-            tok = getToken(z);
+            tok = getToken(tokerMsg);
             if (!tok.isIdent())
                unexpected(tok, 
                           SPUG_FSTR("Identifier expected in import alias "
@@ -2754,7 +2754,7 @@ void Parser::parseImportStmt(Zt z, Namespace *ns) {
                           );
             syms.back().source = tok.getData();
             symToks.back() = tok;
-            tok = getToken(z);
+            tok = getToken(tokerMsg);
          }
 
          if (tok.isSemi()) {
@@ -2837,8 +2837,8 @@ void Parser::parseImportStmt(Zt z, Namespace *ns) {
 
 // try { ... } catch (...) { ... }
 //    ^                           ^
-ContextPtr Parser::parseTryStmt(Zt z) {
-   Token tok = toker.getToken(z);
+ContextPtr Parser::parseTryStmt(TokerMsg tokerMsg) {
+   Token tok = toker.getToken(tokerMsg);
    if (!tok.isLCurly())
       unexpected(tok, "Curly bracket expected after try.");
    
@@ -2854,7 +2854,7 @@ ContextPtr Parser::parseTryStmt(Zt z) {
    {
       ContextStackFrame<Parser> 
          cstack(*this, context->createSubContext().get());
-      terminal = parseBlock(z, true, noCallbacks); // XXX add tryLeave callback
+      terminal = parseBlock(tokerMsg, true, noCallbacks); // XXX add tryLeave callback
    }
    bool lastWasTerminal = terminal;
    
@@ -2862,24 +2862,24 @@ ContextPtr Parser::parseTryStmt(Zt z) {
    // finally/catch clauses are thrown to outer contexts. 
    context->setCatchBranchpoint(0);
    
-   tok = toker.getToken(z);
+   tok = toker.getToken(tokerMsg);
    if (!tok.isCatch())
       unexpected(tok, "catch expected after try block.");
    
    while (true) {
       
       // parse the exception specifier
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       if (!tok.isLParen())
          unexpected(tok, 
                     "parenthesized catch expression expected after catch "
                      "keyword."
                     );
 
-      TypeDefPtr exceptionType = parseTypeSpec(z);
+      TypeDefPtr exceptionType = parseTypeSpec(tokerMsg);
       
       // parse the exception variable
-      Token varTok = toker.getToken(z);
+      Token varTok = toker.getToken(tokerMsg);
       if (!varTok.isIdent())
          unexpected(tok, "variable name expected after exception type.");
 
@@ -2890,14 +2890,14 @@ ContextPtr Parser::parseTryStmt(Zt z) {
                                     );
       BSTATS_END
 
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       if (!tok.isRParen())
          unexpected(tok, 
                     "closing parenthesis expected after exception variable."
                     );
       
       // parse the catch body
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       if (!tok.isLCurly())
          unexpected(tok,
                     "Curly bracket expected after catch clause."
@@ -2916,7 +2916,7 @@ ContextPtr Parser::parseTryStmt(Zt z) {
          BSTATS_END
 
          // XXX add catchLeave callback
-         ContextPtr terminalCatch = parseBlock(z, true, noCallbacks); 
+         ContextPtr terminalCatch = parseBlock(tokerMsg, true, noCallbacks); 
          lastWasTerminal = terminalCatch;
          if (terminalCatch) {
             if (terminal && terminal->encloses(*terminalCatch))
@@ -2931,7 +2931,7 @@ ContextPtr Parser::parseTryStmt(Zt z) {
       }
       
       // see if there's another catch
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       if (!tok.isCatch()) {
          toker.putBack(tok);
          BSTATS_GO(s1)
@@ -2942,15 +2942,15 @@ ContextPtr Parser::parseTryStmt(Zt z) {
    }
 }
 
-ContextPtr Parser::parseThrowStmt(Zt z) {
-   Token tok = toker.getToken(z);
+ContextPtr Parser::parseThrowStmt(TokerMsg tokerMsg) {
+   Token tok = toker.getToken(tokerMsg);
    if (tok.isSemi()) {
       // XXX need to get this working and to verify that we are in a catch
       error(tok, "Rethrowing exceptions not supported yet.");
 //      context->builder.emitThrow(*context, 0);
    } else {
       toker.putBack(tok);
-      ExprPtr expr = parseExpression(z);
+      ExprPtr expr = parseExpression(tokerMsg);
 
       if (!expr->type->isDerivedFrom(context->construct->vtableBaseType.get()))
          error(tok, SPUG_FSTR("Object of type " << 
@@ -2959,7 +2959,7 @@ ContextPtr Parser::parseThrowStmt(Zt z) {
                               )
                );
       
-      tok = toker.getToken(z);
+      tok = toker.getToken(tokerMsg);
       if (!tok.isSemi())
          unexpected(tok, "Semicolon expected after throw expression.");
 
@@ -2978,9 +2978,9 @@ ContextPtr Parser::parseThrowStmt(Zt z) {
 
 // oper name ( args ) { ... }
 //     ^                     ^
-void Parser::parsePostOper(Zt z, TypeDef *returnType) {
+void Parser::parsePostOper(TokerMsg tokerMsg, TypeDef *returnType) {
    bool reversed = false;
-   Token tok = getToken(z);
+   Token tok = getToken(tokerMsg);
    if (tok.isIdent()) {
       const string &ident = tok.getData();
       bool isInit = ident == "init";
@@ -3004,7 +3004,7 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
                             " must be of return type 'void'"
                             )
                   );
-         expectToken(z, Token::lparen, "expected argument list");
+         expectToken(tokerMsg, Token::lparen, "expected argument list");
          
          // the operators other than "init" require an empty args list.
          int expectedArgCount;
@@ -3021,17 +3021,17 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
          else
             flags = normal;
 
-         parseFuncDef(z, returnType, tok, "oper " + ident, flags, 
+         parseFuncDef(tokerMsg, returnType, tok, "oper " + ident, flags, 
                       expectedArgCount
                       );
       } else if (ident == "x") {
          // "oper x++" or "oper x--"
          if (!returnType)
             error(tok, "operator requires a return type");
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
          if (tok.isIncr() || tok.isDecr()) {
-            expectToken(z, Token::lparen, "expected argument list.");         
-            parseFuncDef(z, returnType, tok, "oper x" + tok.getData(),
+            expectToken(tokerMsg, Token::lparen, "expected argument list.");         
+            parseFuncDef(tokerMsg, returnType, tok, "oper x" + tok.getData(),
                          normal,
                          (context->scope == Context::composite) ? 0 : 1
                          );
@@ -3047,10 +3047,10 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
          if (!returnType)
             error(tok, "'call' operator requires a return type");
          
-         expectToken(z, Token::lparen, "expected argument list");
-         parseFuncDef(z, returnType, tok, "oper call", normal, -1);
+         expectToken(tokerMsg, Token::lparen, "expected argument list");
+         parseFuncDef(tokerMsg, returnType, tok, "oper call", normal, -1);
       } else if (ident == "to") {
-         TypeDefPtr type = parseTypeSpec(z);
+         TypeDefPtr type = parseTypeSpec(tokerMsg);
 
          // check for instance scope
          if (context->scope != Context::composite)
@@ -3070,14 +3070,14 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
                                  )
                   );
 
-         expectToken(z, Token::lparen, "expected argument list");
-         parseFuncDef(z, returnType, tok, "oper to " + type->getFullName(), 
+         expectToken(tokerMsg, Token::lparen, "expected argument list");
+         parseFuncDef(tokerMsg, returnType, tok, "oper to " + type->getFullName(), 
                       normal,
                       0
                       );
       } else if (ident == "r") {
          reversed = true;
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
       } else {
          unexpected(tok, 
                     SPUG_FSTR(ident << " is not a legal operator").c_str()
@@ -3096,23 +3096,23 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
    if (tok.isLBracket()) {
       // "oper []" or "oper []="
       if (reversed) error(tok, "Only binary operators are reversible");
-      expectToken(z, Token::rbracket, "expected right bracket.");
-      tok = getToken(z);
+      expectToken(tokerMsg, Token::rbracket, "expected right bracket.");
+      tok = getToken(tokerMsg);
       if (context->scope != Context::composite)
          error(tok, 
                "Bracket operators may only be defined in class scope."
                );
       if (tok.isAssign()) {
-         expectToken(z, Token::lparen, "expected argument list.");
-         parseFuncDef(z, returnType, tok, "oper []=", normal, -1);
+         expectToken(tokerMsg, Token::lparen, "expected argument list.");
+         parseFuncDef(tokerMsg, returnType, tok, "oper []=", normal, -1);
       } else {
-         parseFuncDef(z, returnType, tok, "oper []", normal, -1);
+         parseFuncDef(tokerMsg, returnType, tok, "oper []", normal, -1);
       }
    } else if (tok.isMinus()) {
       // minus is special because it can be either unary or binary
       if (reversed) error(tok, "Only binary operators are reversible");
-      expectToken(z, Token::lparen, "expected argument list.");
-      int numArgs = parseFuncDef(z, returnType, tok, "oper " + tok.getData(), 
+      expectToken(tokerMsg, Token::lparen, "expected argument list.");
+      int numArgs = parseFuncDef(tokerMsg, returnType, tok, "oper " + tok.getData(), 
                                  normal, 
                                  -1
                                  );
@@ -3126,23 +3126,23 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
                );
    } else if (tok.isTilde() || tok.isBang()) {
       if (reversed) error(tok, "Only binary operators are reversible");
-      expectToken(z, Token::lparen, "expected an argument list.");
+      expectToken(tokerMsg, Token::lparen, "expected an argument list.");
       // in composite context, these should have no arguments.
       int numArgs = (context->scope == Context::composite) ? 0 : 1;
-      parseFuncDef(z, returnType, tok, "oper " + tok.getData(), normal, 
+      parseFuncDef(tokerMsg, returnType, tok, "oper " + tok.getData(), normal, 
                    numArgs
                    );
    } else if (tok.isIncr() || tok.isDecr()) {
       if (reversed) error(tok, "Only binary operators are reversible");
       string sym = tok.getData();
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (!tok.isIdent() || tok.getData() != "x")
          unexpected(tok, 
                     "increment/decrement operators must include an 'x' "
                      "token to indicate pre or post: ex: oper ++x()"
                     );
-      expectToken(z, Token::lparen, "expected argument list.");
-      parseFuncDef(z, returnType, tok, "oper " + sym + "x",
+      expectToken(tokerMsg, Token::lparen, "expected argument list.");
+      parseFuncDef(tokerMsg, returnType, tok, "oper " + sym + "x",
                    normal,
                    (context->scope == Context::composite) ? 0 : 1
                    );
@@ -3154,10 +3154,10 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
       // in composite context, these should have just one argument.
       int numArgs = (context->scope == Context::composite) ? 1 : 2;
       
-      expectToken(z, Token::lparen, "expected argument list.");
+      expectToken(tokerMsg, Token::lparen, "expected argument list.");
       
       string name = (reversed ? "oper r" : "oper ") + tok.getData();
-      parseFuncDef(z, returnType, tok, name, reversed ? reverseOp: normal, 
+      parseFuncDef(tokerMsg, returnType, tok, name, reversed ? reverseOp: normal, 
                    numArgs
                    );
    } else {
@@ -3167,13 +3167,13 @@ void Parser::parsePostOper(Zt z, TypeDef *returnType) {
 
 // [ n1, n2, ... ]
 //  ^             ^
-void Parser::parseGenericParms(Zt z, GenericParmVec &parms) {
-   Token tok = getToken(z);
+void Parser::parseGenericParms(TokerMsg tokerMsg, GenericParmVec &parms) {
+   Token tok = getToken(tokerMsg);
    while (true) {
       if (tok.isIdent())
          parms.push_back(new GenericParm(tok.getData()));
       
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isRBracket())
          return;
       else if (!tok.isComma())
@@ -3182,7 +3182,7 @@ void Parser::parseGenericParms(Zt z, GenericParmVec &parms) {
                      "list."
                     );
       else
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
                     
    }
 }
@@ -3190,10 +3190,10 @@ void Parser::parseGenericParms(Zt z, GenericParmVec &parms) {
 void Parser::recordIStr(Generic *generic) {
    int depth = 0;
    
-   Zt z;
+   TokerMsg tokerMsg;
    while (true) {
 
-      Token tok = toker.getToken(z);
+      Token tok = toker.getToken(tokerMsg);
       generic->addToken(tok);
       if (tok.isLParen())
          ++depth;
@@ -3208,11 +3208,11 @@ void Parser::recordIStr(Generic *generic) {
 
 void Parser::recordBlock(Generic *generic) {
    int bracketCount = 1;
-   Zt z;
+   TokerMsg tokerMsg;
    while (bracketCount) {
       // get the next token, use the low-level token so as not to process 
       // annotations.
-      Token tok = toker.getToken(z);
+      Token tok = toker.getToken(tokerMsg);
       generic->addToken(tok);
       if (tok.isLCurly())
          ++bracketCount;
@@ -3226,15 +3226,15 @@ void Parser::recordBlock(Generic *generic) {
 }
 
 void Parser::recordParenthesized(Generic *generic) {
-   Zt z;
-   Token tok = getToken(z);
+   TokerMsg tokerMsg;
+   Token tok = getToken(tokerMsg);
    if (!tok.isLParen())
       unexpected(tok, "left parenthesis expected");
    generic->addToken(tok);
    int parenCount = 1;
    
    while (parenCount) {
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       if (tok.isLParen())
          ++parenCount;
       else if (tok.isRParen())
@@ -3248,11 +3248,11 @@ void Parser::recordParenthesized(Generic *generic) {
 //      ^                         ^
 // class name;
 //      ^     ^
-TypeDefPtr Parser::parseClassDef(Zt z) {
+TypeDefPtr Parser::parseClassDef(TokerMsg tokerMsg) {
    runCallbacks(classDef);
    
-   z.nested = true;
-   Token tok = getToken(z);
+   tokerMsg.nested = true;
+   Token tok = getToken(tokerMsg);
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
    string className = tok.getData();
@@ -3261,17 +3261,17 @@ TypeDefPtr Parser::parseClassDef(Zt z) {
    TypeDefPtr existing = checkForExistingDef(tok, className);
    
    // check for a generic parameter list
-   tok = getToken(z);
+   tok = getToken(tokerMsg);
    Generic *generic = 0;
    if (tok.isLBracket()) {
       if (existing)
          error(tok, "Generic classes can not be forward declared");
       
       generic = new Generic();
-      parseGenericParms(z, generic->parms);
+      parseGenericParms(tokerMsg, generic->parms);
       generic->ns = context->ns;
       generic->compileNS = context->compileNS;
-      tok = getToken(z);
+      tok = getToken(tokerMsg);
       generic->addToken(tok);
    }
    
@@ -3281,7 +3281,7 @@ TypeDefPtr Parser::parseClassDef(Zt z) {
    if (tok.isColon())
       while (true) {
          // parse the base class name
-         TypeDefPtr baseClass = parseTypeSpec(z, 0, generic);
+         TypeDefPtr baseClass = parseTypeSpec(tokerMsg, 0, generic);
          // subsequent parse errors should note the location of ident
          context->setLocation(identLoc);
          if (!generic) {
@@ -3300,7 +3300,7 @@ TypeDefPtr Parser::parseClassDef(Zt z) {
             bases.push_back(baseClass);
          }
 
-         tok = getToken(z);
+         tok = getToken(tokerMsg);
          if (generic) generic->addToken(tok);
          if (tok.isLCurly())
             break;
@@ -3377,7 +3377,7 @@ TypeDefPtr Parser::parseClassDef(Zt z) {
    ContextStackFrame<Parser> cstack(*this, lexicalContext.get());
 
    // parse the body
-   parseClassBody(z);
+   parseClassBody(tokerMsg);
 
    type->rectify(*classContext);
    BSTATS_GO(s2)
@@ -3439,13 +3439,13 @@ Parser::Parser(Toker &toker, model::Context *context) :
 
 void Parser::parse() {
     // outer parser just parses an un-nested block
-    Zt z;
-    parseBlock(z, false, noCallbacks);
+    TokerMsg tokerMsg;
+    parseBlock(tokerMsg, false, noCallbacks);
 }
 
 // class name { ... }
 //             ^     ^
-void Parser::parseClassBody(Zt z) {
+void Parser::parseClassBody(TokerMsg tokerMsg) {
    runCallbacks(classEnter);
 
    // parse the class body   
@@ -3453,19 +3453,19 @@ void Parser::parseClassBody(Zt z) {
       state = st_base;
       
       // check for a closing brace or a nested class definition
-      Token tok = getToken(z);
+      Token tok = getToken(tokerMsg);
       if (tok.isRCurly()) {
          // run callbacks, this can change the token stream so make sure we've 
          // still got an end curly
          toker.putBack(tok);
          if (runCallbacks(classLeave)) {
-            Token tok2 = toker.getToken(z);
+            Token tok2 = toker.getToken(tokerMsg);
             if (!tok2.isRCurly()) {
                toker.putBack(tok2);
                continue;
             }
          } else {
-            toker.getToken(z);
+            toker.getToken(tokerMsg);
          }
          break;
       } else if (tok.isSemi()) {
@@ -3473,28 +3473,28 @@ void Parser::parseClassBody(Zt z) {
          continue;
       } else if (tok.isClass()) {
          state = st_notBase;
-         TypeDefPtr newType = parseClassDef(z);
+         TypeDefPtr newType = parseClassDef(tokerMsg);
          continue;
 
       // check for "oper" keyword
       } else if (tok.isOper()) {
          state = st_notBase;
-         parsePostOper(z, 0);
+         parsePostOper(tokerMsg, 0);
          continue;
 
       // check for "alias" keyword.
       } else if (tok.isAlias()) {
          state = st_notBase;
-         parseAlias(z);
+         parseAlias(tokerMsg);
          continue;
       }
 
       // parse some other kind of definition
       toker.putBack(tok);
       state = st_notBase;
-      TypeDefPtr type = parseTypeSpec(z);
+      TypeDefPtr type = parseTypeSpec(tokerMsg);
       TypeDef *tempType = type.get();
-      parseDef(z, tempType);
+      parseDef(tokerMsg, tempType);
    }
    
    // make sure all forward declarations have been defined.

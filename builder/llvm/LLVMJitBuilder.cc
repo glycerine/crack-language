@@ -328,7 +328,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     func = mainFunc;
 
     // debug
-    if (options->dropintoRepl && context.repl && context.repl->debugLevel() > 2) { 
+    if (options->dropIntoRepl && context.repl && context.repl->debugLevel() > 2) { 
         printf("dumping code just before verifyModule():");
         dump();
     }
@@ -397,7 +397,7 @@ void LLVMJitBuilder::doRunOrDump(Context &context) {
     if (options->dumpMode)
         dump();
 
-    if (options->dropintoRepl) {
+    if (options->dropIntoRepl) {
         run(context);
         return;
     }

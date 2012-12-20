@@ -61,14 +61,14 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
     parser::Toker tempToker(iss, sourceName, lineNumber);
     list<parser::Token> tokens;
     parser::Token tok;
-    parser::Zt z;
+    parser::TokerMsg tokerMsg;
 
     // 0 - not in an istring
     // 1 - in an istring
     // 2 - in an interpolation sequence
     // >2 - in an interpolation sequence nested in n-2 parenthesis
     int istrMode = 0;
-    while (!(tok = tempToker.getToken(z)).isEnd()) {
+    while (!(tok = tempToker.getToken(tokerMsg)).isEnd()) {
         if (istrMode) {
             if (tok.isLParen()){
                 ++istrMode;
@@ -96,8 +96,8 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
 }
 
 Token *CrackContext::getToken() {
-    parser::Zt z;
-    return new Token(toker->getToken(z));
+    parser::TokerMsg tokerMsg;
+    return new Token(toker->getToken(tokerMsg));
 }
 
 void CrackContext::putBack(Token *tok) {
@@ -210,8 +210,8 @@ void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
 }
 
 Token *CrackContext::_getToken(CrackContext *inst) {
-    parser::Zt z;
-    return new Token(inst->toker->getToken(z));
+    parser::TokerMsg tokerMsg;
+    return new Token(inst->toker->getToken(tokerMsg));
 }
 
 void CrackContext::_putBack(CrackContext *inst, Token *tok) {

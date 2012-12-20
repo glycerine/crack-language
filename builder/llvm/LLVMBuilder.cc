@@ -246,13 +246,13 @@ namespace {
         BBuilderContextData *bdata =
             BBuilderContextData::get(lexicalContext.get());
 
-        parser::Zt z; 
-        z.nested = true;
+        parser::TokerMsg tokerMsg; 
+        tokerMsg.nested = true;
         istringstream src(temp);
         try {
             parser::Toker toker(src, "<builtin>", lineNum);
             parser::Parser p(toker, lexicalContext.get());
-            p.parseClassBody(z);
+            p.parseClassBody(tokerMsg);
         } catch (parser::ParseError &ex) {
             std::cerr << ex << endl;
             assert(false);

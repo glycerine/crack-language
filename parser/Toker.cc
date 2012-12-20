@@ -30,7 +30,7 @@ Location Toker::getLocation() {
     return lastLoc;
 }
 
-bool Toker::getChar(char &ch, Zt z) {
+bool Toker::getChar(char &ch, TokerMsg tokerMsg) {
     bool result;
     if (putbackIndex < putbackSize) {
         ch = putbackBuf[putbackIndex++];
@@ -38,7 +38,7 @@ bool Toker::getChar(char &ch, Zt z) {
     } else {
         result = src.read(&ch, 1);
         
-        if (!result && repl && z.nested) {
+        if (!result && repl && tokerMsg.nested) {
             if (repl->get_more_input()) {
                 result = src.read(&ch, 1);
             }
@@ -209,7 +209,7 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
                      );
 }
 
-Token Toker::readToken(Zt z) {
+Token Toker::readToken(TokerMsg tokerMsg) {
     char ch, terminator;
     
     // information on the preceeding characters for compound symbols
@@ -233,7 +233,7 @@ Token Toker::readToken(Zt z) {
 
     while (true) {
         // read the next character from the stream
-        if (!getChar(ch,z)) break;
+        if (!getChar(ch, tokerMsg)) break;
 
         // processing varies according to state
         switch (state) {
@@ -966,7 +966,7 @@ Token Toker::readToken(Zt z) {
     }
 }
 
-Token Toker::getToken(Zt z) {
+Token Toker::getToken(TokerMsg tokerMsg) {
     // if any tokens have been put back, use them first
     if (tokens.size()) {
         Token temp = tokens.back();
@@ -982,7 +982,7 @@ Token Toker::getToken(Zt z) {
         return temp;
     } else {
         vector<Token> toks;
-        toks.push_back(readToken(z));
+        toks.push_back(readToken(tokerMsg));
 
         // we want to read all of the i-string tokens as a batch so that we 
         // can apply the indentation transforms to them all collectively. 
@@ -1011,7 +1011,7 @@ Token Toker::getToken(Zt z) {
                 } else if (tok.isIdent()) {
                     continueIString();
                 }
-                toks.push_back(readToken(z));
+                toks.push_back(readToken(tokerMsg));
             }
             
             for (int i = 0; i < toks.size(); ++i)

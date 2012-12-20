@@ -37,7 +37,7 @@ class BuilderOptions : public spug::RCBase {
         // Keep compile time statistics
         bool statsMode;
         // drop into interpreter
-        bool dropintoRepl;
+        bool dropIntoRepl;
         // builder specific option strings
         StringMap optionMap;
 
@@ -47,7 +47,7 @@ class BuilderOptions : public spug::RCBase {
                               dumpMode(false),
                               debugMode(false),
                               statsMode(false),
-                              dropintoRepl(false),
+                              dropIntoRepl(false),
                               optionMap() { }
 
 };

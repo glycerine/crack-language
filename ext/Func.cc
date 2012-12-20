@@ -261,8 +261,8 @@ void Func::finish() {
             std::istringstream initsStream(ctorInitializers);
             Toker initsToker(initsStream, name.c_str());
             Parser initsParser(initsToker, funcContext.get());
-            Zt z;
-            initsParser.parseInitializers(z, &inits, thisRef.get());
+            TokerMsg tokerMsg;
+             initsParser.parseInitializers(tokerMsg, &inits, thisRef.get());
         }
         receiverType->emitInitializers(*funcContext, &inits);
         

@@ -122,7 +122,7 @@ class Parser {
        * Returns the next token from the tokenizer and stores its location in
        * the current context.
        */
-      Token getToken(Zt z);
+      Token getToken(TokerMsg tokerMsg);
 
       /**
        * Returns the precedence of the specified operator.
@@ -136,7 +136,7 @@ class Parser {
        * Get the next token and make sure it is of type 'type' otherwise
        * unexpected(tok, error);
        */
-      void expectToken(Zt z, Token::Type type, const char *error);
+      void expectToken(TokerMsg tokerMsg, Token::Type type, const char *error);
 
       /** Look up a binary operator, either as a stand-alone operator
        * defintiion with two args or a method with one arg.
@@ -154,7 +154,7 @@ class Parser {
       /**
        * Parse an annotation and execute it.
        */
-      void parseAnnotation(Zt z);
+      void parseAnnotation(TokerMsg tokerMsg);
 
       /**
        * Parse a single statement.
@@ -165,7 +165,7 @@ class Parser {
        *    the statement is terminal in all contexts from the current context
        *    to the returned context (non-inclusive).
        */
-      model::ContextPtr parseStatement(Zt z, bool defsAllowed);
+      model::ContextPtr parseStatement(TokerMsg tokerMsg, bool defsAllowed);
 
       /**
        * Parse a block - a sequence of statements in the same execution
@@ -174,7 +174,7 @@ class Parser {
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseBlock(Zt z, bool nested, Event closeEvent);
+      model::ContextPtr parseBlock(TokerMsg tokerMsg, bool nested, Event closeEvent);
 
       /**
        * Creates a variable reference complete with an implicit "this" if
@@ -206,12 +206,12 @@ class Parser {
       /**
        * Parse the rest of an explicit "oper" name.
        */
-      std::string parseOperSpec(Zt z);
+      std::string parseOperSpec(TokerMsg tokerMsg);
 
       /**
        * Parse and emit a function call.
        */
-      model::FuncCallPtr parseFuncCall(Zt z,
+      model::FuncCallPtr parseFuncCall(TokerMsg tokerMsg,
                                        const Token &ident,
                                        const std::string &funcName,
                                        model::Namespace *ns,
@@ -226,7 +226,7 @@ class Parser {
        *   identifier is scoped to the local context.
        * @param ident The identifier's token.
        */
-      model::ExprPtr parsePostIdent(Zt z, 
+      model::ExprPtr parsePostIdent(TokerMsg tokerMsg, 
                                     model::Expr *container,
                                     const Token &ident                                    );
 
@@ -235,7 +235,7 @@ class Parser {
        *
        * @param expr the receiver of the interpolated string operation.
        */
-      model::ExprPtr parseIString(Zt z, model::Expr *expr);
+      model::ExprPtr parseIString(TokerMsg tokerMsg, model::Expr *expr);
 
       /**
        * Parse a sequence constant.
@@ -243,12 +243,12 @@ class Parser {
        * @param containerType the type of the sequence that we are
        * initializing.
        */
-      model::ExprPtr parseConstSequence(Zt z, model::TypeDef *containerType);
+      model::ExprPtr parseConstSequence(TokerMsg tokerMsg, model::TypeDef *containerType);
 
       /**
        * Parse a "typeof" expression.
        */
-      model::TypeDefPtr parseTypeof(Zt z);
+      model::TypeDefPtr parseTypeof(TokerMsg tokerMsg);
 
       /**
        * If the expression is a VarRef referencing a TypeDef, return the
@@ -260,7 +260,7 @@ class Parser {
        * Parse the ternary operator's expression.
        * @param cond the conditional expression.
        */
-      model::ExprPtr parseTernary(Zt z, model::Expr *cond);
+      model::ExprPtr parseTernary(TokerMsg tokerMsg, model::Expr *cond);
 
       /**
        * Parse a secondary expression.  Secondary expressions include a the
@@ -271,7 +271,7 @@ class Parser {
        *        modifies.
        * @param precedence the current level of operator precedence.
        */
-      model::ExprPtr parseSecondary(Zt z,
+      model::ExprPtr parseSecondary(TokerMsg tokerMsg,
                                     model::Expr *expr,
                                     unsigned precedence = 0
                                     );
@@ -285,8 +285,8 @@ class Parser {
        *    the sequence 'a + b' ('+' has precedence of 8), we'll stop parsing
        *    after the 'a'.
        */
-      model::ExprPtr parseExpression(Zt z, unsigned precedence = 0);
-      void parseMethodArgs(Zt z,
+      model::ExprPtr parseExpression(TokerMsg tokerMsg, unsigned precedence = 0);
+      void parseMethodArgs(TokerMsg tokerMsg,
                            std::vector<model::ExprPtr> &args,
                            Token::Type terminator = Token::rparen
                            );
@@ -296,24 +296,24 @@ class Parser {
        * @param tok the left bracket token of the generic specifier.
        * @param generic defined when doing this within a generic definition.
        */
-      model::TypeDef *parseSpecializer(Zt z,
+      model::TypeDef *parseSpecializer(TokerMsg tokerMsg,
                                        const Token &tok,
                                        model::TypeDef *typeDef,
                                        model::Generic *generic = 0
                                        );
 
 
-      model::ExprPtr parseConstructor(Zt z, 
+      model::ExprPtr parseConstructor(TokerMsg tokerMsg, 
                                       const Token &tok, model::TypeDef *type,
                                       Token::Type terminator
                                       );
 
-      model::TypeDefPtr parseTypeSpec(Zt z,
+      model::TypeDefPtr parseTypeSpec(TokerMsg tokerMsg,
                                       const char *errorMsg = 0,
                                       model::Generic *generic = 0
                                       );
-      void parseModuleName(Zt z, std::vector<std::string> &moduleName);
-      void parseArgDefs(Zt z, std::vector<model::ArgDefPtr> &args, bool isMethod);
+      void parseModuleName(TokerMsg tokerMsg, std::vector<std::string> &moduleName);
+      void parseArgDefs(TokerMsg tokerMsg, std::vector<model::ArgDefPtr> &args, bool isMethod);
 
       enum FuncFlags {
          normal,           // normal function
@@ -335,7 +335,7 @@ class Parser {
        * @param expectedArgCount if > -1, this is the expected number of arguments.
        * @returns the number of actual arguments.
        */
-      int parseFuncDef(Zt z, model::TypeDef *returnType, const Token &nameTok,
+      int parseFuncDef(TokerMsg tokerMsg, model::TypeDef *returnType, const Token &nameTok,
                        const std::string &name,
                        FuncFlags funcFlags,
                        int expectedArgCount
@@ -345,7 +345,7 @@ class Parser {
        * Parse a variable definition initializer.  Deals with the special
        * syntax for constructors and sequence constants.
        */
-      model::ExprPtr parseInitializer(Zt z,
+      model::ExprPtr parseInitializer(TokerMsg tokerMsg,
                                       model::TypeDef *type,
                                       const std::string &varName
                                       );
@@ -353,7 +353,7 @@ class Parser {
       /**
        * Parse an alias statement.
        */
-      void parseAlias(Zt z);
+      void parseAlias(TokerMsg tokerMsg);
 
       /**
        * Parse a definition. Returns false if there was no definition.
@@ -361,10 +361,10 @@ class Parser {
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
-      bool parseDef(Zt z, model::TypeDef *&type);
+      bool parseDef(TokerMsg tokerMsg, model::TypeDef *&type);
 
       /** Parse a constant definition. */
-      void parseConstDef(Zt z);
+      void parseConstDef(TokerMsg tokerMsg);
 
       // statements
 
@@ -372,48 +372,48 @@ class Parser {
        * Parse a clause, which can either be a an expression statement or a
        * definition.
        */
-      void parseClause(Zt z, bool defsAllowed);
+      void parseClause(TokerMsg tokerMsg, bool defsAllowed);
 
       /*
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseIfClause(Zt z);
+      model::ContextPtr parseIfClause(TokerMsg tokerMsg);
 
       /** Parse the condition in a 'while', 'for' or 'if' statement */
-      model::ExprPtr parseCondExpr(Zt z);
+      model::ExprPtr parseCondExpr(TokerMsg tokerMsg);
 
       /*
        * @returns the context that this statement terminates to.  See
        *    parseStatement().
        */
-      model::ContextPtr parseIfStmt(Zt z);
+      model::ContextPtr parseIfStmt(TokerMsg tokerMsg);
 
-      void parseWhileStmt(Zt z);
-      void parseForStmt(Zt z);
-      void parseReturnStmt(Zt z);
-      model::ContextPtr parseTryStmt(Zt z);
-      model::ContextPtr parseThrowStmt(Zt z);
+      void parseWhileStmt(TokerMsg tokerMsg);
+      void parseForStmt(TokerMsg tokerMsg);
+      void parseReturnStmt(TokerMsg tokerMsg);
+      model::ContextPtr parseTryStmt(TokerMsg tokerMsg);
+      model::ContextPtr parseThrowStmt(TokerMsg tokerMsg);
 
       /**
        * Parse an import statement.  'ns' is the namespace in which to alias
        * imported symbols.
        */
-      void parseImportStmt(Zt z, model::Namespace *ns);
+      void parseImportStmt(TokerMsg tokerMsg, model::Namespace *ns);
 
       /**
        * Parse a function definition after an "oper" keyword.
        */
-      void parsePostOper(Zt z, model::TypeDef *returnType);
+      void parsePostOper(TokerMsg tokerMsg, model::TypeDef *returnType);
 
       /** Parse the generic parameter list */
-      void parseGenericParms(Zt z, model::GenericParmVec &parms);
+      void parseGenericParms(TokerMsg tokerMsg, model::GenericParmVec &parms);
 
       void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
       void recordParenthesized(model::Generic *generic);
 
-      model::TypeDefPtr parseClassDef(Zt z);
+      model::TypeDefPtr parseClassDef(TokerMsg tokerMsg);
 
    public:
       // XXX should be protected, once required functionality is migrated out.
@@ -446,9 +446,9 @@ class Parser {
       /**
        * Parse the initializer list after an oper init.
        */
-      void parseInitializers(Zt z, model::Initializers *inits, model::Expr *receiver);
+      void parseInitializers(TokerMsg tokerMsg, model::Initializers *inits, model::Expr *receiver);
 
-      void parseClassBody(Zt z);
+      void parseClassBody(TokerMsg tokerMsg);
 
       /**
        * Throws a parse error about an attempt to override a variable that has
