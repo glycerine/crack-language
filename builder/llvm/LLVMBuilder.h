@@ -162,7 +162,7 @@ class LLVMBuilder : public Builder {
         llvm::Module *module;
 
         // the first function made in beginSection(). Faciliates cleanup.
-        llvm::Function *first_section_func;
+        llvm::Function *firstSectionFunc;
 
         llvm::Function *func;
         llvm::PointerType *llvmVoidPtrType;
