@@ -184,8 +184,7 @@ void Namespace::removeDef(VarDef *def, bool OverloadDefAllowed, bool bulkclean) 
 
 void Namespace::removeDefAllowOverload(VarDef *def, bool bulkclean) {
 
-    OverloadDef* odef = dynamic_cast<OverloadDef*>(def);    
-    // crashes???   OverloadDefPtr odef = OverloadDefPtr::cast(def);
+    OverloadDefPtr odef = OverloadDefPtr::cast(def);
 
     if (odef) {
         model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();

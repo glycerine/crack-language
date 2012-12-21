@@ -11,17 +11,32 @@
 #include <limits.h>
 
 /**
- * OrderedIdLog: keep a vector of VarDef's that can be searched
- *   readily by value or by name. It's tail elements can be truncated
- *   off rapidly when we rollback/abort a transaction because
- *   of syntax error at the repl.
- *   It is ordered in the sense that the order in which definitions
- *   are pushed-back is preserved for ease of truncation.
- *   It is hashed in that location of a VarDef of name is fast.
+ * OrderedIdLog: keep a map from serial number to VarDef's 
+ *   that can be searched readily by value or by name. 
+ *   It's tail elements can be truncated
+ *   off cleanly when we rollback/abort a transaction due
+ *   to syntax error at the repl.
+ *   It is ordered by the serial numbers (see nextId() and
+ *   lastId() which are allocated in the chronological order
+ *   in which VarDefs are entered by the push_back() method.
  *
- * Ironically, tr1::hash_multimap invalidates iterators upon insert.
- *  which means we had to shift to std::multimap instead. multimap
- *  preserves iterators after either insert or erase.
+ * Originally used tr1::hash_multimap for indexes, but
+ *  it turns out that tr1 hash-maps invalidate iterators upon insert.
+ *  We had to shift to std::multimap instead for the indices. multimap
+ *  preserves iterators after either insert or erase. The
+ *  _mainMap that holds the central VarDefName element is a std::map,
+ *  although it was originally a vector, and there are some
+ *  vestiges of that yet to be refactored out.
+ * 
+ * We don't want to keep alive any of our VarDef or Namespace
+ *  references, as this might induce errors that we aren't 
+ *  ready to reason about. Hence there is no reference counting
+ *  here.
+ *
+ * NB: Still under development, so all in the header file
+ *     for ease of change.
+ *
+ * XXX TODO: once stabilized, encapsulate/separate .h/.cc
  */
 
 namespace model {
@@ -51,7 +66,7 @@ namespace model {
         //  name;
         //  as opposed to the names in Namespace::defs which confound
         //  lookup (for removal) by combining overloaded names into
-        //  one thing. So we will have "
+        //  one thing.
         //
         typedef std::multimap<std::string, long> StrPosMap;
         typedef StrPosMap::iterator   StrPosMapIt;
