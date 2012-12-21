@@ -467,13 +467,20 @@ void Namespace::undoHelperRollbackOrderedForTxn(const Txmark& t) {
 
     if (st == en) return;
 
+    bool found = false;
     for (OrderedIdLog::VdnMapIt it = st; it != en; ++it) {
         OrderedIdLog::VarDefName& d = it->second;
+        found = false;
+
+#undef IDEALLY
+#ifdef IDEALLY
+            d.ns->removeDefAllowOverload(d.vardef, true);
+#else
         if (this == d.ns) {
             d.ns->removeDefAllowOverload(d.vardef, true);
+            found = true;
 
         } else {
-            bool found = false;
             Namespace *parent = 0;
             unsigned int i = 0;
             while(parent = getParent(i++).get()) {
@@ -491,11 +498,15 @@ void Namespace::undoHelperRollbackOrderedForTxn(const Txmark& t) {
                     break;
                 }
             }
-            if (found) break;
         }
 
-        //        printf("undo tx saw unknown, non-ancestor namespace '%s'\n",
-        //               d.ns->getNamespaceName().c_str());
+        if (!found) {
+            if (globalRepl && globalRepl->debugLevel() > 0) { 
+                printf("undo tx saw unknown, non-ancestor namespace '%s'\n",
+                       d.ns->getNamespaceName().c_str());
+            }
+        }
+#endif
     }
 
     orderedForTxn.eraseBeyond(t.last_commit);
