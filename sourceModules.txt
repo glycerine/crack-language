@@ -73,5 +73,6 @@ compiler/CrackContext.cc
 compiler/Token2.cc
 compiler/Location2.cc
 wisecrack/repl.cc
+wisecrack/SpecialCmd.cc
 Crack.cc
 util/CacheFiles.cc
