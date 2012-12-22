@@ -20,8 +20,8 @@
 /**
  * OrderedIdLog: keep a map from serial number to VarDef's 
  *   that can be searched readily by value or by name. 
- *   It's tail elements can be truncated
- *   off cleanly when we rollback/abort a transaction due
+ *   It's tail elements from last_commit to end will be truncated
+ *   off when we rollback/abort a transaction due
  *   to syntax error at the repl.
  *   It is ordered by the serial numbers (see nextId() and
  *   lastId() which are allocated in the chronological order
@@ -29,7 +29,7 @@
  *
  * Originally used tr1::hash_multimap for indexes, but
  *  it turns out that tr1 hash-maps invalidate iterators upon insert.
- *  We had to shift to std::multimap instead for the indices. multimap
+ *  We had to shift to std::multimap instead for the indices. A multimap
  *  preserves iterators after either insert or erase. The
  *  _mainMap that holds the central VarDefName element is a std::map,
  *  although it was originally a vector, and there are some
@@ -51,7 +51,7 @@ namespace model {
     class VarDef;
     class Namespace;
 
-    // a simple vector together with simple hashtables for fast lookup
+    // serial number -> VarDefName map
 
     class OrderedIdLog {
     public:
