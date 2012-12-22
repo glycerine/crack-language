@@ -75,22 +75,22 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
 
     // INVAR: we have a repl command, and p points to it.
     if (0 == strlen(p) // "." alone
-        ||  (' ' == *p && strlen(p) > 1)) { // or with a named sym to print
+        ||  (' ' == *p && strlen(p) > 1)) { // or with sym to print
         // . sym : print sym
         // .     : print last sym
 
         const char *sym = p + 1;
         std::string cmd;
 
-        if (0==strlen(p)) {
-            // just . by itself on a line: print the
+        VarDefPtr vcout = context->ns->lookUp("cout");
+        if (!vcout) {
+            cmd += "import crack.io cout; ";
+        }
+        
+        if (!strlen(p)) {
+            // just . (or getReplCmdStart()) by itself on a line: print the
             // last thing added to the namespace, if we can.
 
-            VarDefPtr vcout = context->ns->lookUp("cout");
-            if (!vcout) {
-                cmd += "import crack.io cout; ";
-            }
-        
             TypeDef *tdef = 0;
             sym = context->ns->lastTxSymbol(&tdef);
             if (NULL == sym) {
@@ -111,7 +111,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
                 const char *y = x.c_str();
                 size_t pxl = x.size();
                 if (!strcmp(y + pxl - 4,"meta")
-                    || 0==strncmp(y, "function", 8)
+                    || !strncmp(y, "function", 8)
                     ) {
                     printf("cannot display '%s' of type '%s' at the moment.\n", sym, y);
                     if (cmd.size()) {
@@ -190,7 +190,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         bdr->dump();
         return true;
 
-    } else if (0==strncmp("dc ", p, 3) && strlen(p) > 3) {
+    } else if (!strncmp("dc ", p, 3) && strlen(p) > 3) {
         // dc: dump llvm-code for a symbol
 
         const char *sym = p + 3;
@@ -258,7 +258,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
 
         return true;
 
-    } else if (0==strncmp("rm ", p, 3) && strlen(p) > 3) {
+    } else if (!strncmp("rm ", p, 3) && strlen(p) > 3) {
         // rm sym : remove symbol sym from namespace
 
         const char *sym = p + 3;
@@ -282,12 +282,12 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         context->ns->removeDefAllowOverload(var.get());
         return true;
 
-    } else if (0==strncmp("!", p, 1)) {
+    } else if (!strncmp("!", p, 1)) {
         const char *cmd = p + 1;
         int res = system(cmd);
         return true;
 
-    } else if (0==strncmp(".", p, 1)) {
+    } else if (!strncmp(".", p, 1)) {
         // source a file
         const char *sourceme = p + 1;
         while(isspace(*sourceme) && sourceme < end) { ++sourceme;  }
@@ -333,7 +333,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         }
         return true;
     }
-    else if (0==strncmp("prefix ", p, 7) && strlen(p) > 7) {
+    else if (!strncmp("prefix ", p, 7) && strlen(p) > 7) {
         const char *pre = p + 7;
         printf("setting repl command prefix to '%s'\n", pre);
         r.setReplCmdStart(pre);
@@ -372,7 +372,10 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
               
         return true;
     }
-    return false;
+
+    printf("unrecognized special repl command '%s%s'."
+           " Type %shelp for hints.\n", s, p, s);
+    return true;
 }
 
 } // end namespace wisecrack
