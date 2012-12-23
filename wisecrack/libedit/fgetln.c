@@ -90,7 +90,7 @@ getline (char **lineptr, size_t *n, FILE *stream)
 char *fgetln(FILE *stream, size_t *len)
 {
   char *ptr = NULL;
-  int sz = 0;
+  size_t sz = 0;
 
   sz = getline(&ptr,  &sz, stream);
   if(len) {
