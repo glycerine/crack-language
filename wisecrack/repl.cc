@@ -154,7 +154,6 @@ namespace wisecrack {
     void Repl::set_debugLevel(int level) { _debugLevel = level; }
     int Repl::debugLevel() { return _debugLevel; }
 
-
     char *Repl::getPrompt() {
         static char _b[256];
         if (_showLineN) {
@@ -168,7 +167,6 @@ namespace wisecrack {
     void Repl::prompt(FILE *fout) {
         _lineEd.displayPrompt(fout);
     }
-
 
     /** 
      *  read(fin) takes a line of input from fin, and if ctrl-c SIGINT is detected,
@@ -227,10 +225,7 @@ namespace wisecrack {
         _readlen = strlen(_readbuf);
         trimr();
 
-#ifdef USE_LIB_EDIT
-        editLine_addToHistory(_readbuf);
-#endif
-        history.push_back(_readbuf);
+        _lineEd.addToHistory(_readbuf);
     }
 
 

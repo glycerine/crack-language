@@ -6,7 +6,9 @@
 // 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "wisecrack/editor.h"
+#include "wisecrack/repl.h"
 
 // implementation of LineEditor using BSD licensed
 //  libary called libeditline
@@ -106,14 +108,13 @@ const char *LineEditor::gets(char* readbuf, int readsz, FILE* fin) {
         size_t len = strlen(readbuf);
         if (readbuf[len-1] == '\n')
             readbuf[len-1]=0;
-        addToHistory(r);
     } else {
         _eof = true;
     }
     return r;
 }
 
-const char *LineEditor::displayPrompt() {
+void LineEditor::displayPrompt(FILE* fout) {
     // for editing the cmd line, the libedit library
     // has to know the length of the prompt and print
     // it by itself, so we do nothing here. Basically
@@ -147,4 +148,8 @@ void SimplestEditor::displayPrompt(FILE* fout) {
 
 bool SimplestEditor::eof(FILE* fin) {
     return feof(fin);
+}
+
+void SimplestEditor::addToHistory(const char *line) {
+    _repl->history.push_back(line);
 }

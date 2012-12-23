@@ -16,9 +16,11 @@
  */
 
 namespace LibEditLine {
-    class EditLine;
-    class History;
-    class HistEvent;
+    struct editline;
+    typedef struct editline EditLine;
+    struct history;
+    typedef struct history History;
+    struct HistEvent;
 }
 
 namespace wisecrack {
@@ -48,15 +50,18 @@ class LineEditor {
     /** have we hit end of file? */
     virtual bool eof(FILE* fin);
 
+    /** how we want the line recorded */
+    virtual void addToHistory(const char *line);
+
+ protected:
+    wisecrack::Repl* _repl;
+
  private:
-    // gets automatically does addToHistory
-    void addToHistory(const char *line);
 
     LibEditLine::EditLine *_editLine;
     LibEditLine::History *_editLineHistory;
     LibEditLine::HistEvent *_editLineHistoryEvent;
 
-    wisecrack::Repl* _repl;
     bool  _eof;
 };
 
@@ -76,6 +81,8 @@ class SimplestEditor : virtual public LineEditor {
     virtual void displayPrompt(FILE* fout);
 
     virtual bool eof(FILE* fin);
+
+    virtual void addToHistory(const char *line);
 };
 
 

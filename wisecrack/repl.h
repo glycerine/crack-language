@@ -67,10 +67,10 @@ namespace wisecrack {
          *   one or the other, not both, for lineEd */
 
         /** uses lib editline  */
-        LineEditor _lineEd;
+        //LineEditor _lineEd;
 
         //* uses simplest fgets, no fancy library */
-        // SimplestEditor _lineEd;
+        SimplestEditor _lineEd;
 
         void prompt(FILE *fout);
         char *getPrompt();
