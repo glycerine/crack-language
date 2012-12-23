@@ -74,5 +74,6 @@ compiler/Token2.cc
 compiler/Location2.cc
 wisecrack/repl.cc
 wisecrack/SpecialCmd.cc
+wisecrack/editor.cc
 Crack.cc
 util/CacheFiles.cc
