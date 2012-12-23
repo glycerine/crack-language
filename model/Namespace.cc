@@ -514,14 +514,14 @@ void Namespace::undoHelperRollbackOrderedForTxn(const Txmark& t) {
 
 void Namespace::undoTransactionTo(const Namespace::Txmark& t,
                                   Repl* repl) {
+
+    if (!t.ns || t.last_commit < 0) return;
     
     if (this != t.ns) {
         printf("error in undoTransactionTo: in wrong namespace\n");
         assert(0);
         exit(1);
     }
-
-    if (t.last_commit < 0) return;
 
    undoHelperRollbackOrderedForTxn(t);
 }
