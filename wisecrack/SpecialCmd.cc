@@ -145,13 +145,10 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
     } else if (!strcmp("histon", p)) {
         // turn on logging history to .crkhist
         r.histon();
-        printf("logging subsequent commands to file '.crkhist'.\n");
+        if (r.hist()) printf("logging subsequent commands to file '.crkhist'.\n");
         return true;
     }
     
-    // otherwise, add to .crkhist file if that is on.
-    r.loghist(p);
-
     if (!strcmp("q", p) ||
         !strcmp("quit", p)) {
         // quitting time.
@@ -319,7 +316,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
     }
     else
     if (!strcmp("history", p)) {
-        if (r.history.size() == 1) return true; // first cmd.
+        if (r.history.size() <= 1) return true; // first cmd.
 
         wisecrack::Repl::histlist::iterator it = r.history.begin();
         wisecrack::Repl::histlist::iterator en = r.history.end();

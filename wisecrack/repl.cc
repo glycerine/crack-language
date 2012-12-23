@@ -117,6 +117,7 @@ namespace wisecrack {
             _histon = true;
         } else {
             perror("could not open history file '.crkhist'");
+            _histon = false;
         }
     }
 
@@ -219,6 +220,8 @@ namespace wisecrack {
         trimr();
 
         _lineEd.addToHistory(_readbuf);
+        history.push_back(_readbuf);
+        loghist(_readbuf);
     }
 
 

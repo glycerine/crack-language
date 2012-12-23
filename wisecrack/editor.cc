@@ -151,5 +151,5 @@ bool SimplestEditor::eof(FILE* fin) {
 }
 
 void SimplestEditor::addToHistory(const char *line) {
-    _repl->history.push_back(line);
+
 }
