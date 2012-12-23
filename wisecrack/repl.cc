@@ -137,6 +137,7 @@ namespace wisecrack {
 
     Repl::~Repl() {
         if (_crkhist) fclose(_crkhist);
+        globalRepl = 0;
     }
 
     bool Repl::done() { return _alldone; }
