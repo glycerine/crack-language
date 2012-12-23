@@ -14,19 +14,10 @@
 #include "wisecrack/editor.h" // LineEditor
 
 //
-// wisecrack: an interpreter for crack
+// project wisecrack: an interpreter for crack
 //
-
-// Repl, read-eval-print-loop : an interpreter
+// Repl, read-eval-print-loop : the central interpreter class.
 //
-//   deliberately kept as simple as possible
-//    in order to enable experimentation to find the
-//    overall structure.
-//    e.g. use simple FILE*, no iostream, use no readline, 
-//         no libedit history, etc.
-//    so we can focus on the read-eval interaction, which
-//    is the tricky part.
-
 
 namespace wisecrack {
 
@@ -204,7 +195,8 @@ namespace wisecrack {
         }
 
         default: {
-            fprintf(stderr, "Wierd and unhandled return in repl.cc  switch(sigsetjmp) , rc = %d\n", rc);
+            fprintf(stderr, "Wierd and unhandled return in repl.cc"
+                    "  switch(sigsetjmp) , rc = %d\n", rc);
             assert(0);                
             break;
         }
@@ -341,8 +333,11 @@ namespace wisecrack {
         src.clear();
     }
 
-    /** return true if more input obtained. */
-    bool Repl::get_more_input() {
+    /**
+     * getMoreInput(): only for the Toker to call.
+     *   Returns true if more input obtained. 
+     */
+    bool Repl::getMoreInput() {
         set_prompt("...");
         
         nextLineNumber();

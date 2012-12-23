@@ -144,7 +144,7 @@ namespace wisecrack {
         void resetSrcToEmpty();
 
         /** return true if more input obtained. */
-        bool get_more_input();
+        bool getMoreInput();
 
         /** set (get) debug level */
         void set_debugLevel(int level);

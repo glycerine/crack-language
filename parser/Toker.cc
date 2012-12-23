@@ -39,7 +39,7 @@ bool Toker::getChar(char &ch, TokerMsg tokerMsg) {
         result = src.read(&ch, 1);
         
         if (!result && repl && tokerMsg.nested) {
-            if (repl->get_more_input()) {
+            if (repl->getMoreInput()) {
                 result = src.read(&ch, 1);
             }
         }
