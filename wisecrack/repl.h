@@ -15,6 +15,7 @@
 #include <vector>
 #include <set>
 #include "spug/Exception.h"
+#include "wisecrack/editor.h"
 
 namespace builder {
     class Builder;
@@ -62,6 +63,14 @@ namespace wisecrack {
         bool done();
         void setDone();
 
+        /** only employ one of LineEditor or SimplestEditor,
+         *   one or the other, not both, for lineEd */
+
+        /** uses lib editline  */
+        LineEditor _lineEd;
+
+        //* uses simplest fgets, no fancy library */
+        // SimplestEditor _lineEd;
 
         void prompt(FILE *fout);
         char *getPrompt();

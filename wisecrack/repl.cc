@@ -10,6 +10,8 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <stdlib.h>
+#include <ctype.h> // isspace
+#include "wisecrack/editor.h" // LineEditor
 
 //
 // wisecrack: an interpreter for crack
@@ -25,75 +27,6 @@
 //    so we can focus on the read-eval interaction, which
 //    is the tricky part.
 
-#include <ctype.h> // isspace
-
-#define USE_LIB_EDIT
-#ifdef USE_LIB_EDIT
-extern "C" {
-
-namespace LibEditLine {
-#include "wisecrack/libedit/histedit.h"
-}
-
-    LibEditLine::EditLine *_editLine =0;
-    LibEditLine::History *_editLineHistory =0;
-    LibEditLine::HistEvent _editLineHistoryEvent;
-
-    // callback for libedit
-    const char *get_prompt_for_editLine(LibEditLine::EditLine* editLine);
-
-    void editLine_library_init() {
-    
-        _editLine = LibEditLine::el_init("crack", stdin, stdout, stderr);
-    
-        // register the callback function that the library 
-        // uses to obtain the prompt string
-        LibEditLine::el_set(_editLine, EL_PROMPT, get_prompt_for_editLine);
-        LibEditLine::el_set(_editLine, EL_EDITOR, "emacs");
-
-        _editLineHistory = LibEditLine::history_init();
-        if (!_editLineHistory) {
-            fprintf(stderr, "editLine history could not be initialized! Aborting.\n");
-            assert(0);
-            exit(1);
-        }
-
-        /* Set the size of the history */
-        LibEditLine::history(_editLineHistory, 
-                             &_editLineHistoryEvent,
-                             H_SETSIZE,
-                             600);
-
-        // set up the call back functions for history functionality
-        el_set(_editLine, EL_HIST, LibEditLine::history, _editLineHistory);
-
-    }
-
-    void editLine_library_shutdown() {
-    
-        if (_editLineHistory) {
-            LibEditLine::history_end(_editLineHistory);
-        }
-        _editLineHistory=0;
-    
-        if (_editLine) {
-            LibEditLine::el_end(_editLine);
-        }
-        _editLine=0;
-    }
-
-    void editLine_addToHistory(const char *line) {
-        LibEditLine::history(_editLineHistory, 
-                             &_editLineHistoryEvent, 
-                             H_ENTER, 
-                             line);
-
-    }
-
-    const char *editLine_gets();
-
-} // end extern C
-#endif // USE_LIB_EDIT
 
 namespace wisecrack {
 
@@ -164,7 +97,8 @@ namespace wisecrack {
 
     //ctor
     Repl::Repl()
-        : _alldone(false),
+        : _lineEd(this, 600),
+          _alldone(false),
           _lineno(0),
           _showLineN(true),
           _debugLevel(0),
@@ -181,12 +115,9 @@ namespace wisecrack {
 
         setReplCmdStart(".");
 
-#ifdef USE_LIB_EDIT
-        editLine_library_init();
-#endif
     }
-    bool Repl::hist() { return _histon; }
 
+    bool Repl::hist() { return _histon; }
 
     void Repl::histon() {
         // open history file
@@ -215,10 +146,6 @@ namespace wisecrack {
 
     Repl::~Repl() {
         if (_crkhist) fclose(_crkhist);
-
-#ifdef USE_LIB_EDIT
-        editLine_library_shutdown();
-#endif
     }
 
     bool Repl::done() { return _alldone; }
@@ -239,14 +166,7 @@ namespace wisecrack {
     }
 
     void Repl::prompt(FILE *fout) {
-#ifdef USE_LIB_EDIT
-        // for editing the cmd line, the libedit library
-        // has to know the length of the prompt and print
-        // it by itself, so we do nothin here.
-#else
-        fprintf(fout,"%s", getPrompt());
-        fflush(fout);
-#endif
+        _lineEd.displayPrompt(fout);
     }
 
 
@@ -270,22 +190,8 @@ namespace wisecrack {
         case  0: {
             // initial time, no siglongjmp yet.
 
-#ifdef  USE_LIB_EDIT
-            r = editLine_gets();
-            if (r) {
-                strncpy(_readbuf, (const char*)r, _readsz-1);
-                size_t len = strlen(_readbuf);
-                if (_readbuf[len-1] == '\n')
-                    _readbuf[len-1]=0;
-                // no, does double free: free((void*)r);
-                r = _readbuf;
-            } else {
-                // ctrl-d means we get back 0x0
-                setDone();
-            }
-#else
-            r = fgets(_readbuf, _readsz, fin);
-#endif
+            r = _lineEd.gets(_readbuf, _readsz, fin);
+
             siglongjmp(ctrlCJmpBuf, normalFinishAfterRead);  
             break;
         }
@@ -309,7 +215,7 @@ namespace wisecrack {
 
         if (NULL == r) {
             // eof or error
-            if (feof(fin)) {
+            if (_lineEd.eof(fin)) {
                 
                 // stub
                 setDone();
@@ -501,19 +407,3 @@ int main(int argc, char *argv[]) {
     return testWisecrackMain(argc, argv);
 }
 #endif
-
-//
-// libeditline interaction callback and helper.
-//
-const char* get_prompt_for_editLine(LibEditLine::EditLine* editLine) {
-    
-    return wisecrack::globalRepl->getPrompt();
-}
-
-const char *editLine_gets() {
-    
-    int count = 0;
-    const char *ret = 0;;
-    return LibEditLine::el_gets(_editLine, &count);
-}
-
