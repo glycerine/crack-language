@@ -344,7 +344,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
 
         printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
                "  %shelp    = show this hint page\n"
-               "  %sdn      = dump repl namespace (also %sls)\n"
+               "  %sls      = dump repl namespace (also %sdn)\n"
                "  %sdump    = dump global namespace (everything)\n"
                "  %sdc      = display code (LLVM bitcode)\n"
                "  %sdebug   = increase the debug messages\n"
