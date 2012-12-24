@@ -9,6 +9,8 @@
 #define _wisecrack_editory_h
 
 #include <stdio.h>
+#include <spug/RCBase.h>
+#include <spug/RCPtr.h>
 
 /**
  * interface to the editline library, or
@@ -27,8 +29,38 @@ namespace wisecrack {
     class Repl;
 }
 
+// interface
+class LineEditor : public virtual spug::RCBase {
+ public:
 
-class LineEditor {
+    /** get a string */
+    virtual const char *gets(char *readbuf, int readsz, FILE* fin) = 0;
+
+    /** show the prompt */
+    virtual void displayPrompt(FILE *fout) = 0;
+
+    /** have we hit end of file? */
+    virtual bool eof(FILE *fin) = 0;
+
+    /** how we want the line recorded */
+    virtual void addToHistory(const char *line) = 0;
+
+};
+
+
+SPUG_RCPTR(LineEditor);
+
+// factory
+LineEditorPtr makeLineEditor(wisecrack::Repl *repl, int historySize = 600);
+
+#ifdef LIBEDIT_FOUND
+#define EDITLINE 1
+#endif
+
+#ifdef EDITLINE
+
+// implementation 1
+class LibEditLineEditor : public LineEditor {
  public:
 
     /** 
@@ -38,26 +70,24 @@ class LineEditor {
      *  history (up arrow), and emacs style line editing
      *  (ctrl-a, ctrl-e, ctrl-k, ctrl-y, etc). 
      */
-    LineEditor(wisecrack::Repl* repl, int historySize = 600);
-    virtual ~LineEditor();
+    LibEditLineEditor(wisecrack::Repl *repl, int historySize = 600);
+    virtual ~LibEditLineEditor();
 
     /** get a string */
-    virtual const char *gets(char* readbuf, int readsz, FILE* fin);
+    virtual const char *gets(char *readbuf, int readsz, FILE *fin);
 
     /** show the prompt */
-    virtual void displayPrompt(FILE* fout);
+    virtual void displayPrompt(FILE *fout);
 
     /** have we hit end of file? */
-    virtual bool eof(FILE* fin);
+    virtual bool eof(FILE *fin);
 
     /** how we want the line recorded */
     virtual void addToHistory(const char *line);
 
- protected:
-    wisecrack::Repl* _repl;
-
  private:
 
+    wisecrack::Repl *_repl;
     LibEditLine::EditLine *_editLine;
     LibEditLine::History *_editLineHistory;
     LibEditLine::HistEvent *_editLineHistoryEvent;
@@ -65,24 +95,33 @@ class LineEditor {
     bool  _eof;
 };
 
+#endif // end ifdef EDITLINE
+
+
 // if you want to switch back to the 
 // utterly simply line handling (no editing capabilities)
 // then instantiate SimplestEditor instead.
 
-class SimplestEditor : virtual public LineEditor {
+// implementation 2
+class SimplestEditor : public LineEditor {
 
  public:
 
-    SimplestEditor(wisecrack::Repl* repl, int historySize = 600);
+    SimplestEditor(wisecrack::Repl *repl, int historySize = 600);
     virtual ~SimplestEditor();
 
-    virtual const char *gets(char* readbuf, int readsz, FILE* fin);
+    virtual const char *gets(char *readbuf, int readsz, FILE *fin);
 
-    virtual void displayPrompt(FILE* fout);
+    virtual void displayPrompt(FILE *fout);
 
-    virtual bool eof(FILE* fin);
+    virtual bool eof(FILE *fin);
 
     virtual void addToHistory(const char *line);
+
+
+ private:
+    wisecrack::Repl *_repl;
+    bool  _eof;
 };
 
 

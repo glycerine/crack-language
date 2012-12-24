@@ -27,6 +27,7 @@ include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(MacroOptionalFindPackage)
 include(MacroLogFeature)
+include(FindEdit)
 
 MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
@@ -45,6 +46,7 @@ IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
 find_package(Iconv REQUIRED)
+Find_Package(Edit REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}
                     ${PROJECT_BINARY_DIR}
@@ -53,6 +55,7 @@ include_directories(${PROJECT_SOURCE_DIR}
 
 add_definitions(-DLLVM_VERSION=${LLVM_VERSION})
 add_definitions("-DCRACKLIB=\"${CMAKE_INSTALL_PREFIX}/lib/crack-${CRACK_VERSION}\"")
+add_definitions(-DEDITLINE)
 
 # share this is autoconf
 file(STRINGS sourceModules.txt CRACK_SRC_FILES)
@@ -171,7 +174,7 @@ set_target_properties( crack
                      )
 
 target_link_libraries( crack
-                       libcrack pthread
+                       libcrack pthread edit
                      )
 
 add_custom_command(TARGET crack POST_BUILD

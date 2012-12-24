@@ -14,11 +14,14 @@
 //  libary called libeditline
 //  from http://sourceforge.net/projects/libedit/
 
+// and a simple fgets based fallback, in case the
+//  first is not available.
 
+#ifdef EDITLINE
 extern "C" {
 
  namespace LibEditLine {
-  #include "wisecrack/libedit/histedit.h"
+  #include "libedit/histedit.h"
  }
 
  static wisecrack::Repl* staticEditorRepl = 0;
@@ -32,7 +35,7 @@ extern "C" {
 } // end extern C
 
 
-LineEditor::LineEditor(wisecrack::Repl *repl, int historySize) 
+LibEditLineEditor::LibEditLineEditor(wisecrack::Repl *repl, int historySize) 
     : 
     _editLine(0),
     _editLineHistory(0),
@@ -68,7 +71,7 @@ LineEditor::LineEditor(wisecrack::Repl *repl, int historySize)
     el_set(_editLine, EL_HIST, LibEditLine::history, _editLineHistory);
 }
 
-LineEditor::~LineEditor() {
+LibEditLineEditor::~LibEditLineEditor() {
     
     if (_editLineHistoryEvent)
         delete _editLineHistoryEvent;
@@ -87,14 +90,14 @@ LineEditor::~LineEditor() {
 
 }
 
-void LineEditor::addToHistory(const char *line) {
+void LibEditLineEditor::addToHistory(const char *line) {
     LibEditLine::history(_editLineHistory, 
                          _editLineHistoryEvent, 
                          H_ENTER, 
                          line);
 }
 
-const char *LineEditor::gets(char* readbuf, int readsz, FILE* fin) {
+const char *LibEditLineEditor::gets(char* readbuf, int readsz, FILE* fin) {
     // ignores fin. it shouldn't, but not obvious how to
     //  implement; at this point fin is here because
     //  SimplestEditor needs it.
@@ -114,7 +117,7 @@ const char *LineEditor::gets(char* readbuf, int readsz, FILE* fin) {
     return r;
 }
 
-void LineEditor::displayPrompt(FILE* fout) {
+void LibEditLineEditor::displayPrompt(FILE* fout) {
     // for editing the cmd line, the libedit library
     // has to know the length of the prompt and print
     // it by itself, so we do nothing here. Basically
@@ -122,18 +125,20 @@ void LineEditor::displayPrompt(FILE* fout) {
     // to do its thing, while we are a no-op.
 }
 
-bool LineEditor::eof(FILE* fin) {
+bool LibEditLineEditor::eof(FILE* fin) {
     return _eof;
 }
 
+#endif // end ifdef EDITLINE
+
 
 SimplestEditor::SimplestEditor(wisecrack::Repl *repl, int historySize) 
-    : LineEditor(repl, historySize) {
+    : _repl(repl) {
 
 }
 
 SimplestEditor::~SimplestEditor() {
-
+    //    printf("~SimplestEditor dtor firing\n");
 }
 
 /** get a string */
@@ -151,5 +156,17 @@ bool SimplestEditor::eof(FILE* fin) {
 }
 
 void SimplestEditor::addToHistory(const char *line) {
+
+}
+
+
+// factory
+LineEditorPtr makeLineEditor(wisecrack::Repl *repl, int historySize) {
+
+#ifdef EDITLINE
+   return new LibEditLineEditor(repl, historySize);
+#else
+   return new SimplestEditor(repl, historySize);
+#endif
 
 }

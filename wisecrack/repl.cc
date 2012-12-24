@@ -88,7 +88,7 @@ namespace wisecrack {
 
     //ctor
     Repl::Repl()
-        : _lineEd(this, 600),
+        : 
           _alldone(false),
           _lineno(0),
           _showLineN(true),
@@ -106,6 +106,7 @@ namespace wisecrack {
 
         setReplCmdStart(".");
 
+        _lineEd = makeLineEditor(this, 600);
     }
 
     bool Repl::hist() { return _histon; }
@@ -158,7 +159,7 @@ namespace wisecrack {
     }
 
     void Repl::prompt(FILE *fout) {
-        _lineEd.displayPrompt(fout);
+        _lineEd->displayPrompt(fout);
     }
 
     /** 
@@ -181,7 +182,7 @@ namespace wisecrack {
         case  0: {
             // initial time, no siglongjmp yet.
 
-            r = _lineEd.gets(_readbuf, _readsz, fin);
+            r = _lineEd->gets(_readbuf, _readsz, fin);
 
             siglongjmp(ctrlCJmpBuf, normalFinishAfterRead);  
             break;
@@ -207,7 +208,7 @@ namespace wisecrack {
 
         if (NULL == r) {
             // eof or error
-            if (_lineEd.eof(fin)) {
+            if (_lineEd->eof(fin)) {
                 
                 // stub
                 setDone();
@@ -219,7 +220,7 @@ namespace wisecrack {
         _readlen = strlen(_readbuf);
         trimr();
 
-        _lineEd.addToHistory(_readbuf);
+        _lineEd->addToHistory(_readbuf);
         history.push_back(_readbuf);
         loghist(_readbuf);
     }
