@@ -31,13 +31,6 @@ namespace llvm {
 
 // Repl, read-eval-print-loop : an interpreter
 //
-//   deliberately kept as simple as possible
-//    in order to enable experimentation to find the
-//    overall structure.
-//    e.g. use simple FILE*, no iostream, use no readline, 
-//         no libedit history, etc.
-//    so we can focus on the read-eval interaction, which
-//    is the tricky part.
 
 
 namespace wisecrack {
@@ -68,15 +61,15 @@ namespace wisecrack {
 
         LineEditorPtr _lineEd;
 
-        void prompt(FILE *fout);
+        void prompt(std::ostream& fout);
         char *getPrompt();
 
         /** read one line, ctrl-c interrupt will throw */
-        void read(FILE *fin);
+        void read(std::istream& fin);
 
         void eval();
-        void print(FILE *fout);
-        void run(FILE *fin, FILE *fout);
+        void print(std::ostream& fout);
+        void run(std::istream& fin, std::ostream& fout);
 
         /**
          * get the current line number.

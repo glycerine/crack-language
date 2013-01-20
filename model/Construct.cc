@@ -866,7 +866,7 @@ namespace {
 
 void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
     if (ctx->repl && ctx->repl->debugLevel() > 0) {
-        printf(" [cleaning up unfinished line]\n");
+        cout << " [cleaning up unfinished line]\n";
     }
     bdr->eraseSection(*ctx, mod);
 
@@ -921,7 +921,7 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
 // the context should always have a reference to its builder.
 // XXX TODO: try refactoring to use the ctx->builder instead of bdr.
 //
-//   _. when development is done: change printf to streams, remove
+//   _. when development is done: possibly remove
 //   globalRepl hack, possibly remove debugLevel monitoring code.
 
 /**
@@ -1019,7 +1019,7 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
     bool doCleanup = false;
     Namespace::Txmark ns_start_point;
 
-    printf("wisecrack read-eval-print-loop [type .help for hints]\n");
+    cout << "wisecrack read-eval-print-loop [type .help for hints]" << endl;
     
     //
     // main Read-Eval-Print loop
@@ -1037,8 +1037,8 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
             repl.resetSrcToEmpty();
             repl.nextLineNumber();
             repl.resetPromptToDefault();
-            repl.prompt(stdout);
-            repl.read(stdin); // can throw
+            repl.prompt(std::cout);
+            repl.read(std::cin); // can throw
             if (repl.getLastReadLineLen()==0) continue;
 
             if (special.continueOnSpecial(repl, ctx, bdr)) continue;

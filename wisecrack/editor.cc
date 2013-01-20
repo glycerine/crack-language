@@ -10,11 +10,17 @@
 #include "wisecrack/editor.h"
 #include "wisecrack/repl.h"
 
+#include <string>
+#include <iostream>
+using std::cout;
+using std::cerr;
+using std::endl;
+
 // implementation of LineEditor using BSD licensed
 //  libary called libeditline
 //  from http://sourceforge.net/projects/libedit/
 
-// and a simple fgets based fallback, in case the
+// and a simple fallback, in case the
 //  first is not available.
 
 #ifdef EDITLINE
@@ -55,7 +61,7 @@ LibEditLineEditor::LibEditLineEditor(wisecrack::Repl *repl, int historySize)
     
     _editLineHistory = LibEditLine::history_init();
     if (!_editLineHistory) {
-        fprintf(stderr, "editLine history could not be initialized! Aborting.\n");
+        cerr << "editLine history could not be initialized! Aborting." << endl;
         assert(0);
         exit(1);
     }
@@ -97,9 +103,9 @@ void LibEditLineEditor::addToHistory(const char *line) {
                          line);
 }
 
-const char *LibEditLineEditor::gets(char* readbuf, int readsz, FILE* fin) {
-    // ignores fin. it shouldn't, but not obvious how to
-    //  implement; at this point fin is here because
+const char *LibEditLineEditor::gets(char* readbuf, int readsz, std::istream& ins) {
+    // ignores ins. it shouldn't, but not obvious how to
+    //  implement; at this point ins is here because
     //  SimplestEditor needs it.
 
     int count = 0;
@@ -117,7 +123,7 @@ const char *LibEditLineEditor::gets(char* readbuf, int readsz, FILE* fin) {
     return r;
 }
 
-void LibEditLineEditor::displayPrompt(FILE* fout) {
+void LibEditLineEditor::displayPrompt(std::ostream& outs) {
     // for editing the cmd line, the libedit library
     // has to know the length of the prompt and print
     // it by itself, so we do nothing here. Basically
@@ -125,7 +131,7 @@ void LibEditLineEditor::displayPrompt(FILE* fout) {
     // to do its thing, while we are a no-op.
 }
 
-bool LibEditLineEditor::eof(FILE* fin) {
+bool LibEditLineEditor::eof(std::istream& ins) {
     return _eof;
 }
 
@@ -138,21 +144,32 @@ SimplestEditor::SimplestEditor(wisecrack::Repl *repl, int historySize)
 }
 
 SimplestEditor::~SimplestEditor() {
-    //    printf("~SimplestEditor dtor firing\n");
+    // cout << "~SimplestEditor dtor firing" << endl;
 }
 
 /** get a string */
-const char *SimplestEditor::gets(char* readbuf, int readsz, FILE* fin) {
-    return fgets(readbuf, readsz, fin);
+
+// old version
+//const char *SimplestEditor::gets(char* readbuf, int readsz, FILE* fin) {
+//    return fgets(readbuf, readsz, fin);
+// }
+
+// new version with stream instead of FILE*.
+const char *SimplestEditor::gets(char* readbuf, int readsz, std::istream& ins) {
+    bzero(readbuf, readsz);
+    std::string s;
+    std::getline(ins, s);
+    strncpy(readbuf, s.c_str(), readsz-1);
+    return readbuf;
 }
 
-void SimplestEditor::displayPrompt(FILE* fout) {
-    fprintf(fout,"%s", _repl->getPrompt());
-    fflush(fout);
+void SimplestEditor::displayPrompt(std::ostream& outs) {
+    outs << _repl->getPrompt();
+    outs.flush();
 }
 
-bool SimplestEditor::eof(FILE* fin) {
-    return feof(fin);
+bool SimplestEditor::eof(std::istream& ins) {
+    return ins.eof();
 }
 
 void SimplestEditor::addToHistory(const char *line) {

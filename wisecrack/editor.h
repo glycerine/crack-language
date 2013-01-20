@@ -34,13 +34,13 @@ class LineEditor : public virtual spug::RCBase {
  public:
 
     /** get a string */
-    virtual const char *gets(char *readbuf, int readsz, FILE* fin) = 0;
+    virtual const char *gets(char *readbuf, int readsz, std::istream& ins) = 0;
 
     /** show the prompt */
-    virtual void displayPrompt(FILE *fout) = 0;
+    virtual void displayPrompt(std::ostream& outs) = 0;
 
     /** have we hit end of file? */
-    virtual bool eof(FILE *fin) = 0;
+    virtual bool eof(std::istream& ins) = 0;
 
     /** how we want the line recorded */
     virtual void addToHistory(const char *line) = 0;
@@ -74,13 +74,13 @@ class LibEditLineEditor : public LineEditor {
     virtual ~LibEditLineEditor();
 
     /** get a string */
-    virtual const char *gets(char *readbuf, int readsz, FILE *fin);
+    virtual const char *gets(char *readbuf, int readsz, std::istream& ins);
 
     /** show the prompt */
-    virtual void displayPrompt(FILE *fout);
+    virtual void displayPrompt(std::ostream& outs);
 
     /** have we hit end of file? */
-    virtual bool eof(FILE *fin);
+    virtual bool eof(std::istream& ins);
 
     /** how we want the line recorded */
     virtual void addToHistory(const char *line);
@@ -110,11 +110,11 @@ class SimplestEditor : public LineEditor {
     SimplestEditor(wisecrack::Repl *repl, int historySize = 600);
     virtual ~SimplestEditor();
 
-    virtual const char *gets(char *readbuf, int readsz, FILE *fin);
+    virtual const char *gets(char *readbuf, int readsz, std::istream& ins);
 
-    virtual void displayPrompt(FILE *fout);
+    virtual void displayPrompt(std::ostream& outs);
 
-    virtual bool eof(FILE *fin);
+    virtual bool eof(std::istream& ins);
 
     virtual void addToHistory(const char *line);
 

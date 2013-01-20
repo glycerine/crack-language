@@ -94,7 +94,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
             TypeDef *tdef = 0;
             sym = context->ns->lastTxSymbol(&tdef);
             if (NULL == sym) {
-                printf("no last symbol to display.\n");
+                std::cout << "no last symbol to display.\n";
                 if (!vcout) {
                     // still bring in cout
                     r.setNextLine(cmd.c_str());
@@ -113,7 +113,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
                 if (!strcmp(y + pxl - 4,"meta")
                     || !strncmp(y, "function", 8)
                     ) {
-                    printf("cannot display '%s' of type '%s' at the moment.\n", sym, y);
+                    std::cout << "cannot display '" << sym << "' of type '"<< y <<"' at the moment.\n";
                     if (cmd.size()) {
                         // allow import of cout no matter.
                         r.setNextLine(cmd.c_str());
@@ -139,13 +139,13 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
     if (!strcmp("histoff", p)) {
         // turn off logging history to .crkhist
         r.histoff();
-        printf("command logging to file '.crkhist' now off.\n");
+        std::cout << "command logging to file '.crkhist' now off.\n";
         return true;
 
     } else if (!strcmp("histon", p)) {
         // turn on logging history to .crkhist
         r.histon();
-        if (r.hist()) printf("logging subsequent commands to file '.crkhist'.\n");
+        if (r.hist()) std::cout << "logging subsequent commands to file '.crkhist'.\n";
         return true;
     }
     
@@ -164,7 +164,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         // up the debugging level
         int d = r.debugLevel();
         ++d;
-        printf("debug level: %d\n", d);
+        std::cout << "debug level: " << d << "\n";
         r.set_debugLevel(d);
         return true;
     } else if (!strcmp("undebug", p)) {
@@ -172,7 +172,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         int d = r.debugLevel();
         --d;
         if (d < 0) { d=0; }
-        printf("debug level: %d\n", d);
+        std::cout << "debug level: " << d << "\n";
         r.set_debugLevel(d);
         return true;
     }
@@ -195,14 +195,14 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         
         // confirm we have an argument
         if (sym >= end) {
-            printf("error using %sdc: no symbol-to-display-code for specified.\n", s);
+            std::cout << "error using " << s << "dc: no symbol-to-display-code for specified.\n";
             return true;
         }
 
         VarDefPtr var = context->ns->lookUp(sym);
 
         if (!var) {
-            printf("error using %sdc: could not locate symbol '%s' to display code for.\n", s, sym);
+            std::cout << "error using " << s << "dc: could not locate symbol '" << sym << "' to display code for.\n";
             return true;
         }
 
@@ -216,7 +216,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         builder::mvll::BTypeDef *tp  = dynamic_cast<builder::mvll::BTypeDef*>(var->type.get());
 
         if (odef) {
-            printf("display code for '%s' function(s):\n", sym);
+            std::cout << "display code for '" << sym << "' function(s):\n";
 
             model::OverloadDef::FuncList::iterator it = odef->beginTopFuncs();
             model::OverloadDef::FuncList::iterator en = odef->endTopFuncs();
@@ -238,18 +238,23 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
                         llvm::outs() << static_cast<llvm::Value&>(*f);
                         
                     } else {
-                        printf("%sdc error: could not find FuncDef -> llvm::Function* "
-                               "mapping for '%s' in builder.\n", s, sym);                        
+                        std::cout << s << "dc error: "
+                            "could not find FuncDef -> llvm::Function* "
+                            "mapping for '" << sym << "' in builder.\n";
                     }
                 }
             }
 
         } else if (btd) {
-            printf("%sdc '%s' error: displaying classes not yet implemented.\n", s, sym);
+            std::cout << s << "dc '" << sym << 
+                "' error: displaying classes not yet implemented.\n";
 
         } else {
-            printf("%sdc '%s' error: I don't know how to dump code for type '%s' yet.\n",
-                   s, sym, tp ? tp->name.c_str() : "*unknown type*");
+            std::cout << s << "dc '" << sym << 
+                "' error: I don't know how to dump code for type '" << 
+                (tp ? tp->name.c_str() : "*unknown type*")
+                      << "' yet.\n";
+                  
 
         }
 
@@ -263,18 +268,22 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
 
         // confirm we have an argument sym to delete
         if (sym >= end) {
-            printf("error using %srm: no symbol-to-delete specified.\n", s);
+            std::cout << "error using " << s << "rm: "
+                "no symbol-to-delete specified.\n";
             return true;
         }
 
         VarDefPtr var = context->ns->lookUp(sym);
 
         if (!var) {
-            printf("error using %srm: could not locate symbol '%s' to delete.\n", s, sym);
+            std::cout << "error using " << s 
+                      << "rm: could not locate symbol '" 
+                      << sym << "' to delete.\n";
             return true;
         }
 
-        printf("rm deleting symbol '%s' at 0x%lx.\n", sym, (unsigned long)var.get());
+        std::cout << "rm deleting symbol '" << sym 
+                  << "' at " << (unsigned long)var.get() << ".\n";
 
         context->ns->removeDefAllowOverload(var.get());
         return true;
@@ -292,8 +301,8 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         // validate file
         FILE *f = fopen(sourceme,"r");
         if (!f) {
-            printf("error in %s. source file: could not open file '%s'\n",
-                   s, sourceme);
+            std::cout << "error in "<< s << ". source file: "
+                "could not open file '" << sourceme << "'\n";
             return true;
         }
 
@@ -308,7 +317,7 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         }
 
         if (r.debugLevel() > 0) {
-            printf("sourced %ld bytes from '%s'\n", m, sourceme);
+            std::cout << "sourced " << m << " bytes from '" << sourceme << "'\n";
         }
 
         r.setNextLine("");
@@ -323,23 +332,23 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
         --en; // don't print the last .history (duh).
         long line = 1;
         for(; it != en; ++it, ++line) {
-            //printf("%ld: %s\n", line, it->c_str());
 
             // easier to copy and paste *without *line numbers!
-            printf("%s\n", it->c_str());
+            std::cout << it->c_str() << "\n";
         }
         return true;
     }
     else if (!strncmp("prefix ", p, 7) && strlen(p) > 7) {
         const char *pre = p + 7;
-        printf("setting repl command prefix to '%s'\n", pre);
+        std::cout << "setting repl command prefix to '" << pre << "'\n";
         r.setReplCmdStart(pre);
         return true;
     }
 
     if (!strcmp("help", p)) {
 
-        printf("wisecrack repl help: ['%s' prefix starts repl commands]\n"
+        char helpbuf[4096];
+        sprintf(helpbuf,"wisecrack repl help: ['%s' prefix starts repl commands]\n"
                "  %shelp    = show this hint page\n"
                "  %sls      = dump repl namespace (also %sdn)\n"
                "  %sdump    = dump global namespace (everything)\n"
@@ -367,11 +376,12 @@ bool SpecialCmdProcessor::continueOnSpecial(wisecrack::Repl& r,
                r.hist() ? "ON" :  "OFF"
                );
               
+        std::cout << helpbuf;
         return true;
     }
 
-    printf("unrecognized special repl command '%s%s'."
-           " Type %shelp for hints.\n", s, p, s);
+    std::cout << "unrecognized special repl command '" << s << p << "'."
+                 " Type " << s << "help for hints.\n";
     return true;
 }
 

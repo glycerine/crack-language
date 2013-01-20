@@ -40,9 +40,9 @@ namespace wisecrack {
         }
         
         if (sigismember(&printOldSset, SIGINT)) {
-            printf("SIGINT is blocked\n");
+            std::cout << ("SIGINT is blocked\n");
         } else {
-            printf("SIGINT is not blocked\n");
+            std::cout << ("SIGINT is not blocked\n");
         }
         
     }
@@ -60,8 +60,6 @@ namespace wisecrack {
     /** signal handler for ctrl-c */
     void repl_sa_sigaction(int signum, siginfo_t *si, void *vs) {
         
-        //printf(" [ctrl-c]\n");
-
         siglongjmp(ctrlCJmpBuf, caughtCtrlC);
     }
 
@@ -158,7 +156,7 @@ namespace wisecrack {
         return _b;
     }
 
-    void Repl::prompt(FILE *fout) {
+    void Repl::prompt(std::ostream& fout) {
         _lineEd->displayPrompt(fout);
     }
 
@@ -166,7 +164,7 @@ namespace wisecrack {
      *  read(fin) takes a line of input from fin, and if ctrl-c SIGINT is detected,
      *     then it throws an ExceptionCtrlC.
      */
-    void Repl::read(FILE *fin) {
+    void Repl::read(std::istream& fin) {
         
         _readlen = 0;
         bzero(_readbuf, _readsz);
@@ -198,8 +196,8 @@ namespace wisecrack {
         }
 
         default: {
-            fprintf(stderr, "Wierd and unhandled return in repl.cc"
-                    "  switch(sigsetjmp) , rc = %d\n", rc);
+            std::cerr << "Wierd and unhandled return in repl.cc"
+                "  switch(sigsetjmp) , rc = " << rc << "\n";
             assert(0);                
             break;
         }
@@ -238,16 +236,17 @@ namespace wisecrack {
 
     }
 
-    void Repl::print(FILE *fout) {
+    void Repl::print(std::ostream& fout) {
         if (done()) return;
-        fprintf(fout,
-                "*print* called, _readlen(%d), _readbuf: '%s'\n",
-                _readlen,
-                _readbuf);
+        fout << "*print* called, _readlen(" 
+             << _readlen 
+             << "), _readbuf: '"
+             << _readbuf
+             <<"'\n";
     }
 
 
-    void Repl::run(FILE *fin, FILE *fout) {
+    void Repl::run(std::istream& fin, std::ostream& fout) {
 
         while(!done()) {
             nextLineNumber();
@@ -257,7 +256,7 @@ namespace wisecrack {
             print(fout);
         }
 
-        fprintf(fout,"\n");
+        fout << "\n";
     }
 
     long Repl::lineNumber() {
@@ -346,8 +345,8 @@ namespace wisecrack {
         set_prompt("...");
         
         nextLineNumber();
-        prompt(stdout);
-        read(stdin);
+        prompt(std::cout);
+        read(std::cin);
 
         // crude, but perhaps effective?
         //  if we get no input, tell the Toker so.
@@ -392,7 +391,7 @@ namespace wisecrack {
 int testWisecrackMain(int argc, char *argv[]) {
 
     wisecrack::Repl r;
-    r.run(stdin, stdout);
+    r.run(std::cin, std::cout);
     return 0;
 }
 
