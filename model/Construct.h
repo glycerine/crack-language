@@ -402,7 +402,7 @@ class Construct : public spug::RCBase, public Options {
         /**
          * run the interpreter 
          */
-        int runRepl(Context *ctx = 0, ModuleDef *mod = 0, builder::Builder *bdr = 0);
+        int runRepl(Context *ctx = 0, ModuleDef *mod = 0);
 
 };
 

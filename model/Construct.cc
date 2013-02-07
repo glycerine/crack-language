@@ -822,7 +822,7 @@ int Construct::runScript(istream &src, const string &name, bool doRepl) {
             // XXX hook to run/finish cached module
         }
         if (doRepl) {
-            runRepl(context.get(), modDef.get(), builder.get());
+            runRepl(context.get(), modDef.get());
         }
     } catch (const spug::Exception &ex) {
         cerr << ex << endl;
@@ -874,35 +874,19 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
 } // end anonymous namespace for cleanupUnfinishedInput
 
 
-// Status: the repl is now quite usable. Multiline input works well.
-//         Cleanup after syntax error in functions or expressions is there.
-//         The remaining big items are outlined below.
+// Status: the repl is quite usable. Multiline input works well.
+//         Cleanup after syntax error in functions or expressions works.
+//         There may be excess llvm code generated under the repl, 
+//         (see .dump to inspect; e.g. the llvm "rep" objects) but
+//         this should not effect correctness nor the final compiled
+//         version at all. Transitive dependencies are not invalidated;
+//         there is no automatic re-compilation forced if you update
+//         a function that is called by other compiled functions.
+//         Meh. Not sure this is worth the effort.
 //
-// XXX TODO list 20 Dec 2012
+//         Basic top-level redefinition of classes and functions works.
 //
-//   _ cleanup aborted (due to syntax error or other error) class definitions.
-//       possibly with a temp namespace that is merge upon correctness, or
-//       discarded upon error.
-//
-// But if you're strongly motivated to do correct cleanup, I wonder if we 
-// could make use of a temporary repl ModuleDef object and then transfer its
-// definitions to a longer lived one?  Then we could drive the rollback
-// functionality from ModuleDef -> BModuleDef -> LLVM.  -- mmuller
-//
-// Status: working. Classes with syntax errors are now cleaned up using
-//         a combination of OrderedIdLog and 
-//         Builder::purgeUnterminatedFunctions. The temp namespace
-//         sounds promising, but I could not work out exactly how
-//         to make it viable.
-//
-//   _ allow re-defining of functions/variables/classes at the repl
-//
-//    Update (14 Dec 2012): Works but leaks. Redefinition at the repl just
-//      clears the symbol from the namespace; it doesn't do proper 
-//      cleanup like Michael describes below, but it works for now
-//      (albiet with the accompanying leak of llvm rep objects).
-//
-//    Michael's thoughts: (7 Dec 2012)
+//    Michael's thoughts (7 Dec 2012) on redefinition of objects:
 //
 // I think the best way to handle redefinition is just to give the context a
 // flag to avoid the error.  The cleanest way to deal with it is if that 
@@ -911,18 +895,11 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
 // actually implemented in the BFuncDef object, though, and I don't think
 // it's crucial.  For a repl I wouldn't be too concerned about leakage.
 //
-//   _ .crackrc startup in cwd or ~/.crackd : automatically run these scripts
-//      upon startup unless suppressed with a startup flag.
-//
-//   _. comment on runRepl(): you shouldn't need to pass in a builder this -
-// the context should always have a reference to its builder.
-// XXX TODO: try refactoring to use the ctx->builder instead of bdr.
-//
-//   _. when development is done: possibly remove
-//   globalRepl hack, possibly remove debugLevel monitoring code.
+// Conclusion: we leak the rep currently (and possibly other things) at
+// the repl; but doesn't affect compiled code.
 
 /**
- * runRepl(): experimental jit-based interpreter. Project name: wisecrack.
+ * runRepl(): run the wisecrack jit-based interpreter.
  *
  * @param ctx : if non-null, use this context
  * @param mod : if non-null, use this module
@@ -932,7 +909,7 @@ void cleanupUnfinishedInput(Builder *bdr, Context *ctx, ModuleDef *mod) {
  *  once (e.g. after runScript), or they should all be null.
  */
 
-int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) {
+int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd) {
 
     wisecrack::Repl repl;
     wisecrack::SpecialCmdProcessor special;
@@ -947,18 +924,20 @@ int Construct::runRepl(Context *arg_ctx, ModuleDef *arg_modd, Builder *arg_bdr) 
     // case they will point to the smart pointers above.
     ModuleDef *mod = arg_modd;
     Context *ctx = arg_ctx;
-    Builder *bdr = arg_bdr;
+    Builder *bdr = 0;
 
     // are we starting fresh, or dropping into a previously defined
     //  ctx, modd, bdr triple?
     if (arg_ctx) {
-        if (0==arg_modd || 0==arg_bdr) {
-            cerr << "internal error in Construct::runRepl: all three"
-                " {ctx,modd,bdr} must be set or must all be null." 
+        if (0==arg_modd) {
+            cerr << "internal error in Construct::runRepl: both"
+                " {ctx,modd} must be set or must all be null." 
                  << endl;
             assert(0);
             return 1;
         }
+
+        bdr = &(arg_ctx->builder);
  
         // already closed the last function and ran it.
         // so we just need to start a new section inside the main loop,
