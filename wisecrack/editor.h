@@ -53,11 +53,9 @@ SPUG_RCPTR(LineEditor);
 // factory
 LineEditorPtr makeLineEditor(wisecrack::Repl *repl, int historySize = 600);
 
-#ifdef LIBEDIT_FOUND
-#define EDITLINE 1
-#endif
-
-#ifdef EDITLINE
+//always want to use the editline library: no more ifdef for this:
+//define EDITLINE 1
+//ifdef EDITLINE
 
 // implementation 1
 class LibEditLineEditor : public LineEditor {
@@ -95,7 +93,7 @@ class LibEditLineEditor : public LineEditor {
     bool  _eof;
 };
 
-#endif // end ifdef EDITLINE
+//endif // end ifdef EDITLINE
 
 
 // if you want to switch back to the 

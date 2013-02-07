@@ -23,7 +23,7 @@ using std::endl;
 // and a simple fallback, in case the
 //  first is not available.
 
-#ifdef EDITLINE
+//ifdef EDITLINE
 extern "C" {
 
  namespace LibEditLine {
@@ -135,7 +135,7 @@ bool LibEditLineEditor::eof(std::istream& ins) {
     return _eof;
 }
 
-#endif // end ifdef EDITLINE
+//endif // end ifdef EDITLINE
 
 
 SimplestEditor::SimplestEditor(wisecrack::Repl *repl, int historySize) 
@@ -180,10 +180,10 @@ void SimplestEditor::addToHistory(const char *line) {
 // factory
 LineEditorPtr makeLineEditor(wisecrack::Repl *repl, int historySize) {
 
-#ifdef EDITLINE
+    // we always want the editline version to be available,
+    // so Make It So.
    return new LibEditLineEditor(repl, historySize);
-#else
-   return new SimplestEditor(repl, historySize);
-#endif
 
+   // old: indef EDITLINE
+   //   return new SimplestEditor(repl, historySize);
 }
