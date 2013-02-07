@@ -46,7 +46,9 @@ IF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 ENDIF( LLVM_VERSION LESS ${LLVM_MIN_VERSION} )
 
 find_package(Iconv REQUIRED)
-Find_Package(Edit REQUIRED)
+
+# Edit no longer required; included in wisecrack/libedit so its always available.
+#Find_Package(Edit REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}
                     ${PROJECT_BINARY_DIR}
