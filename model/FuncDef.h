@@ -28,6 +28,9 @@ SPUG_RCPTR(FuncDef);
 
 class FuncDef : public VarDef {
     public:
+        // When changing flags, be mindful of the fact that these values are 
+        // persisted - changing flag values invalidates all meta-data in the 
+        // cache.
         enum Flags {
             noFlags =0,  // so we can specify this
             method = 1,  // function is a method (has a receiver)
@@ -103,7 +106,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
-        virtual bool isSerializable(const ModuleDef *module) const;
+        virtual bool isSerializable(const Namespace *ns) const;
         
         /**
          * Returns true if the function is an override of a virtual method
@@ -149,10 +152,10 @@ class FuncDef : public VarDef {
         static void dump(std::ostream &out, const ArgVec &args);
         static void display(std::ostream &out, const ArgVec &args);
 
-        virtual void addDependenciesTo(const ModuleDef *mod, 
-                                       ModuleDefMap &deps
-                                       ) const;
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
         static FuncDefPtr deserialize(Deserializer &deser, 
                                       const std::string &funcName
                                       );

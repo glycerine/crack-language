@@ -150,7 +150,7 @@ class OverloadDef : public VarDef {
         
         bool hasInstSlot();
         bool isStatic() const;
-        virtual bool isSerializable(const ModuleDef *module) const;
+        virtual bool isSerializable(const Namespace *ns) const;
         
         /**
          * Returns true if the overload consists of only one function.
@@ -168,19 +168,21 @@ class OverloadDef : public VarDef {
         void dump(std::ostream &out, const std::string &prefix = "") const;
         void display(std::ostream &out, const std::string &prefix = "") const;
         
-        virtual void addDependenciesTo(const ModuleDef *mod, 
-                                       ModuleDefMap &deps
-                                       ) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         
         /**
          * Returns true if the overload includes any non-builtin functions 
          * (this is useful for determining if it needs to be serialized).
          */
-        bool hasSerializableFuncs(const ModuleDef *module) const;
+        bool hasSerializableFuncs(const Namespace *ns) const;
 
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
         
-        static OverloadDefPtr deserialize(Deserializer &deser);
+        static OverloadDefPtr deserialize(Deserializer &deser,
+                                          Namespace *owner
+                                          );
 };
 
 } // namespace model

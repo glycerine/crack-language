@@ -84,7 +84,7 @@ class VarDef : public virtual spug::RCBase {
             fullName.clear(); // must recache since owner changed
         }
 
-        Namespace *getOwner(void) { return owner; }
+        Namespace *getOwner() const { return owner; }
         
         /**
          * Return true if the variable is unassignable.
@@ -105,17 +105,22 @@ class VarDef : public virtual spug::RCBase {
         ModuleDef *getModule() const;
         
         /**
-         * Returns true if the definition should be serialized when the module
+         * Returns true if the definition should be serialized when the owner
          * is being serialized.
          */
-        virtual bool isSerializable(const ModuleDef *module) const;
+        virtual bool isSerializable(const Namespace *ns) const;
+
+        /** Keeps track of a set of externally managed VarDefs. */
+        typedef std::set<const VarDef *> Set;
         
         /**
-         * Add all of the modules that this 
+         * Add all of the modules that this definition (and all types it 
+         * introduces) to the dependencies of the module.
+         * @param added the set of TypeDef's that have already been added.
+         *              We only have to keep track of types, these are the 
+         *              only things that can be cyclic.
          */
-        virtual void addDependenciesTo(const ModuleDef *mod,
-                                       ModuleDefMap &deps
-                                       ) const;
+        virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
 
         /**
          * Serialize an external definition. "Extern"
@@ -136,7 +141,9 @@ class VarDef : public virtual spug::RCBase {
          * kind of definiton from the context, as when we serialize a variable 
          * type.
          */
-        virtual void serialize(Serializer &serializer, bool writeKind) const;
+        virtual void serialize(Serializer &serializer, bool writeKind,
+                               const Namespace *ns
+                               ) const;
 
         /**
          * Deserialize an alias.

@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <iostream>
 #include <iomanip>
+#include "spug/check.h"
 
+using namespace spug;
 using namespace std;
 using namespace model;
 
@@ -43,7 +45,7 @@ void Serializer::write(size_t length, const void *data, const char *name) {
     dst.write(reinterpret_cast<const char *>(data), length);
 }
 
-bool Serializer::writeObject(const void *object, const char *name) {
+bool Serializer::writeObject(const RCBase *object, const char *name) {
     ObjMap::iterator iter = objMap.find(object);
     if (iter == objMap.end()) {
 
@@ -60,4 +62,25 @@ bool Serializer::writeObject(const void *object, const char *name) {
         write(iter->second << 1, "objectId");
         return false;
     }
+}
+
+int Serializer::registerObject(const RCBase *object) {
+    ObjMap::iterator iter = objMap.find(object);
+    if (iter == objMap.end()) {
+        int id = lastId++;
+        objMap[object] = id;
+        return id;
+    } else {
+        return iter->second;
+    }
+}
+
+void Serializer::writeDouble(double val, const char *name) {
+    SPUG_CHECK(sizeof(double) == 8,
+               "double != 8 chars on this platform, size is: " <<
+                sizeof(double)
+               );
+    if (trace)
+        cerr << "write double " << name << ": " << val << endl;
+    dst.write(reinterpret_cast<const char *>(&val), sizeof(double));
 }

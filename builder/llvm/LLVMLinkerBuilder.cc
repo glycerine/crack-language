@@ -180,6 +180,7 @@ BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
     result->options = options;
+    result->intzLLVM = intzLLVM;
     return result;
 }
 
@@ -395,11 +396,6 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     BasicBlock &entryBlock = initFunc->getEntryBlock();
     builder.SetInsertPoint(&entryBlock, entryBlock.begin());
     builder.CreateCall(registerFunc, args);
-
-    if (context.construct->cacheMode) {
-        Cacher c(context, options.get(), BModuleDefPtr::acast(moduleDef));
-        c.saveToCache();
-    }
 
     if (debugInfo)
         delete debugInfo;

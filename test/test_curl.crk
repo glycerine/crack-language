@@ -182,16 +182,18 @@ curl_escape,
 curl_unescape,
 curl_free,
 easy_setopt_long,
-easy_setopt_voiptr,
+easy_setopt_ptr,
 easy_setopt_offset,
 easy_perform,
 
 easy_info_get_long,
 easy_info_get_double,
-easy_info_get_string,
+easy_info_get_ptr,
 easy_info_get_slist,
 easy_strerror,
-easy_pause;
+easy_pause,
+slist_cast,
+slist_free_all;
 
 errStr := FStr();
 
@@ -242,9 +244,9 @@ for (l := list.head; !(l is null); l = l.next)
 
 // Test program from http://curl.haxx.se/libcurl/c/simple.html -----------------
 url := "http://www.iana.org/domains/example/";
-easy_setopt_voiptr(curl, CURLOPT_URL, url.buffer);
+easy_setopt_ptr(curl, CURLOPT_URL, url.buffer);
 cout `setopt noprogress = $(easy_setopt_long(curl, CURLOPT_NOPROGRESS, int64(0)))\n`;
-cout `setopt callback = $(easy_setopt_voiptr(curl, CURLOPT_PROGRESSFUNCTION, progress_callback))\n`;
+cout `setopt callback = $(easy_setopt_ptr(curl, CURLOPT_PROGRESSFUNCTION, progress_callback))\n`;
 res := easy_perform(curl);
 
 if (res != CURLE_OK) {
@@ -273,7 +275,7 @@ cout `Strings: $("-"*70)\n`;
 
 for (int i=0; i< STRING_TEST_NAMES.count(); i++) {
     info.info=STRING_TEST_CODES[i];
-    res = easy_info_get_string(curl, info);
+    res = easy_info_get_ptr(curl, info);
     if (res != CURLE_OK) {
         errMsg := CString(easy_strerror(res), false);
         exitError(errStr `Getting $(STRING_TEST_NAMES[i]) failed:  $errMsg\n`);

@@ -232,6 +232,7 @@ BuilderPtr LLVMJitBuilder::createChildBuilder() {
     result->rootBuilder = rootBuilder ? rootBuilder : this;
     result->llvmVoidPtrType = llvmVoidPtrType;
     result->options = options;
+    result->intzLLVM = intzLLVM;
     return result;
 }
 
@@ -276,26 +277,6 @@ ModuleDefPtr LLVMJitBuilder::createModule(Context &context,
     bModDef->sourcePath = getSourcePath(path);
 
     return bModDef;
-}
-
-void LLVMJitBuilder::cacheModule(Context &context, ModuleDef *mod) {
-
-    assert(BModuleDefPtr::cast(mod)->rep == module);
-
-    // encode main function location in bitcode metadata
-    vector<Value *> dList;
-    NamedMDNode *node;
-
-    node = module->getOrInsertNamedMetadata("crack_entry_func");
-    dList.push_back(func);
-    node->addOperand(MDNode::get(getGlobalContext(), dList));
-
-    Cacher c(context,
-             context.construct->rootBuilder->options.get(),
-             BModuleDefPtr::cast(mod)
-             );
-    c.saveToCache();
-
 }
 
 void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
@@ -363,24 +344,13 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     externals.clear();
 
     // build the debug tables
-    Module::FunctionListType &funcList = module->getFunctionList();
-    for (Module::FunctionListType::iterator funcIter = funcList.begin();
-         funcIter != funcList.end();
-         ++funcIter
-         ) {
-        string name = funcIter->getName();
-        if (!funcIter->isDeclaration())
-            crack::debug::registerDebugInfo(
-                execEng->getPointerToGlobal(funcIter),
-                name,
-                "",   // file name
-                0     // line number
-            );
-    }
+    buildDebugTables();
 
     doRunOrDump(context);
-    if (context.construct->cacheMode)
-        cacheModule(context, moduleDef);
+
+    // and if we're caching, store it in the persistent cache.
+    if (moduleDef->cacheable && context.construct->cacheMode)
+        context.cacheModule(moduleDef);
 
     // last thing: remove legacy cleanups so next repl
     //  section doesn't mistakenly think there is already
@@ -476,6 +446,24 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 }
 
+void LLVMJitBuilder::buildDebugTables() {
+    // register debug info for the module
+    for (Module::iterator iter = module->begin();
+         iter != module->end();
+         ++iter
+         ) {
+        if (!iter->isDeclaration()) {
+            string name = iter->getName();
+            crack::debug::registerDebugInfo(
+                execEng->getPointerToGlobal(iter),
+                name,
+                "",   // file name
+                0     // line number
+            );
+        }
+    }
+}
+
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Context &context,
     const string &canonicalName,
@@ -498,26 +486,38 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         ensureCacheMap();
 
         // try to resolve unresolved globals from the cache
-        for (Module::const_global_iterator iter = module->global_begin();
+        for (Module::global_iterator iter = module->global_begin();
              iter != module->global_end();
              ++iter
              ) {
             if (iter->isDeclaration()) {
 
                 // now find the defining module
+                string xname = iter->getName();
                 CacheMapType::const_iterator globalDefIter =
                     cacheMap->find(iter->getName());
                 if (globalDefIter != cacheMap->end()) {
                     void *realAddr =
                         execEng->getPointerToGlobal(globalDefIter->second);
-                    assert(realAddr && "unable to resolve global");
+                    SPUG_CHECK(realAddr,
+                               "unable to resolve global: " <<
+                               globalDefIter->first
+                               );
                     execEng->addGlobalMapping(iter, realAddr);
+                } else {
+                    cout << "couldn't get " << xname << " from cacheMap" <<
+                    endl;
                 }
+            } else {
+                // not a declaration - register it in the cache map
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
             }
         }
 
         // now try to resolve functions
-        for (Module::const_iterator iter = module->begin();
+        for (Module::iterator iter = module->begin();
              iter != module->end();
              ++iter
              ) {
@@ -535,8 +535,14 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
                                );
                     execEng->addGlobalMapping(iter, realAddr);
                 }
+            } else {
+                cacheMap->insert(
+                    CacheMapType::value_type(iter->getName(), iter)
+                );
             }
         }
+
+        buildDebugTables();
 
         setupCleanup(bmod.get());
 

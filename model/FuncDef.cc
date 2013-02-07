@@ -204,44 +204,51 @@ void FuncDef::display(ostream &out, const string &prefix) const {
     display(out, args);
 }
 
-void FuncDef::addDependenciesTo(const ModuleDef *mod, 
-                                ModuleDefMap &deps
-                                ) const {
-    returnType->addDependenciesTo(mod, deps);
+void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
+    mod->addDependency(getModule());
+    returnType->addDependenciesTo(mod, added);
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          )
-        (*iter)->type->addDependenciesTo(mod, deps);
+        (*iter)->type->addDependenciesTo(mod, added);
 }
 
-bool FuncDef::isSerializable(const ModuleDef *module) const {
-    return VarDef::isSerializable(module) && 
-           !(flags & FuncDef::builtin) && 
-           getModule() == module;
+bool FuncDef::isSerializable(const Namespace *ns) const {
+    return VarDef::isSerializable(ns) && 
+           !(flags & FuncDef::builtin);
 }
 
-void FuncDef::serialize(Serializer &serializer, bool writeKind) const {
-    assert(!writeKind);
-    returnType->serialize(serializer, false);
+void FuncDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
+    assert(!writeKind && owner == ns);
+    returnType->serialize(serializer, false, 0);
+    serializer.write(static_cast<unsigned>(flags), "flags");
     
     serializer.write(args.size(), "#args");
     for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          )
-        (*iter)->serialize(serializer, false);
+        (*iter)->serialize(serializer, false, 0);
 }
 
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     TypeDefPtr returnType = TypeDef::deserialize(deser);
+    Flags flags = static_cast<Flags>(deser.readUInt("flags"));
     
     int argCount = deser.readUInt("#args");
     ArgVec args;
     for (int i = 0; i < argCount; ++i)
         args.push_back(ArgDef::deserialize(deser));
 
-    return deser.context->builder.materializeFunc(
+    FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
         name,
         args
     );
+    
+    result->returnType = returnType;
+    result->flags = flags;
+
+    return result;
 }

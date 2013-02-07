@@ -60,6 +60,7 @@ The following files are not released under the MPL:
       ./cmake/modules/FindIconv.cmake
       ./cmake/modules/FindPCRE.cmake
       ./cmake/modules/FindSpug.cmake 
+      ./lib/crack/hash/sha1.crk
       ./wisecrack/libedit/*    
 
     These files are under their own license which requires only that 

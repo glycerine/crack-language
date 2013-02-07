@@ -13,7 +13,6 @@
 #include "util/SourceDigest.h"
 #include "Context.h"
 #include "Deserializer.h"
-#include "ModuleDefMap.h"
 #include "Serializer.h"
 
 using namespace std;
@@ -25,7 +24,8 @@ ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
     Namespace(name),
     parent(parent),
     finished(false),
-    fromExtension(false) {
+    fromExtension(false),
+    cacheable(false) {
 }
 
 bool ModuleDef::hasInstSlot() {
@@ -47,6 +47,13 @@ bool ModuleDef::matchesSource(const StringVec &libSearchPath) {
         return true;
 
     return matchesSource(fullSourcePath);
+}
+
+void ModuleDef::addDependency(ModuleDef *other) {
+    if (other != this &&
+        dependencies.find(other->getNamespaceName()) == dependencies.end()
+        )
+        dependencies[other->getNamespaceName()] = other;
 }
 
 void ModuleDef::close(Context &context) {
@@ -106,30 +113,20 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
 #define CRACK_METADATA_V1 2271218416
 
 void ModuleDef::serialize(Serializer &serializer) const {
+    int id = serializer.registerObject(this);
+    SPUG_CHECK(id == 0,
+               "Module id for serialized module " << getFullName() <<
+                " is not 0: " << id
+               );
     serializer.module = this;
     serializer.write(CRACK_METADATA_V1, "magic");
 
     // XXX we need to write the source hash.
 
-    // calculate the dependencies
-    ModuleDefMap deps;
-    for (VarDefMap::const_iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         )
-        iter->second->addDependenciesTo(this, deps);
-
-    // make sure we have the imports (we can import a module without
-    // incorporating any of its defs)
-    for (vector<ModuleDefPtr>::const_iterator iter = imports.begin();
-         iter != imports.end();
-         ++iter
-         )
-        deps[(*iter)->getFullName()] = *iter;
-
     // write the dependencies
-    serializer.write(deps.size(), "#deps");
-    for (ModuleDefMap::const_iterator iter = deps.begin(); iter != deps.end();
+    serializer.write(dependencies.size(), "#deps");
+    for (ModuleDefMap::const_iterator iter = dependencies.begin();
+         iter != dependencies.end();
          ++iter
          ) {
         serializer.write(iter->first, "canonicalName");
@@ -172,6 +169,16 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         deser.context->builder.materializeModule(*deser.context, canonicalName,
                                                  0 // owner
                                                  );
+
+    // storing the module in the construct cache - this is actually also done
+    // later within construct, but we need the module to be present while
+    // we're constructing it so we can resolve types by name when building
+    // them.
+    deser.context->construct->moduleCache[canonicalName] = mod;
+
+    // register the module as id 0.
+    deser.registerObject(0, mod.get());
+
     deser.context->ns = mod.get();
     mod->deserializeDefs(deser);
     return mod;

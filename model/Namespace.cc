@@ -10,6 +10,7 @@
 #include "Namespace.h"
 
 #include "spug/check.h"
+#include "ConstVarDef.h"
 #include "Context.h"
 #include "Deserializer.h"
 #include "Expr.h"
@@ -318,7 +319,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (i->second->isSerializable(serializer.module))
+        if (i->second->isSerializable(this))
             ++count;
     }
     
@@ -328,12 +329,12 @@ void Namespace::serializeDefs(Serializer &serializer) const {
          i != defs.end();
          ++i
          ) {
-        if (!i->second->isSerializable(serializer.module))
+        if (!i->second->isSerializable(this))
             continue;
-        else if (i->second->getModule() != serializer.module)
+        else if (i->second->getOwner() != this)
             i->second->serializeAlias(serializer, i->first);
         else
-            i->second->serialize(serializer, true);
+            i->second->serialize(serializer, true, this);
     }
 }
 
@@ -359,10 +360,13 @@ void Namespace::deserializeDefs(Deserializer &deser) {
 //                addDef(Generic::deserialize(deser));
                 break;
             case Serializer::overloadId:
-                addDef(OverloadDef::deserialize(deser).get());
+                addDef(OverloadDef::deserialize(deser, this).get());
                 break;
             case Serializer::typeId:
                 TypeDef::deserialize(deser).get();
+                break;
+            case Serializer::constVarId:
+                addDef(ConstVarDef::deserialize(deser).get());
                 break;
             default:
                 SPUG_CHECK(false, "Bad definition type id " << kind);

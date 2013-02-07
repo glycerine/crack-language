@@ -782,7 +782,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
                                     ) {
     assert(genericInfo);
     
-    // check the cache
+    // check the type's specialization cache
     TypeDef *result = findSpecialization(types);
     if (result) {
         // record a dependency on the owner's module and return the result.
@@ -886,7 +886,8 @@ TypeDef *TypeDef::getSpecialization(Context &context,
 
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
-    
+
+        module->cacheable = true;    
         module->close(*modContext);
         modContext->popErrorContext();
 
@@ -907,7 +908,7 @@ TypeDef *TypeDef::getSpecialization(Context &context,
     (*generic)[types] = result;
 
     // record a dependency on the owner's module
-    context.recordDependency(result->getOwner()->getModule().get());
+    context.ns->getModule()->addDependency(module.get());
     
     return result;
 }
@@ -937,7 +938,32 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "}" << endl;
 }
 
-void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
+bool TypeDef::isSerializable(const Namespace *ns) const {
+    if (meta)
+        return false;
+    else
+        return VarDef::isSerializable(ns);
+}
+
+void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
+    // if we've already dealt with this type, quit.
+    if (!added.insert(this).second)
+        return;
+
+    mod->addDependency(VarDef::getModule());
+
+    // compute dependencies from all non-private symbols
+    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end(); 
+         ++iter
+         ) {
+        if (iter->first.compare(0, 2, "__"))
+            iter->second->addDependenciesTo(mod, added);
+    }
+}
+
+void TypeDef::serialize(Serializer &serializer, bool writeKind,
+                        const Namespace *ns
+                        ) const {
     if (writeKind)
         serializer.write(Serializer::typeId, "kind");
     if (serializer.writeObject(this, "type")) {
@@ -952,20 +978,108 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind) const {
         } else {
             serializer.write(0, "isAlias");
             serializer.write(name, "name");
-            
-            serializer.write(parents.size(), "#bases");
-            for (TypeVec::const_iterator i = parents.begin();
-                 i != parents.end();
-                 ++i
-                 )
-                (*i)->serialize(serializer, false);
-            
-            Namespace::serializeDefs(serializer);
+            serializer.writeObject(getOwner(), "owner");
+
+            serializer.write(generic ? 1 : 0, "isGeneric");
+            if (generic) {
+                genericInfo->serialize(serializer);
+            } else {
+                serializer.write(parents.size(), "#bases");
+                for (TypeVec::const_iterator i = parents.begin();
+                    i != parents.end();
+                    ++i
+                    )
+                    (*i)->serialize(serializer, false, 0);
+                
+                Namespace::serializeDefs(serializer);
+            }
         }
     }
 }
 
 namespace {
+
+    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
+                                               string typeName, 
+                                               int parmStart
+                                               );
+
+    TypeDefPtr resolveType(Context &context, const string &moduleName,
+                           const string &typeName
+                           ) {
+        // do a special check for array and function generics
+        if (moduleName == ".builtin") {
+            TypeDefPtr specialType;
+            int parmStart;
+            if (!typeName.compare(0, 6, "array[")) {
+                specialType = context.construct->arrayType;
+                parmStart = 6;
+            } else if (!typeName.compare(0, 9, "function[")) {
+                specialType = context.construct->functionType;
+                parmStart = 9;
+            }
+            
+            if (specialType) {
+                return specialType->getSpecialization(
+                    context,
+                    parseTypeParameters(context, typeName, parmStart).get()
+                );
+            }
+        }
+        
+        ModuleDefPtr module = 
+            context.construct->getModule(moduleName);
+        SPUG_CHECK(module, 
+                   "Unable to find module " << moduleName << 
+                    " which contains referenced type " << typeName
+                   );
+        VarDefPtr typeVar = module->lookUp(typeName);
+        SPUG_CHECK(typeVar, 
+                   "Unable to find type " << moduleName << "." <<
+                    typeName
+                   );
+        TypeDefPtr type = TypeDefPtr::rcast(typeVar);
+        SPUG_CHECK(type,
+                   "Name " << moduleName << "." << typeName << 
+                    " is not a type: " << *typeVar
+                   );
+        return type;
+    }
+    
+    TypeDefPtr resolveType(Context &context, string fullTypeName) {
+        // find the end of the module name
+        int lastPeriod = -1;
+        for (int i = 0; i < fullTypeName.size() && fullTypeName[i] != '[';
+             ++i
+             ) {
+            if (fullTypeName[i] == '.')
+                lastPeriod = i;
+        }
+        
+        SPUG_CHECK(lastPeriod > 0, 
+                   "no module name found in type name: " << fullTypeName
+                   );
+        return resolveType(context, fullTypeName.substr(0, lastPeriod),
+                           fullTypeName.substr(lastPeriod + 1)
+                           );
+    }
+
+    TypeDef::TypeVecObjPtr parseTypeParameters(Context &context,
+                                               string name, 
+                                               int parmStart
+                                               ) {
+        TypeDef::TypeVecObjPtr parms = new TypeDef::TypeVecObj;
+        int i = parmStart;
+        while (name[i] != ']') {
+            int start = i;
+            for (; name[i] != ']' && name[i] != ','; ++i);
+            parms->push_back(resolveType(context, name.substr(start, i - start)));
+            if (name[i] == ',')
+                ++i;
+        }
+        return parms;
+    }
+
     struct TypeDefReader : public Deserializer::ObjectReader {
         virtual spug::RCBasePtr read(Deserializer &deser) const {
             int alias = deser.readUInt("isAlias");
@@ -973,44 +1087,56 @@ namespace {
             if (alias) {
                 string moduleName = deser.readString(64, "module");
                 string typeName = deser.readString(16, "name");
-                ModuleDefPtr module = 
-                    deser.context->construct->getModule(moduleName);
-                SPUG_CHECK(module, 
-                           "Unable to find module " << moduleName << 
-                            " which contains referenced type " << typeName
-                           );
-                VarDefPtr typeVar = module->lookUp(typeName);
-                SPUG_CHECK(typeVar, 
-                           "Unable to find type " << moduleName << "." <<
-                            typeName
-                           );
-                type = TypeDefPtr::rcast(typeVar);
-                SPUG_CHECK(type,
-                           "Name " << moduleName << "." << typeName << 
-                            " is not a type: " << *typeVar
-                           );
+                
+                type = resolveType(*deser.context, moduleName, typeName);
             } else {
                 string name = deser.readString(16, "name");
                 
-                // bases
-                int count = deser.readUInt("#bases");
-                TypeDef::TypeVec bases(count);
-                for (int i = 0; i < count; ++i)
-                    bases[i] = TypeDef::deserialize(deser, "bases[i]");
+                // the owner isn't necessarily a type - it should either be a 
+                // type or the module, but the module should always already be 
+                // registered in the deserializer.
+                // XXX This may not always be the case, do something to verify.
+                Deserializer::ReadObjectResult result = 
+                    deser.readObject(TypeDefReader(), "owner");
+                NamespacePtr owner = NamespacePtr::rcast(result.object);
 
-                // instantiate the type                
-                type = deser.context->builder.materializeType(*deser.context,
-                                                              name
-                                                              );
-                type->parents = bases;
-                // XXX yarks.  this assumes that the parent context of the 
-                // first definition is always the context of the class.  Is 
-                // that really safe?
-                deser.context->addDef(type.get());
                 
-                // pass a flag back to indicate that we just deserialized a 
-                // definition.
-                deser.userData = 1;
+                // is this a generic?
+                unsigned isGeneric = deser.readUInt("isGeneric");
+                if (isGeneric) {
+                    type = new TypeDef(
+                        deser.context->construct->classType.get(),
+                        name,
+                        true
+                    );
+                    type->genericInfo = Generic::deserialize(deser);
+                    type->generic = new TypeDef::SpecializationCache();
+                } else {
+                    // bases
+                    int count = deser.readUInt("#bases");
+                    TypeDef::TypeVec bases(count);
+                    for (int i = 0; i < count; ++i)
+                        bases[i] = TypeDef::deserialize(deser, "bases[i]");
+
+                    // create a fake context for the owner and instantiate the 
+                    // type
+                    Context::Scope scope =
+                        ModuleDefPtr::rcast(owner) ? Context::module :
+                                                    Context::instance;
+                    ContextPtr ownerContext =
+                        deser.context->createSubContext(scope, owner.get());
+                    type = 
+                        deser.context->builder.materializeType(*ownerContext,
+                                                               name
+                                                               );
+                    type->parents = bases;
+
+                    // pass a flag back to indicate that we just deserialized 
+                    // a definition.
+                    deser.userData = 1;
+                }
+
+                owner->addDef(type.get());                
             }
             
             return type;
@@ -1023,7 +1149,7 @@ TypeDefPtr TypeDef::deserialize(Deserializer &deser, const char *name) {
         deser.readObject(TypeDefReader(), name ? name : "type");
     TypeDefPtr result = TypeDefPtr::rcast(readObj.object);
 
-    // if we're in a non-alias definition
+    // if we're in a definition that has a nested defs list.
     if (readObj.userData) {
         // 'defs' - fill in the body.
         ContextPtr classContext =

@@ -91,6 +91,7 @@ So given this, our meta-data format is:
             overloadId = 4,
             aliasId = 5,
             typeAliasId = 6,
+            constVar = 7,
         }
         uint kind;
 
@@ -99,6 +100,7 @@ So given this, our meta-data format is:
             case variableId: VarDef
             case typeId: ref[Type]
             case overloadId: OverloadDef
+            case constVar: ConstVarDef
         }
     }
 
@@ -128,8 +130,15 @@ So given this, our meta-data format is:
 
     TypeDef {
         blob name
-        array[ref[Type]] bases
-        array[Def] defs
+        ref[Type] owner
+        uint generic
+        if (generic) {
+            array[blob] parms
+            array[Token] tokens
+        } else {
+            array[ref[Type]] bases
+            array[Def] defs
+        }
     }
 
     OverloadDef {
@@ -139,7 +148,41 @@ So given this, our meta-data format is:
 
     FuncDef {
         ref[Type] returnType
+        uint flags;
         array[VarDef] args
     }
+
+    ConstVarDef {
+        blob name
+        ref[Type] type
+        uint kind
+        switch (kind) {
+            case constIntReqUnsigned: uint
+            case constInt: uint
+            case constFloat: 8 bytes
+            case constNull: empty
+            case constAgg: empty
+        }
+    }
+
+    Location {
+        blob sourceName
+        uint lineNum
+    }
+
+    Token {
+        uint tokenType
+
+        // see parser/Token.h for the values of these
+        if (tokenType in (Token::integer, Token::string, Token::floatLit,
+                          Token::octalLit, Token::hexLit, Token::binLit)
+            ) {
+
+            blob tokenData
+        }
+
+        ref[Location] loc
+    }
+
 
 }}

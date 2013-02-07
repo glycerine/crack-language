@@ -27,7 +27,6 @@ using namespace crack::util;
 
 bool serializerTestUInt() {
     bool success = true;
-    using namespace model;
 
     ostringstream dst;
     Serializer s(dst);
@@ -55,6 +54,23 @@ bool serializerTestUInt() {
         success = false;
     }
     return success;
+}
+
+bool serializerTestLargeStrings() {
+    ostringstream dst;
+    Serializer s(dst);
+    string testString = "large string - greater than 16 bytes";
+    s.write(testString, "long_string");
+
+    string data = dst.str();
+    istringstream src(data);
+    Deserializer d(src);
+    if (d.readString(16, "long_string") != testString) {
+        cerr << "reading large string back failed, got " << testString << endl;
+        return false;
+    } else {
+        return true;
+    }
 }
 
 struct DataSet {
@@ -103,15 +119,15 @@ bool moduleTestDeps() {
     DataSet ds;
     ds.addTestModules();
     bool success = true;
-    ModuleDefMap deps;
-    ds.t1->addDependenciesTo(ds.mod.get(), deps);
+    VarDef::Set added;
+    ds.t1->addDependenciesTo(ds.mod.get(), added);
 
-    if (deps.find("dep1") == deps.end()) {
+    if (ds.mod->dependencies.hasKey("dep1")) {
         cerr << "dep1 not in module's deps" << endl;
         success = false;
     }
 
-    if (deps.find("dep0") != deps.end()) {
+    if (ds.mod->dependencies.hasKey("dep0")) {
         cerr << "indirect dependency is in module's deps" << endl;
         success = false;
     }
@@ -124,7 +140,8 @@ bool moduleSerialization() {
     ostringstream out;
     Serializer ser(out);
     ds.mod->serialize(ser);
-    ds.dep1->serialize(ser);
+    Serializer ser2(out);
+    ds.dep1->serialize(ser2);
     return true;
 }
 
@@ -244,6 +261,7 @@ struct TestCase {
 
 TestCase testCases[] = {
     {"serializerTestUInt", serializerTestUInt},
+    {"serializerTestLargeStrings", serializerTestLargeStrings},
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
     {"moduleReload", moduleReload},

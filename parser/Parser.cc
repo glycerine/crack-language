@@ -2778,15 +2778,16 @@ void Parser::parseImportStmt(TokerMsg tokerMsg, Namespace *ns) {
          error(tok, ex.getMessage());
       }
    } else {
-       BSTATS_GO(s1)
-       builder.initializeImport(mod.get(),
-                                syms,
-                                // HACK check for annotation?
-                                ns == context->compileNS.get()
-                                );
-       BSTATS_END
+      BSTATS_GO(s1)
+      builder.initializeImport(mod.get(),
+                               syms,
+                               // HACK check for annotation?
+                               ns == context->compileNS.get()
+                               );
+      BSTATS_END
       // alias all of the names in the new module
       int st = 0;
+      ModuleDefPtr curModule = ns->getModule();
       for (ImportedDefVec::iterator iter = syms.begin();
            iter != syms.end();
            ++iter, ++st
@@ -2831,7 +2832,17 @@ void Parser::parseImportStmt(TokerMsg tokerMsg, Namespace *ns) {
          builder.registerImportedDef(*context, symVal.get());
          BSTATS_END
          ns->addAlias(iter->local, symVal.get());
+         if (curModule) {
+            VarDef::Set added;
+            symVal->addDependenciesTo(curModule.get(), added);
+         }
       }
+      
+      // add a dependency on the module itself.  We have to check that 
+      // curModule is not null when we do this, it can be null in the case of 
+      // an annotation import.
+      if (curModule)
+         curModule->addDependency(mod.get());
    }
 }
 

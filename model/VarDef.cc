@@ -113,23 +113,18 @@ ModuleDef *VarDef::getModule() const {
     return owner->getModule().get();
 }
 
-bool VarDef::isSerializable(const ModuleDef *module) const {
-    return name[0] != ':' && getModule() == module;
+bool VarDef::isSerializable(const Namespace *ns) const {
+    return name[0] != ':' && owner == ns;
 }
 
-void VarDef::addDependenciesTo(const ModuleDef *mod,
-                               ModuleDefMap &deps
-                               ) const {
+void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 
     ModuleDefPtr depMod = getModule();
-    if (depMod != mod &&
-        deps.find(depMod->getNamespaceName()) == deps.end()
-        )
-        deps[depMod->getNamespaceName()] = depMod;
+    mod->addDependency(depMod.get());
 
     // add the dependencies of the type
     if (type.get() != this)
-        type->addDependenciesTo(mod, deps);
+        type->addDependenciesTo(mod, added);
 }
 
 void VarDef::serializeExtern(Serializer &serializer) const {
@@ -175,12 +170,14 @@ VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
                             );
 }
 
-void VarDef::serialize(Serializer &serializer, bool writeKind) const {
+void VarDef::serialize(Serializer &serializer, bool writeKind,
+                       const Namespace *ns
+                       ) const {
     if (writeKind)
         serializer.write(Serializer::variableId, "kind");
     serializer.write(name, "name");
     serializer.write(getInstSlot() + 1, "instSlot");
-    type->serialize(serializer, false);
+    type->serialize(serializer, false, ns);
 }
 
 VarDefPtr VarDef::deserialize(Deserializer &deser) {

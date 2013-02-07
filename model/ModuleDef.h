@@ -11,6 +11,7 @@
 
 #include <set>
 #include <vector>
+#include "ModuleDefMap.h"
 #include "Namespace.h"
 #include "VarDef.h"
 
@@ -51,9 +52,15 @@ class ModuleDef : public VarDef, public Namespace {
         
         // explicit imports.
         std::vector<ModuleDefPtr> imports;
+        
+        // Modules that we have a dependency on.
+        ModuleDefMap dependencies;
 
         // path to original source code on disk
         std::string sourcePath;
+        
+        // true if the module should be persisted in the cache when closed.
+        bool cacheable;
 
         ModuleDef(const std::string &name, Namespace *parent);
 
@@ -95,6 +102,11 @@ class ModuleDef : public VarDef, public Namespace {
          * Returns true if the module matches the specific source file.
          */
         virtual bool matchesSource(const std::string &sourcePath) = 0;
+
+        /**
+         * Add the other module to this module's dependencies.
+         */
+        void addDependency(ModuleDef *other);
 
         virtual NamespacePtr getParent(unsigned index);
         virtual ModuleDefPtr getModule();

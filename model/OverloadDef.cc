@@ -206,11 +206,11 @@ bool OverloadDef::isStatic() const {
     return flatFuncs.front()->isStatic();
 }
 
-bool OverloadDef::isSerializable(const ModuleDef *module) const {
-    if (!VarDef::isSerializable(module))
+bool OverloadDef::isSerializable(const Namespace *ns) const {
+    if (!VarDef::isSerializable(ns))
         return false;
     else
-        return hasSerializableFuncs(module);
+        return hasSerializableFuncs(ns);
 }
 
 bool OverloadDef::isSingleFunction() const {
@@ -274,28 +274,28 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
     }
 }
 
-void OverloadDef::addDependenciesTo(const ModuleDef *mod, 
-                                    ModuleDefMap &deps
-                                    ) const {
+void OverloadDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        (*iter)->addDependenciesTo(mod, deps);
+        (*iter)->addDependenciesTo(mod, added);
     }
 }
 
-bool OverloadDef::hasSerializableFuncs(const ModuleDef *module) const {
+bool OverloadDef::hasSerializableFuncs(const Namespace *ns) const {
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(module))
+        if ((*iter)->isSerializable(ns))
             return true;
     }
 }
 
-void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
+void OverloadDef::serialize(Serializer &serializer, bool writeKind,
+                            const Namespace *ns
+                            ) const {
 
     // calculate the number of functions to serialize (we don't serialize 
     // builtins)
@@ -304,7 +304,7 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
          iter != funcs.end();
          ++iter
          )
-        if ((*iter)->isSerializable(serializer.module))
+        if ((*iter)->isSerializable(ns))
             ++size;
 
     if (writeKind)
@@ -316,16 +316,21 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind) const {
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable(serializer.module))
-            (*iter)->serialize(serializer, false);
+        if ((*iter)->isSerializable(ns))
+            (*iter)->serialize(serializer, false, ns);
     }
 }
 
-OverloadDefPtr OverloadDef::deserialize(Deserializer &deser) {
+OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
+                                        Namespace *owner
+                                        ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld = new OverloadDef(name);
     int size = deser.readUInt("#overloads");
-    for (int i = 0; i < size; ++i)
-        ovld->addFunc(FuncDef::deserialize(deser, name).get());
+    for (int i = 0; i < size; ++i) {
+        FuncDefPtr func = FuncDef::deserialize(deser, name);
+        func->setOwner(owner);
+        ovld->addFunc(func.get());
+    }
     return ovld;
 }
