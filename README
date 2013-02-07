@@ -29,6 +29,12 @@ The following files are not released under the MPL:
     distributed without limitations:
         ./m4/ax_path_lib_pcre.m4
 
+    This file is released under the GPL v3; it is a wisecrack mode
+    for emacs (wisecrack is the repl for crack). Since it is a stand-alone
+    editor configuration file, this in no way limits the licenses on
+    other files here.
+        ./wisecrack.el
+
     These files are under LGPL v2:
         ./m4/gtk-2.0.m4
         ./m4/alsa.m4
